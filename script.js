@@ -84,7 +84,8 @@ async function saveData() {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Master-Key': JSONBIN_CONFIG.apiKey
+                'X-Master-Key': JSONBIN_CONFIG.apiKey,
+                'X-Bin-Versioning': 'false'
             },
             body: JSON.stringify(dbData)
         });
@@ -92,6 +93,8 @@ async function saveData() {
         if(res.ok) {
             console.log("Perubahan berhasil disimpan secara global ke cloud!");
         } else {
+            const errData = await res.json();
+            console.error("JSONbin Error:", errData);
             alert("Gagal menyimpan ke server online. Pastikan API Key benar.");
         }
     } catch (err) {
