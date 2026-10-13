@@ -76,7 +76,6 @@
                 <label>Masukkan NIM / Kode Guest</label>
                 <input type="text" id="login-nim-input" placeholder="Cth: 12345 atau NIM resmi">
             </div>
-            <!-- Password Admin disamarkan menggunakan type="password" -->
             <div id="admin-fields" class="form-group" style="display: none;">
                 <label>Kode Admin</label>
                 <input type="password" id="login-admin-code" placeholder="••••••••">
@@ -146,8 +145,8 @@
 
                 <div class="card">
                     <h3>
-                        📅 Jadwal Kuliah Hari Ini (Selasa, 13 Oktober 2026)
-                        <span class="admin-only"><button class="btn" style="width: auto; padding: 4px 10px; font-size: 12px;" onclick="openAddJadwalModal()">+ Tambah Jadwal</button></span>
+                        📅 Jadwal Kuliah (Database Terhubung: jadwal.json)
+                        <span class="admin-only"><button class="btn" style="width: auto; padding: 4px 10px; font-size: 12px;" onclick="openAddJadwalModal()">+ Tambah Jadwal Manual</button></span>
                     </h3>
                     <table>
                         <thead>
@@ -278,34 +277,29 @@
 
         let dbData = JSON.parse(localStorage.getItem('portal_blok12_db')) || {
             pengumuman: [
-                { id: 1, judul: "Pengumuman Blok 1.2", isi: "Perkuliahan dan praktikum berjalan sesuai jadwal hari ini.", deadline: "2026-11-01" }
+                { id: 1, judul: "Pengumuman Blok 1.2", isi: "Perkuliahan dan praktikum berjalan sesuai jadwal.", deadline: "2026-11-01" }
             ],
             reminder: [
-                "Kuliah Anatomi Ekstremitas Inferior - Pukul 07.50 WIB",
-                "Praktikum Histologi Kartilago & Tulang"
+                "Cek jadwal harian Anatomi & Histologi",
+                "Deadline tugas mandiri"
             ],
             jadwalUpdates: [
-                "File Jadwal Resmi: Silakan cek menu update atau unduh file PDF jadwal."
-            ],
-            jadwal: [
-                { tgl: "Selasa, 13 Oct 2026", jam: "07.50-09.30", kelasA: "Anatomi 3: Extremitas Inferior", kelasB: "Histologi 3: Kartilago & Tulang" },
-                { tgl: "Selasa, 13 Oct 2026", jam: "12.30-14.10", kelasA: "Anatomi 3: Extremitas Inferior", kelasB: "Histologi 3: Kartilago & Tulang" },
-                { tgl: "Rabu, 14 Oct 2026", jam: "09.50-11.30", kelasA: "REMIDI FISIO BLOK 1.2", kelasB: "REMIDI FISIO BLOK 1.2" }
+                "File Jadwal Resmi: Database jadwal.json terhubung otomatis."
             ],
             tugas: [
-                { id: 1, nama: "Laporan Praktikum Anatomi 3", deadline: "16 Okt 2026", ket: "Kumpulkan laporan tepat waktu.", link: "https://forms.gle/contoh" }
+                { id: 1, nama: "Laporan Praktikum Anatomi", deadline: "16 Okt 2026", ket: "Kumpulkan laporan tepat waktu.", link: "https://forms.gle/contoh" }
             ],
             laboratorium: [
-                { id: 1, nama: "Lab Anatomi Ekstremitas Inferior", skenario: "Modul Tulang Kaki & Panggul", ket: "Bawa penuntun praktikum masing-masing.", link: "https://drive.google.com/contoh" }
+                { id: 1, nama: "Lab Anatomi Ekstremitas", skenario: "Modul Tulang & Sendi", ket: "Bawa penuntun praktikum masing-masing.", link: "https://drive.google.com/contoh" }
             ],
             skills_lab: [
-                { id: 1, nama: "Skills Lab Palpasi Sendi", skenario: "Modul Ekstremitas Bawah", ket: "Pakaian rapi berjas lab.", link: "https://drive.google.com/contoh" }
+                { id: 1, nama: "Skills Lab Palpasi", skenario: "Modul Pemeriksaan Fisik", ket: "Pakaian rapi berjas lab.", link: "https://drive.google.com/contoh" }
             ],
             tutorial: [
-                { id: 1, nama: "Tutorial Kasus Skenario 3", skenario: "Diseminasi Kasus Muskuloskeletal", ket: "Membawa referensi literatur.", link: "https://drive.google.com/contoh" }
+                { id: 1, nama: "Tutorial Kasus Skenario", skenario: "Diseminasi Kasus Klinik", ket: "Membawa referensi literatur.", link: "https://drive.google.com/contoh" }
             ],
             materi: [
-                { id: 1, kuliah: "Anatomi Ekstremitas Inferior", materi: "Slide Kuliah Yunia Hastami, dr", link: "#" }
+                { id: 1, kuliah: "Anatomi Manusia", materi: "Slide Kuliah Pengantar", link: "#" }
             ]
         };
 
@@ -425,19 +419,29 @@
             });
         }
 
-        function renderJadwal() {
+        // FUNGSI FETCH DATA DARI JADWAL.JSON
+        async function renderJadwal() {
             const tbody = document.getElementById('jadwal-table-body');
-            tbody.innerHTML = '';
-            dbData.jadwal.forEach((j, idx) => {
-                const isToday = j.tgl.includes("13 Oct") || j.tgl.includes("13-Oct");
-                tbody.innerHTML += `<tr class="${isToday ? 'highlight-row' : ''}">
-                    <td>${j.tgl} ${isToday ? '<span class="badge" style="background:#eab308; color:white;">Hari Ini (13 Okt)</span>' : ''}</td>
-                    <td>${j.jam}</td>
-                    <td>${j.kelasA}</td>
-                    <td>${j.kelasB}</td>
-                    <td class="admin-only"><button class="btn btn-danger" style="width: auto; padding: 3px 6px; font-size: 11px;" onclick="deleteItem('jadwal', ${idx})">Hapus</button></td>
-                </tr>`;
-            });
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Memuat database jadwal.json...</td></tr>';
+            
+            try {
+                const response = await fetch('jadwal.json');
+                const data = await response.json();
+                
+                tbody.innerHTML = '';
+                data.jadwal.forEach((j, idx) => {
+                    const isToday = j.tgl.includes("13-Oct") || j.tgl.includes("13 Oct");
+                    tbody.innerHTML += `<tr class="${isToday ? 'highlight-row' : ''}">
+                        <td>${j.tgl} ${isToday ? '<span class="badge" style="background:#eab308; color:white;">Hari Ini (13 Okt)</span>' : ''}</td>
+                        <td>${j.jam}</td>
+                        <td>${j.kelasA}</td>
+                        <td>${j.kelasB}</td>
+                        <td class="admin-only"><button class="btn btn-danger" style="width: auto; padding: 3px 6px; font-size: 11px;" onclick="alert('Untuk mengedit jadwal permanen, ubah file jadwal.json di GitHub.')">Info</button></td>
+                    </tr>`;
+                });
+            } catch (error) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Gagal memuat jadwal.json. Pastikan file jadwal.json sudah di-upload ke GitHub.</td></tr>';
+            }
         }
 
         function renderTugas() {
@@ -532,7 +536,7 @@
                 const file = fileInput.files[0];
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    dbData.jadwalUpdates.push(`${title} (<a href="${e.target.result}" download="${file.name}">Unduh PDF Resmi: ${file.name}</a>)`);
+                    dbData.jadwalUpdates.push(`${title} (<a href="${e.target.result}" download="${file.name}">Unduh File: ${file.name}</a>)`);
                     saveData();
                     document.getElementById('up-title').value = '';
                     fileInput.value = '';
@@ -543,30 +547,6 @@
                 saveData();
                 document.getElementById('up-title').value = '';
             }
-        }
-
-        function openAddJadwalModal() {
-            document.getElementById('admin-modal-title').innerText = "Tambah Jadwal Baru";
-            document.getElementById('admin-modal-body').innerHTML = `
-                <div class="form-group"><input type="text" id="j-tgl" placeholder="Hari / Tanggal (Cth: Selasa, 13 Oct 2026)"></div>
-                <div class="form-group"><input type="text" id="j-jam" placeholder="Jam (Cth: 07.50-09.30)"></div>
-                <div class="form-group"><input type="text" id="j-kela" placeholder="Kelas A / Kegiatan"></div>
-                <div class="form-group"><input type="text" id="j-kelb" placeholder="Kelas B / Kegiatan"></div>
-                <button class="btn btn-success" onclick="saveNewJadwal()">Simpan Jadwal</button>
-            `;
-            document.getElementById('admin-modal').style.display = 'flex';
-        }
-
-        function saveNewJadwal() {
-            dbData.jadwal.push({
-                id: Date.now(),
-                tgl: document.getElementById('j-tgl').value,
-                jam: document.getElementById('j-jam').value,
-                kelasA: document.getElementById('j-kela').value,
-                kelasB: document.getElementById('j-kelb').value
-            });
-            saveData();
-            closeModal('admin-modal');
         }
 
         function openAddTugasModal() {
