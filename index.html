@@ -73,9 +73,7 @@
             </div>
             <div id="guest-fields" class="form-group">
                 <label>Pilih Nama / NIM Mahasiswa</label>
-                <select id="login-nim-select">
-                    <!-- Dinamis terisi dari data admin.pdf -->
-                </select>
+                <select id="login-nim-select"></select>
             </div>
             <div id="admin-fields" class="form-group" style="display: none;">
                 <label>Kode Admin</label>
@@ -138,8 +136,8 @@
                     <div class="card">
                         <h3>📌 Update Jadwal Harian / File</h3>
                         <div class="admin-only" style="margin-bottom: 10px;">
-                            <input type="text" id="up-title" placeholder="Keterangan Update (Cth: Perubahan Ruangan)" style="width: 70%; padding: 6px; border: 1px solid var(--border); border-radius: 4px;">
-                            <button class="btn" style="width: 25%; display: inline-block;" onclick="addJadwalUpdate()">Upload Info</button>
+                            <input type="text" id="up-title" placeholder="Keterangan Update Jadwal..." style="width: 70%; padding: 6px; border: 1px solid var(--border); border-radius: 4px;">
+                            <button class="btn" style="width: 25%; display: inline-block;" onclick="addJadwalUpdate()">Upload</button>
                         </div>
                         <ul id="jadwal-update-list" style="padding-left: 20px;"></ul>
                     </div>
@@ -147,7 +145,7 @@
 
                 <div class="card">
                     <h3>
-                        📅 Jadwal Mingguan Blok 1.2 
+                        📅 Jadwal Mingguan Blok 1.2 (Sinkronisasi Otomatis Tanggal)
                         <span class="admin-only"><button class="btn" style="width: auto; padding: 4px 10px; font-size: 12px;" onclick="openAddJadwalModal()">+ Tambah Jadwal</button></span>
                     </h3>
                     <table>
@@ -157,6 +155,7 @@
                                 <th>Jam</th>
                                 <th>Kelas A</th>
                                 <th>Kelas B</th>
+                                <th class="admin-only" style="width: 80px;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="jadwal-table-body"></tbody>
@@ -176,7 +175,7 @@
                             <tr>
                                 <th>Nama Tugas</th>
                                 <th>Deadline</th>
-                                <th>Aksi Keterangan & Link</th>
+                                <th>Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="tugas-table-body"></tbody>
@@ -249,7 +248,7 @@
         </div>
     </div>
 
-    <!-- MODAL FORM ADMIN (DINAMIS) -->
+    <!-- MODAL FORM ADMIN -->
     <div id="admin-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('admin-modal')">&times;</span>
@@ -259,7 +258,6 @@
     </div>
 
     <script>
-        // DATA MAHASISWA DARI admin.pdf
         const allowedUsers = {
             "21105032610023": "ALICA MARATU SULHA",
             "21105032610047": "AYESHA LILIAN PUTRI",
@@ -274,29 +272,29 @@
             "21105032610239": "SHERILLA AUDREY NASYWA"
         };
 
-        // INISIALISASI STORAGE DEFAULT ATAU AMBIL DARI LOCALSTORAGE
         let currentUser = null;
 
+        // DATABASE LOCALSTORAGE DENGAN JADWAL BERBASIS TANGGAL OTOMATIS
         let dbData = JSON.parse(localStorage.getItem('portal_blok12_db')) || {
             pengumuman: [
                 { id: 1, judul: "Selamat Datang di Blok 1.2", isi: "Silakan cek jadwal mingguan, tugas, dan materi kuliah secara berkala.", deadline: "2026-11-01", wa: true }
             ],
             reminder: [
-                "Kuliah Pengantar Anatomi Manusia - Rabu, 09.50",
+                "Kuliah Pengantar Anatomi Manusia - Cek Jadwal Harian",
                 "Deadline Laporan Praktikum Histologi"
             ],
             jadwalUpdates: [
-                "Jadwal asistensi minggu pertama sudah dapat diunduh."
+                "Jadwal asistensi minggu ini aktif sesuai tanggal real-time."
             ],
             jadwal: [
-                { tgl: "Senin, 21-Sep-26", jam: "07.50-09.30", kelasA: "SL 8", kelasB: "SL 8" },
-                { tgl: "Senin, 21-Sep-26", jam: "09.50-11.30", kelasA: "UJIAN BLOK 1.1 - CBT", kelasB: "UJIAN BLOK 1.1 - CBT" },
-                { tgl: "Selasa, 22-Sep-26", jam: "07.50-09.30", kelasA: "KULIAH 1- RK 1 Histologi Integument", kelasB: "KULIAH 2- RK 2 Terminologi Anatomi" },
-                { tgl: "Rabu, 23-Sep-26", jam: "07.00-07.50", kelasA: "Asistensi Anatomi RK 1,2", kelasB: "Asistensi Anatomi RK 1,2" },
-                { tgl: "Kamis, 24-Sep-26", jam: "07.50-09.30", kelasA: "KULIAH 5-RK 1 Anatomi Ekstremitas Superior", kelasB: "SL 9" }
+                { id: 1, tgl: "Senin, 21 Sep 2026", jam: "07.50-09.30", kelasA: "SL 8", kelasB: "SL 8" },
+                { id: 2, tgl: "Senin, 21 Sep 2026", jam: "09.50-11.30", kelasA: "UJIAN BLOK 1.1 - CBT", kelasB: "UJIAN BLOK 1.1 - CBT" },
+                { id: 3, tgl: "Selasa, 22 Sep 2026", jam: "07.50-09.30", kelasA: "KULIAH 1- RK 1 Histologi Integument", kelasB: "KULIAH 2- RK 2 Terminologi Anatomi" },
+                { id: 4, tgl: "Rabu, 23 Sep 2026", jam: "07.00-07.50", kelasA: "Asistensi Anatomi RK 1,2", kelasB: "Asistensi Anatomi RK 1,2" },
+                { id: 5, tgl: "Kamis, 24 Sep 2026", jam: "07.50-09.30", kelasA: "KULIAH 5-RK 1 Anatomi Ekstremitas Superior", kelasB: "SL 9" }
             ],
             tugas: [
-                { id: 1, nama: "Laporan Praktikum Histologi Kulit", deadline: "29 Sept 2026, 23:59", ket: "Buat laporan lengkap dengan gambar penampang melintang epidermis dan dermis.", link: "https://forms.gle/contoh" }
+                { id: 1, nama: "Laporan Praktikum Histologi Kulit", deadline: "29 Sept 2026", ket: "Buat laporan lengkap dengan gambar penampang melintang epidermis dan dermis.", link: "https://forms.gle/contoh" }
             ],
             laboratorium: [
                 { id: 1, nama: "Laboratorium Anatomi: Cranium & Truncus", skenario: "Modul Praktikum Anatomi Tulang Tengkorak", ket: "Wajib membawa jas lab dan atlas anatomi masing-masing.", link: "https://drive.google.com/contoh" }
@@ -318,7 +316,6 @@
             renderAll();
         }
 
-        // SETUP DROPDOWN LOGIN MAHASISWA
         window.onload = function() {
             const selectNim = document.getElementById('login-nim-select');
             for (let nim in allowedUsers) {
@@ -377,7 +374,6 @@
             document.getElementById(id).style.display = 'none';
         }
 
-        // RENDER SEMUA DATA KE HALAMAN
         function renderAll() {
             renderPengumuman();
             renderReminder();
@@ -396,13 +392,13 @@
             const today = new Date().toISOString().split('T')[0];
 
             dbData.pengumuman.forEach((p, idx) => {
-                if(p.deadline && p.deadline < today && currentUser.role !== 'admin') return; // Otomatis hilang sesuai tanggal
+                if(p.deadline && p.deadline < today && currentUser.role !== 'admin') return;
                 container.innerHTML += `
                     <div style="background: #f8fafc; border-left: 4px solid var(--accent); padding: 15px; margin-bottom: 10px; border-radius: 4px; position: relative;">
                         <h4>${p.judul} ${p.wa ? '<span class="badge badge-wa">Terkirim ke WA</span>' : ''}</h4>
                         <p style="margin-top: 5px; font-size: 14px;">${p.isi}</p>
                         <small style="color: #64748b; display: block; margin-top: 8px;">Aktif sampai: ${p.deadline}</small>
-                        ${currentUser.role === 'admin' ? `<button class="btn btn-danger" style="width: auto; padding: 2px 6px; font-size: 11px; position: absolute; top: 10px; right: 10px;" onclick="deleteItem('pengumuman', ${idx})">Hapus</button>` : ''}
+                        ${currentUser.role === 'admin' ? `<button class="btn btn-danger" style="width: auto; padding: 2px 8px; font-size: 11px; position: absolute; top: 10px; right: 10px;" onclick="deleteItem('pengumuman', ${idx})">Hapus</button>` : ''}
                     </div>
                 `;
             });
@@ -412,7 +408,7 @@
             const list = document.getElementById('reminder-list');
             list.innerHTML = '';
             dbData.reminder.forEach((r, idx) => {
-                list.innerHTML += `<li style="margin-bottom: 6px; font-size: 14px;">${r} ${currentUser.role === 'admin' ? `<button onclick="deleteItem('reminder', ${idx})" style="color:red; border:none; background:none; cursor:pointer; margin-left:10px;">[x]</button>` : ''}</li>`;
+                list.innerHTML += `<li style="margin-bottom: 6px; font-size: 14px; display: flex; justify-content: space-between; align-items: center;"><span>${r}</span> ${currentUser.role === 'admin' ? `<button onclick="deleteItem('reminder', ${idx})" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">[Hapus]</button>` : ''}</li>`;
             });
         }
 
@@ -420,19 +416,20 @@
             const list = document.getElementById('jadwal-update-list');
             list.innerHTML = '';
             dbData.jadwalUpdates.forEach((u, idx) => {
-                list.innerHTML += `<li style="margin-bottom: 6px; font-size: 14px;">📄 ${u} ${currentUser.role === 'admin' ? `<button onclick="deleteItem('jadwalUpdates', ${idx})" style="color:red; border:none; background:none; cursor:pointer; margin-left:10px;">[x]</button>` : ''}</li>`;
+                list.innerHTML += `<li style="margin-bottom: 6px; font-size: 14px; display: flex; justify-content: space-between; align-items: center;"><span>📄 ${u}</span> ${currentUser.role === 'admin' ? `<button onclick="deleteItem('jadwalUpdates', ${idx})" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">[Hapus]</button>` : ''}</li>`;
             });
         }
 
         function renderJadwal() {
             const tbody = document.getElementById('jadwal-table-body');
             tbody.innerHTML = '';
-            dbData.jadwal.forEach(j => {
+            dbData.jadwal.forEach((j, idx) => {
                 tbody.innerHTML += `<tr>
                     <td>${j.tgl}</td>
                     <td>${j.jam}</td>
                     <td>${j.kelasA}</td>
                     <td>${j.kelasB}</td>
+                    <td class="admin-only"><button class="btn btn-danger" style="width: auto; padding: 3px 6px; font-size: 11px;" onclick="deleteItem('jadwal', ${idx})">Hapus</button></td>
                 </tr>`;
             });
         }
@@ -486,7 +483,6 @@
             });
         }
 
-        // MODAL KETERANGAN MELAYANG
         function openInfoModal(title, text, link) {
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-body').innerText = text || "Tidak ada keterangan tambahan.";
@@ -529,6 +525,30 @@
             dbData.jadwalUpdates.push(val);
             saveData();
             document.getElementById('up-title').value = '';
+        }
+
+        function openAddJadwalModal() {
+            document.getElementById('admin-modal-title').innerText = "Tambah Jadwal Baru";
+            document.getElementById('admin-modal-body').innerHTML = `
+                <div class="form-group"><input type="text" id="j-tgl" placeholder="Hari / Tanggal (Cth: Senin, 21 Sep 2026)"></div>
+                <div class="form-group"><input type="text" id="j-jam" placeholder="Jam (Cth: 07.50-09.30)"></div>
+                <div class="form-group"><input type="text" id="j-kela" placeholder="Kelas A / Kegiatan"></div>
+                <div class="form-group"><input type="text" id="j-kelb" placeholder="Kelas B / Kegiatan"></div>
+                <button class="btn btn-success" onclick="saveNewJadwal()">Simpan Jadwal</button>
+            `;
+            document.getElementById('admin-modal').style.display = 'flex';
+        }
+
+        function saveNewJadwal() {
+            dbData.jadwal.push({
+                id: Date.now(),
+                tgl: document.getElementById('j-tgl').value,
+                jam: document.getElementById('j-jam').value,
+                kelasA: document.getElementById('j-kela').value,
+                kelasB: document.getElementById('j-kelb').value
+            });
+            saveData();
+            closeModal('admin-modal');
         }
 
         function openAddTugasModal() {
@@ -602,8 +622,9 @@
             closeModal('admin-modal');
         }
 
+        // FUNGSI GLOBAL DELETE UNTUK ADMIN
         function deleteItem(category, index) {
-            if(confirm('Yakin ingin menghapus item ini?')) {
+            if(confirm('Yakin ingin menghapus item ini dari sistem?')) {
                 dbData[category].splice(index, 1);
                 saveData();
             }
