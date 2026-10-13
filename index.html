@@ -52,10 +52,11 @@
         
         .admin-only { display: none; }
         .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; background: #e2e8f0; color: #475569; }
-        .badge-wa { background: #dcfce7; color: #15803d; }
+        .badge-wa { background: #dcfce7; color: #15803d; text-decoration: none; }
         
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         @media(max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+        .highlight-row { background: #fef08a !important; }
     </style>
 </head>
 <body>
@@ -72,8 +73,9 @@
                 </select>
             </div>
             <div id="guest-fields" class="form-group">
-                <label>Pilih Nama / NIM Mahasiswa</label>
-                <select id="login-nim-select"></select>
+                <label>Masukkan NIM Anda</label>
+                <input type="text" id="login-nim-input" placeholder="Cth: 21105032610227">
+                <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">Sesuai daftar resmi mahasiswa</small>
             </div>
             <div id="admin-fields" class="form-group" style="display: none;">
                 <label>Kode Admin</label>
@@ -89,6 +91,7 @@
             <div>
                 <h2>Blok Sistem Integumen & Muskuloskeletal</h2>
                 <small id="user-info" style="color: #cbd5e1;"></small>
+                <div id="wib-clock" style="font-size: 12px; color: #38bdf8; margin-top: 2px;"></div>
             </div>
             <button class="btn btn-danger" style="width: auto; padding: 6px 14px;" onclick="handleLogout()">Keluar</button>
         </header>
@@ -115,10 +118,7 @@
                             <label>Hilangkan Otomatis Setelah Tanggal:</label>
                             <input type="date" id="p-deadline">
                         </div>
-                        <div class="form-group">
-                            <label><input type="checkbox" id="p-wa"> Bagikan juga pengumuman ini ke WhatsApp (Simulasi)</label>
-                        </div>
-                        <button class="btn btn-success" onclick="addPengumuman()">Terbitkan Pengumuman</button>
+                        <button class="btn btn-success" onclick="addPengumuman()">Terbitkan & Siapkan Kirim WA</button>
                     </div>
                     <div id="pengumuman-list"></div>
                 </div>
@@ -134,10 +134,11 @@
                     </div>
 
                     <div class="card">
-                        <h3>📌 Update Jadwal Harian / File</h3>
+                        <h3>📌 Update Jadwal Harian / File PC</h3>
                         <div class="admin-only" style="margin-bottom: 10px;">
-                            <input type="text" id="up-title" placeholder="Keterangan Update Jadwal..." style="width: 70%; padding: 6px; border: 1px solid var(--border); border-radius: 4px;">
-                            <button class="btn" style="width: 25%; display: inline-block;" onclick="addJadwalUpdate()">Upload</button>
+                            <input type="text" id="up-title" placeholder="Keterangan file..." style="width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 6px;">
+                            <input type="file" id="up-file" style="width: 100%; font-size: 13px; margin-bottom: 6px;">
+                            <button class="btn" onclick="addJadwalUpdateWithFile()">Upload dari PC</button>
                         </div>
                         <ul id="jadwal-update-list" style="padding-left: 20px;"></ul>
                     </div>
@@ -145,7 +146,7 @@
 
                 <div class="card">
                     <h3>
-                        📅 Jadwal Mingguan Blok 1.2 (Sinkronisasi Otomatis Tanggal)
+                        📅 Jadwal Mingguan (Sorotan Tanggal Hari Ini: 13 Okt 2026)
                         <span class="admin-only"><button class="btn" style="width: auto; padding: 4px 10px; font-size: 12px;" onclick="openAddJadwalModal()">+ Tambah Jadwal</button></span>
                     </h3>
                     <table>
@@ -221,7 +222,7 @@
                 <div class="card">
                     <h3>
                         📚 Materi Perkuliahan
-                        <span class="admin-only"><button class="btn" style="width: auto; padding: 4px 10px; font-size: 12px;" onclick="openAddMateriModal()">+ Tambah Materi</button></span>
+                        <span class="admin-only"><button class="btn" style="width: auto; padding: 4px 10px; font-size: 12px;" onclick="openAddMateriModal()">+ Tambah Materi & Upload PC</button></span>
                     </h3>
                     <table>
                         <thead>
@@ -238,7 +239,7 @@
         </main>
     </div>
 
-    <!-- MODAL GENERAL UNTUK KETERANGAN / DETAIL -->
+    <!-- MODAL GENERAL -->
     <div id="info-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('info-modal')">&times;</span>
@@ -248,7 +249,7 @@
         </div>
     </div>
 
-    <!-- MODAL FORM ADMIN -->
+    <!-- MODAL ADMIN -->
     <div id="admin-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('admin-modal')">&times;</span>
@@ -274,40 +275,37 @@
 
         let currentUser = null;
 
-        // DATABASE LOCALSTORAGE DENGAN JADWAL BERBASIS TANGGAL OTOMATIS
         let dbData = JSON.parse(localStorage.getItem('portal_blok12_db')) || {
             pengumuman: [
-                { id: 1, judul: "Selamat Datang di Blok 1.2", isi: "Silakan cek jadwal mingguan, tugas, dan materi kuliah secara berkala.", deadline: "2026-11-01", wa: true }
+                { id: 1, judul: "Pengumuman Blok 1.2", isi: "Kuliah berjalan lancar sesuai jadwal.", deadline: "2026-11-01" }
             ],
             reminder: [
-                "Kuliah Pengantar Anatomi Manusia - Cek Jadwal Harian",
-                "Deadline Laporan Praktikum Histologi"
+                "Cek jadwal harian Anatomi & Histologi",
+                "Deadline tugas mandiri"
             ],
             jadwalUpdates: [
-                "Jadwal asistensi minggu ini aktif sesuai tanggal real-time."
+                "Jadwal lab minggu ini sudah diperbarui."
             ],
             jadwal: [
-                { id: 1, tgl: "Senin, 21 Sep 2026", jam: "07.50-09.30", kelasA: "SL 8", kelasB: "SL 8" },
-                { id: 2, tgl: "Senin, 21 Sep 2026", jam: "09.50-11.30", kelasA: "UJIAN BLOK 1.1 - CBT", kelasB: "UJIAN BLOK 1.1 - CBT" },
-                { id: 3, tgl: "Selasa, 22 Sep 2026", jam: "07.50-09.30", kelasA: "KULIAH 1- RK 1 Histologi Integument", kelasB: "KULIAH 2- RK 2 Terminologi Anatomi" },
-                { id: 4, tgl: "Rabu, 23 Sep 2026", jam: "07.00-07.50", kelasA: "Asistensi Anatomi RK 1,2", kelasB: "Asistensi Anatomi RK 1,2" },
-                { id: 5, tgl: "Kamis, 24 Sep 2026", jam: "07.50-09.30", kelasA: "KULIAH 5-RK 1 Anatomi Ekstremitas Superior", kelasB: "SL 9" }
+                { tgl: "Senin, 12 Oct 2026", jam: "07.50-09.30", kelasA: "TUTOR 3", kelasB: "SL 14" },
+                { tgl: "Selasa, 13 Oct 2026", jam: "07.50-09.30", kelasA: "Anatomi 3: Extremitas Inferior", kelasB: "Histologi 3: Kartilago & Tulang" },
+                { tgl: "Selasa, 13 Oct 2026", jam: "12.30-14.10", kelasA: "Anatomi 3: Extremitas Inferior", kelasB: "Histologi 3: Kartilago & Tulang" },
+                { tgl: "Rabu, 14 Oct 2026", jam: "09.50-11.30", kelasA: "REMIDI FISIO BLOK 1.2", kelasB: "REMIDI FISIO BLOK 1.2" }
             ],
             tugas: [
-                { id: 1, nama: "Laporan Praktikum Histologi Kulit", deadline: "29 Sept 2026", ket: "Buat laporan lengkap dengan gambar penampang melintang epidermis dan dermis.", link: "https://forms.gle/contoh" }
+                { id: 1, nama: "Laporan Praktikum Anatomi 3", deadline: "16 Okt 2026", ket: "Kumpulkan tepat waktu.", link: "https://forms.gle/contoh" }
             ],
             laboratorium: [
-                { id: 1, nama: "Laboratorium Anatomi: Cranium & Truncus", skenario: "Modul Praktikum Anatomi Tulang Tengkorak", ket: "Wajib membawa jas lab dan atlas anatomi masing-masing.", link: "https://drive.google.com/contoh" }
+                { id: 1, nama: "Lab Anatomi Ekstremitas Inferior", skenario: "Modul Tulang Kaki & Panggul", ket: "Bawa penuntun praktikum.", link: "https://drive.google.com/contoh" }
             ],
             skills_lab: [
-                { id: 1, nama: "Skills Lab 1: Pemeriksaan Fisik Kulit & Palpasi", skenario: "Skenario Kasus Lesi Kulit", ket: "Mahasiswa dibagi menjadi 2 kelompok besar (RK 1 dan RK 2).", link: "https://drive.google.com/contoh" }
+                { id: 1, nama: "Skills Lab Palpasi Sendi", skenario: "Modul Ekstremitas Bawah", ket: "Pakaian rapi berjas lab.", link: "https://drive.google.com/contoh" }
             ],
             tutorial: [
-                { id: 1, nama: "Tutorial Skenario 1 (Sistem Integumen)", skenario: "Diskusi kelompok lantai 3 Gedung FK", ket: "Harap membawa lembar kerja mandiri (SL Mandiri) yang sudah diisi.", link: "https://drive.google.com/contoh" }
+                { id: 1, nama: "Tutorial Kasus Skenario 3", skenario: "Diseminasi Kasus Muskuloskeletal", ket: "Membawa referensi literatur.", link: "https://drive.google.com/contoh" }
             ],
             materi: [
-                { id: 1, kuliah: "Histologi Integument", materi: "Slide Kuliah Dr. Muthmainah, dr, MKes", link: "https://drive.google.com/contoh" },
-                { id: 2, kuliah: "Terminologi & Anatomi", materi: "Pengantar Anatomi Manusia - Yunia Hastami, dr", link: "https://drive.google.com/contoh" }
+                { id: 1, kuliah: "Anatomi Ekstremitas Inferior", materi: "Slide Kuliah Yunia Hastami, dr", link: "#" }
             ]
         };
 
@@ -316,12 +314,12 @@
             renderAll();
         }
 
-        window.onload = function() {
-            const selectNim = document.getElementById('login-nim-select');
-            for (let nim in allowedUsers) {
-                selectNim.innerHTML += `<option value="${nim}">${allowedUsers[nim]} (${nim})</option>`;
-            }
-        };
+        // JAM WIB REAL TIME
+        setInterval(() => {
+            const now = new Date();
+            const options = { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('wib-clock').innerText = `Waktu WIB: ${now.toLocaleDateString('id-ID', options)}`;
+        }, 1000);
 
         function toggleLoginFields() {
             const role = document.getElementById('login-role').value;
@@ -340,9 +338,13 @@
                     alert('Kode Admin Salah! Gunakan A9');
                 }
             } else {
-                const nim = document.getElementById('login-nim-select').value;
-                currentUser = { role: 'guest', name: allowedUsers[nim], nim: nim };
-                initApp();
+                const nim = document.getElementById('login-nim-input').value.trim();
+                if (allowedUsers[nim]) {
+                    currentUser = { role: 'guest', name: allowedUsers[nim], nim: nim };
+                    initApp();
+                } else {
+                    alert('NIM tidak terdaftar dalam sistem akademik!');
+                }
             }
         }
 
@@ -393,11 +395,15 @@
 
             dbData.pengumuman.forEach((p, idx) => {
                 if(p.deadline && p.deadline < today && currentUser.role !== 'admin') return;
+                const waText = encodeURIComponent(`*PENGUMUMAN AKADEMIK BLOK 1.2*\n\n*${p.judul}*\n${p.isi}\n\nBerlaku s/d: ${p.deadline}`);
                 container.innerHTML += `
                     <div style="background: #f8fafc; border-left: 4px solid var(--accent); padding: 15px; margin-bottom: 10px; border-radius: 4px; position: relative;">
-                        <h4>${p.judul} ${p.wa ? '<span class="badge badge-wa">Terkirim ke WA</span>' : ''}</h4>
+                        <h4>${p.judul}</h4>
                         <p style="margin-top: 5px; font-size: 14px;">${p.isi}</p>
                         <small style="color: #64748b; display: block; margin-top: 8px;">Aktif sampai: ${p.deadline}</small>
+                        <div style="margin-top: 10px;">
+                            <a href="https://wa.me/?text=${waText}" target="_blank" class="badge badge-wa">📲 Kirim / Bagikan ke WhatsApp</a>
+                        </div>
                         ${currentUser.role === 'admin' ? `<button class="btn btn-danger" style="width: auto; padding: 2px 8px; font-size: 11px; position: absolute; top: 10px; right: 10px;" onclick="deleteItem('pengumuman', ${idx})">Hapus</button>` : ''}
                     </div>
                 `;
@@ -424,8 +430,10 @@
             const tbody = document.getElementById('jadwal-table-body');
             tbody.innerHTML = '';
             dbData.jadwal.forEach((j, idx) => {
-                tbody.innerHTML += `<tr>
-                    <td>${j.tgl}</td>
+                // Highlight baris jika tanggal cocok dengan hari ini (13 Oct 2026 atau format serupa)
+                const isToday = j.tgl.includes("13 Oct") || j.tgl.includes("13-Oct");
+                tbody.innerHTML += `<tr class="${isToday ? 'highlight-row' : ''}">
+                    <td>${j.tgl} ${isToday ? '<span class="badge" style="background:#eab308; color:white;">Hari Ini</span>' : ''}</td>
                     <td>${j.jam}</td>
                     <td>${j.kelasA}</td>
                     <td>${j.kelasB}</td>
@@ -476,7 +484,7 @@
                     <td><strong>${m.kuliah}</strong></td>
                     <td>${m.materi}</td>
                     <td>
-                        <a href="${m.link}" target="_blank" style="color: var(--accent); font-weight: 600; text-decoration: none;">Akses File / Link ↗</a>
+                        <a href="${m.link}" target="_blank" style="color: var(--accent); font-weight: 600; text-decoration: none;">Akses File ↗</a>
                         ${currentUser.role === 'admin' ? `<button class="btn btn-danger" style="width: auto; padding: 3px 6px; font-size: 11px; margin-left: 10px;" onclick="deleteItem('materi', ${idx})">Hapus</button>` : ''}
                     </td>
                 </tr>`;
@@ -488,23 +496,20 @@
             document.getElementById('modal-body').innerText = text || "Tidak ada keterangan tambahan.";
             const linkBox = document.getElementById('modal-link-container');
             if(link) {
-                linkBox.innerHTML = `<a href="${link}" target="_blank" class="btn" style="display:block; text-align:center; text-decoration:none;">Buka Link / Pengumpulan Tugas ↗</a>`;
+                linkBox.innerHTML = `<a href="${link}" target="_blank" class="btn" style="display:block; text-align:center; text-decoration:none;">Buka Tautan / File ↗</a>`;
             } else {
-                linkBox.innerHTML = '<span style="color:#64748b; font-size:13px;">Tidak ada tautan eksternal.</span>';
+                linkBox.innerHTML = '<span style="color:#64748b; font-size:13px;">Tidak ada tautan.</span>';
             }
             document.getElementById('info-modal').style.display = 'flex';
         }
 
-        // FUNGSI ADMIN: TAMBAH DATA
         function addPengumuman() {
             const judul = document.getElementById('p-judul').value;
             const isi = document.getElementById('p-isi').value;
             const deadline = document.getElementById('p-deadline').value;
-            const wa = document.getElementById('p-wa').checked;
 
             if(!judul || !isi || !deadline) return alert('Semua kolom wajib diisi!');
-            dbData.pengumuman.push({ id: Date.now(), judul, isi, deadline, wa });
-            if(wa) alert('Simulasi: Pengumuman berhasil dikirim broadcast ke WhatsApp grup angkatan!');
+            dbData.pengumuman.push({ id: Date.now(), judul, isi, deadline });
             saveData();
             document.getElementById('p-judul').value = '';
             document.getElementById('p-isi').value = '';
@@ -519,18 +524,33 @@
             document.getElementById('rem-text').value = '';
         }
 
-        function addJadwalUpdate() {
-            const val = document.getElementById('up-title').value;
-            if(!val) return;
-            dbData.jadwalUpdates.push(val);
-            saveData();
-            document.getElementById('up-title').value = '';
+        function addJadwalUpdateWithFile() {
+            const title = document.getElementById('up-title').value;
+            const fileInput = document.getElementById('up-file');
+            
+            if(!title && fileInput.files.length === 0) return alert('Masukkan keterangan atau pilih file!');
+            
+            if(fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    dbData.jadwalUpdates.push(`${title} (<a href="${e.target.result}" download="${file.name}">Unduh: ${file.name}</a>)`);
+                    saveData();
+                    document.getElementById('up-title').value = '';
+                    fileInput.value = '';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                dbData.jadwalUpdates.push(title);
+                saveData();
+                document.getElementById('up-title').value = '';
+            }
         }
 
         function openAddJadwalModal() {
             document.getElementById('admin-modal-title').innerText = "Tambah Jadwal Baru";
             document.getElementById('admin-modal-body').innerHTML = `
-                <div class="form-group"><input type="text" id="j-tgl" placeholder="Hari / Tanggal (Cth: Senin, 21 Sep 2026)"></div>
+                <div class="form-group"><input type="text" id="j-tgl" placeholder="Hari / Tanggal (Cth: Selasa, 13 Oct 2026)"></div>
                 <div class="form-group"><input type="text" id="j-jam" placeholder="Jam (Cth: 07.50-09.30)"></div>
                 <div class="form-group"><input type="text" id="j-kela" placeholder="Kelas A / Kegiatan"></div>
                 <div class="form-group"><input type="text" id="j-kelb" placeholder="Kelas B / Kegiatan"></div>
@@ -555,7 +575,7 @@
             document.getElementById('admin-modal-title').innerText = "Tambah Tugas Baru";
             document.getElementById('admin-modal-body').innerHTML = `
                 <div class="form-group"><input type="text" id="t-nama" placeholder="Nama Tugas"></div>
-                <div class="form-group"><input type="text" id="t-deadline" placeholder="Deadline (Cth: 29 Sept 2026)"></div>
+                <div class="form-group"><input type="text" id="t-deadline" placeholder="Deadline (Cth: 16 Okt 2026)"></div>
                 <div class="form-group"><textarea id="t-ket" placeholder="Keterangan lengkap tugas..." rows="3"></textarea></div>
                 <div class="form-group"><input type="text" id="t-link" placeholder="Link Pengumpulan / Google Form"></div>
                 <button class="btn btn-success" onclick="saveNewTugas()">Simpan Tugas</button>
@@ -601,28 +621,54 @@
         }
 
         function openAddMateriModal() {
-            document.getElementById('admin-modal-title').innerText = "Tambah Materi Perkuliahan";
+            document.getElementById('admin-modal-title').innerText = "Tambah Materi Perkuliahan & Upload PC";
             document.getElementById('admin-modal-body').innerHTML = `
-                <div class="form-group"><input type="text" id="m-kuliah" placeholder="Nama Kuliah (Cth: Histologi Integument)"></div>
+                <div class="form-group"><input type="text" id="m-kuliah" placeholder="Nama Kuliah"></div>
                 <div class="form-group"><input type="text" id="m-materi" placeholder="Nama Materi / Dosen Pengampu"></div>
-                <div class="form-group"><input type="text" id="m-link" placeholder="Link Google Drive / URL Materi"></div>
-                <button class="btn btn-success" onclick="saveNewMateri()">Simpan Materi</button>
+                <div class="form-group">
+                    <label>Pilih File dari PC (Opsional):</label>
+                    <input type="file" id="m-file" style="width: 100%;">
+                </div>
+                <div class="form-group"><input type="text" id="m-link" placeholder="Atau masukkan URL Link Eksternal"></div>
+                <button class="btn btn-success" onclick="saveNewMateriWithFile()">Simpan Materi</button>
             `;
             document.getElementById('admin-modal').style.display = 'flex';
         }
 
-        function saveNewMateri() {
-            dbData.materi.push({
-                id: Date.now(),
-                kuliah: document.getElementById('m-kuliah').value,
-                materi: document.getElementById('m-materi').value,
-                link: document.getElementById('m-link').value
-            });
-            saveData();
-            closeModal('admin-modal');
+        function saveNewMateriWithFile() {
+            const kuliah = document.getElementById('m-kuliah').value;
+            const materi = document.getElementById('m-materi').value;
+            const linkInput = document.getElementById('m-link').value;
+            const fileInput = document.getElementById('m-file');
+
+            if(!kuliah || !materi) return alert('Nama kuliah dan materi wajib diisi!');
+
+            if(fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    dbData.materi.push({
+                        id: Date.now(),
+                        kuliah,
+                        materi,
+                        link: e.target.result // Tersimpan langsung sebagai data file lokal
+                    });
+                    saveData();
+                    closeModal('admin-modal');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                dbData.materi.push({
+                    id: Date.now(),
+                    kuliah,
+                    materi,
+                    link: linkInput || '#'
+                });
+                saveData();
+                closeModal('admin-modal');
+            }
         }
 
-        // FUNGSI GLOBAL DELETE UNTUK ADMIN
         function deleteItem(category, index) {
             if(confirm('Yakin ingin menghapus item ini dari sistem?')) {
                 dbData[category].splice(index, 1);
