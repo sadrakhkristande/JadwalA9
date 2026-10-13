@@ -46,9 +46,8 @@ let dbData = JSON.parse(localStorage.getItem('portal_blok12_db')) || {
     theme: 'light'
 };
 
-// Inisialisasi Tema Saat Dimuat
 window.addEventListener('DOMContentLoaded', () => {
-    setTheme(dbData.theme || 'light');
+    applyTheme(dbData.theme || 'light');
     checkMaintenanceStatus();
 });
 
@@ -57,21 +56,28 @@ function saveData() {
     renderAll();
 }
 
-// Pengaturan Tema (Light / Dark / White)
-window.setTheme = function(themeName) {
+// Fungsi Toggle Switch Tema (Light / Dark)
+window.toggleThemeSwitch = function() {
+    const checkbox = document.getElementById('theme-toggle-checkbox');
+    const newTheme = checkbox.checked ? 'dark' : 'light';
+    applyTheme(newTheme);
+};
+
+function applyTheme(themeName) {
     dbData.theme = themeName;
     localStorage.setItem('portal_blok12_db', JSON.stringify(dbData));
     
-    document.body.classList.remove('theme-dark', 'theme-white');
+    const checkbox = document.getElementById('theme-toggle-checkbox');
+    if(checkbox) {
+        checkbox.checked = (themeName === 'dark');
+    }
+
     if(themeName === 'dark') {
         document.body.classList.add('theme-dark');
-    } else if(themeName === 'white') {
-        document.body.classList.add('theme-white');
+    } else {
+        document.body.classList.remove('theme-dark');
     }
-    
-    const selector = document.getElementById('theme-selector');
-    if(selector) selector.value = themeName;
-};
+}
 
 // Pengaturan Maintenance Mode
 function checkMaintenanceStatus() {
