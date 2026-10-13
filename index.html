@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal Akademik - Blok 1.2 Sistem Integumen & Muskuloskeletal</title>
+    <title>Website A9 - Portal Akademik Blok 1.2</title>
     <style>
         :root {
             --primary: #0f172a;
@@ -44,7 +44,7 @@
         .card h3 { margin-bottom: 15px; color: var(--primary); display: flex; justify-content: space-between; align-items: center; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        table th, table td { border: 1px solid var(--border); padding: 12px; text-align: left; font-size: 13.5px; }
+        table th, table td { border: 1px solid var(--border); padding: 12px; text-align: left; font-size: 13.5px; vertical-align: top; }
         table th { background: #f1f5f9; color: #1e293b; font-weight: 600; }
         
         .admin-only { display: none; }
@@ -62,7 +62,7 @@
     <!-- HALAMAN LOGIN -->
     <div id="login-page">
         <div class="login-card">
-            <h2>Portal Akademik Blok 1.2</h2>
+            <h2>Website A9</h2>
             <div class="form-group">
                 <label>Jenis Login</label>
                 <select id="login-role" onchange="toggleLoginFields()">
@@ -86,7 +86,7 @@
     <div id="main-app">
         <header>
             <div>
-                <h2>Blok Sistem Integumen & Muskuloskeletal</h2>
+                <h2>Website A9</h2>
                 <small id="user-info" style="color: #cbd5e1;"></small>
                 <div id="wib-clock" style="font-size: 12px; color: #38bdf8; margin-top: 2px;"></div>
             </div>
@@ -141,14 +141,16 @@
                     </div>
                 </div>
 
-                <div class="card">
+                <div class="card" style="overflow-x: auto;">
                     <h3>📅 Agenda Jadwal Kuliah (Khusus Hari Ini & Besok - Kelas A)</h3>
                     <table>
                         <thead>
                             <tr>
-                                <th>Hari / Tanggal</th>
-                                <th>Jam</th>
-                                <th>Kegiatan / Kelas A</th>
+                                <th style="width: 18%;">Hari / Tanggal</th>
+                                <th style="width: 20%;">Sesi 1 (Pagi)</th>
+                                <th style="width: 20%;">Sesi 2 (Siang 1)</th>
+                                <th style="width: 20%;">Sesi 3 (Siang 2)</th>
+                                <th style="width: 22%;">Sesi 4 (Sore)</th>
                             </tr>
                         </thead>
                         <tbody id="jadwal-table-body"></tbody>
