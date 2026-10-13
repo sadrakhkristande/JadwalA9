@@ -15,7 +15,6 @@
     --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
 }
 
-/* Tema Dark Mode */
 body.theme-dark {
     --primary: #1e293b;
     --primary-light: #0f172a;
@@ -37,12 +36,7 @@ body.theme-dark table tr:hover td {
     background-color: #273548 !important;
 }
 
-body.theme-dark .card {
-    background: #1e293b !important;
-    border-color: #334155 !important;
-}
-
-body.theme-dark .modal-content {
+body.theme-dark .card, body.theme-dark .modal-content {
     background: #1e293b !important;
     color: #f1f5f9 !important;
 }
@@ -51,15 +45,6 @@ body.theme-dark input, body.theme-dark select, body.theme-dark textarea {
     background: #0f172a !important;
     color: #f1f5f9 !important;
     border-color: #334155 !important;
-}
-
-/* Tema White Mode (Clean Pure White) */
-body.theme-white {
-    --bg-light: #ffffff;
-    --card-bg: #ffffff;
-    --border: #cbd5e1;
-    --text: #000000;
-    --text-muted: #475569;
 }
 
 * {
@@ -170,7 +155,6 @@ body {
 .btn-success { background: var(--success); }
 .btn-success:hover { background: #15803d; }
 .btn-warning { background: #d97706; color: white; }
-.btn-warning:hover { background: #b45309; }
 
 #main-app { display: none; }
 
@@ -307,3 +291,55 @@ table tr:hover td { background-color: rgba(0,0,0,0.02); }
 .highlight-tomorrow { background-color: #f8fafc !important; color: #1e293b !important; }
 body.theme-dark .highlight-today { background-color: #713f12 !important; color: #fef08a !important; }
 body.theme-dark .highlight-tomorrow { background-color: #1e293b !important; color: #f1f5f9 !important; }
+
+/* Switch Toggle Styling di Header Kanan Atas */
+.switch-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #cbd5e1;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+}
+
+.switch input { 
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #475569;
+    transition: .3s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--accent);
+}
+
+input:checked + .slider:before {
+    transform: translateX(24px);
+}
