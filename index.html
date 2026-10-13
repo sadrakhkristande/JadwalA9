@@ -56,7 +56,7 @@
         
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         @media(max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
-        .highlight-row { background: #fef08a !important; }
+        .highlight-row { background: #fef08a !important; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -73,13 +73,12 @@
                 </select>
             </div>
             <div id="guest-fields" class="form-group">
-                <label>Masukkan NIM Anda</label>
-                <input type="text" id="login-nim-input" placeholder="Cth: 21105032610227">
-                <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">Sesuai daftar resmi mahasiswa</small>
+                <label>Masukkan NIM / Kode Guest</label>
+                <input type="text" id="login-nim-input" placeholder="Cth: 12345 atau NIM resmi">
             </div>
             <div id="admin-fields" class="form-group" style="display: none;">
                 <label>Kode Admin</label>
-                <input type="password" id="login-admin-code" placeholder="Masukkan Kode Admin (A9)">
+                <input type="password" id="login-admin-code" placeholder="Masukkan Kode Admin (A9ACOR)">
             </div>
             <button class="btn" onclick="handleLogin()">Masuk Aplikasi</button>
         </div>
@@ -118,7 +117,7 @@
                             <label>Hilangkan Otomatis Setelah Tanggal:</label>
                             <input type="date" id="p-deadline">
                         </div>
-                        <button class="btn btn-success" onclick="addPengumuman()">Terbitkan & Siapkan Kirim WA</button>
+                        <button class="btn btn-success" onclick="addPengumuman()">Terbitkan Pengumuman</button>
                     </div>
                     <div id="pengumuman-list"></div>
                 </div>
@@ -133,9 +132,10 @@
                         <ul id="reminder-list" style="padding-left: 20px;"></ul>
                     </div>
 
+                    <!-- Bagian Update Jadwal PC Khusus Admin -->
                     <div class="card">
                         <h3>📌 Update Jadwal Harian / File PC</h3>
-                        <div class="admin-only" style="margin-bottom: 10px;">
+                        <div id="admin-update-box" class="admin-only" style="margin-bottom: 10px;">
                             <input type="text" id="up-title" placeholder="Keterangan file..." style="width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 6px;">
                             <input type="file" id="up-file" style="width: 100%; font-size: 13px; margin-bottom: 6px;">
                             <button class="btn" onclick="addJadwalUpdateWithFile()">Upload dari PC</button>
@@ -146,7 +146,7 @@
 
                 <div class="card">
                     <h3>
-                        📅 Jadwal Mingguan (Sorotan Tanggal Hari Ini: 13 Okt 2026)
+                        📅 Jadwal Mingguan (Fokus Hari Ini: Selasa, 13 Oktober 2026)
                         <span class="admin-only"><button class="btn" style="width: auto; padding: 4px 10px; font-size: 12px;" onclick="openAddJadwalModal()">+ Tambah Jadwal</button></span>
                     </h3>
                     <table>
@@ -260,6 +260,7 @@
 
     <script>
         const allowedUsers = {
+            "12345": "Guest Utama",
             "21105032610023": "ALICA MARATU SULHA",
             "21105032610047": "AYESHA LILIAN PUTRI",
             "21105032610049": "AYSAR HAMMAM IBRAHIM",
@@ -277,14 +278,14 @@
 
         let dbData = JSON.parse(localStorage.getItem('portal_blok12_db')) || {
             pengumuman: [
-                { id: 1, judul: "Pengumuman Blok 1.2", isi: "Kuliah berjalan lancar sesuai jadwal.", deadline: "2026-11-01" }
+                { id: 1, judul: "Pengumuman Blok 1.2", isi: "Perkuliahan dan praktikum berjalan sesuai jadwal hari ini.", deadline: "2026-11-01" }
             ],
             reminder: [
-                "Cek jadwal harian Anatomi & Histologi",
-                "Deadline tugas mandiri"
+                "Kuliah Anatomi Ekstremitas Inferior - Pukul 07.50 WIB",
+                "Praktikum Histologi Kartilago & Tulang"
             ],
             jadwalUpdates: [
-                "Jadwal lab minggu ini sudah diperbarui."
+                "Pengumuman: Jadwal shift laboratorium anatomi diperbarui."
             ],
             jadwal: [
                 { tgl: "Senin, 12 Oct 2026", jam: "07.50-09.30", kelasA: "TUTOR 3", kelasB: "SL 14" },
@@ -293,10 +294,10 @@
                 { tgl: "Rabu, 14 Oct 2026", jam: "09.50-11.30", kelasA: "REMIDI FISIO BLOK 1.2", kelasB: "REMIDI FISIO BLOK 1.2" }
             ],
             tugas: [
-                { id: 1, nama: "Laporan Praktikum Anatomi 3", deadline: "16 Okt 2026", ket: "Kumpulkan tepat waktu.", link: "https://forms.gle/contoh" }
+                { id: 1, nama: "Laporan Praktikum Anatomi 3", deadline: "16 Okt 2026", ket: "Kumpulkan laporan tepat waktu.", link: "https://forms.gle/contoh" }
             ],
             laboratorium: [
-                { id: 1, nama: "Lab Anatomi Ekstremitas Inferior", skenario: "Modul Tulang Kaki & Panggul", ket: "Bawa penuntun praktikum.", link: "https://drive.google.com/contoh" }
+                { id: 1, nama: "Lab Anatomi Ekstremitas Inferior", skenario: "Modul Tulang Kaki & Panggul", ket: "Bawa penuntun praktikum masing-masing.", link: "https://drive.google.com/contoh" }
             ],
             skills_lab: [
                 { id: 1, nama: "Skills Lab Palpasi Sendi", skenario: "Modul Ekstremitas Bawah", ket: "Pakaian rapi berjas lab.", link: "https://drive.google.com/contoh" }
@@ -331,19 +332,19 @@
             const role = document.getElementById('login-role').value;
             if (role === 'admin') {
                 const code = document.getElementById('login-admin-code').value;
-                if (code === 'A9') {
-                    currentUser = { role: 'admin', name: 'Admin Utama (A9)' };
+                if (code === 'A9ACOR') {
+                    currentUser = { role: 'admin', name: 'Admin Utama (A9ACOR)' };
                     initApp();
                 } else {
-                    alert('Kode Admin Salah! Gunakan A9');
+                    alert('Kode Admin Salah! Gunakan A9ACOR');
                 }
             } else {
                 const nim = document.getElementById('login-nim-input').value.trim();
-                if (allowedUsers[nim]) {
-                    currentUser = { role: 'guest', name: allowedUsers[nim], nim: nim };
+                if (nim === "12345" || allowedUsers[nim]) {
+                    currentUser = { role: 'guest', name: allowedUsers[nim] || "Guest " + nim, nim: nim };
                     initApp();
                 } else {
-                    alert('NIM tidak terdaftar dalam sistem akademik!');
+                    alert('NIM atau Kode Guest tidak valid!');
                 }
             }
         }
@@ -430,10 +431,9 @@
             const tbody = document.getElementById('jadwal-table-body');
             tbody.innerHTML = '';
             dbData.jadwal.forEach((j, idx) => {
-                // Highlight baris jika tanggal cocok dengan hari ini (13 Oct 2026 atau format serupa)
                 const isToday = j.tgl.includes("13 Oct") || j.tgl.includes("13-Oct");
                 tbody.innerHTML += `<tr class="${isToday ? 'highlight-row' : ''}">
-                    <td>${j.tgl} ${isToday ? '<span class="badge" style="background:#eab308; color:white;">Hari Ini</span>' : ''}</td>
+                    <td>${j.tgl} ${isToday ? '<span class="badge" style="background:#eab308; color:white;">Hari Ini (13 Okt)</span>' : ''}</td>
                     <td>${j.jam}</td>
                     <td>${j.kelasA}</td>
                     <td>${j.kelasB}</td>
@@ -651,7 +651,7 @@
                         id: Date.now(),
                         kuliah,
                         materi,
-                        link: e.target.result // Tersimpan langsung sebagai data file lokal
+                        link: e.target.result
                     });
                     saveData();
                     closeModal('admin-modal');
