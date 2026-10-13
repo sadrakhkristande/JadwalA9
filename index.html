@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Mahasiswa & Admin - Blok 1.2</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f4f6f9; color: #333; }
+        
+        /* Modal & Floating Box */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); position: relative; }
+        .close-btn { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 20px; font-weight: bold; }
+        
+        /* Halaman Login */
+        #login-page { display: flex; height: 100vh; justify-content: center; align-items: center; background: #1e293b; }
+        .login-card { background: white; padding: 30px; border-radius: 10px; width: 360px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .login-card h2 { text-align: center; margin-bottom: 20px; color: #0f172a; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 5px; font-size: 14px; }
+        .btn { width: 100%; padding: 10px; background: #2563eb; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 5px; }
+        .btn:hover { background: #1d4ed8; }
+        .btn-danger { background: #dc2626; }
+        .btn-danger:hover { background: #b91c1c; }
+        
+        /* Dashboard Layout */
+        #main-app { display: none; }
+        header { background: #0f172a; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        nav { background: #1e293b; padding: 10px 20px; display: flex; gap: 15px; flex-wrap: wrap; }
+        nav button { background: transparent; color: #94a3b8; border: none; padding: 8px 12px; cursor: pointer; font-weight: 600; border-radius: 4px; }
+        nav button.active, nav button:hover { color: white; background: #334155; }
+        
+        main { padding: 20px; max-width: 1200px; margin: 0 auto; }
+        .card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .card h3 { margin-bottom: 15px; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        table th, table td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 14px; }
+        table th { background: #f8fafc; }
+        
+        .admin-only { display: none; }
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; background: #e2e8f0; }
+        .badge-wa { background: #22c55e; color: white; }
+    </style>
+</head>
+<body>
+
+    <!-- HALAMAN LOGIN -->
+    <div id="login-page">
+        <div class="login-card">
+            <h2>Login Akun</h2>
+            <div class="form-group">
+                <label>Jenis Login</label>
+                <select id="login-role" onchange="toggleLoginFields()">
+                    <option value="guest">Guest (Mahasiswa)</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div id="guest-fields">
+                <div class="form-group">
+                    <label>NIM</label>
+                    <input type="text" id="login-nim" placeholder="Masukkan NIM">
+                </div>
+            </div>
+            <div id="admin-fields" style="display: none;">
+                <div class="form-group">
+                    <label>Kode Admin</label>
+                    <input type="password" id="login-admin-code" placeholder="Masukkan Kode Admin">
+                </div>
+            </div>
+            <button class="btn" onclick="handleLogin()">Masuk</button>
+        </div>
+    </div>
+
+    <!-- HALAMAN UTAMA -->
+    <div id="main-app">
+        <header>
+            <div>
+                <h2 id="app-title">Portal Akademik Blok 1.2</h2>
+                <small id="user-info" style="color: #cbd5e1;"></small>
+            </div>
+            <button class="btn btn-danger" style="width: auto; padding: 6px 12px;" onclick="handleLogout()">Logout</button>
+        </header>
+
+        <nav>
+            <button class="nav-btn active" onclick="switchTab('dashboard')">Dashboard</button>
+            <button class="nav-btn" onclick="switchTab('tugas')">Tugas</button>
+            <button class="nav-btn" onclick="switchTab('lab')">Laboratorium</button>
+            <button class="nav-btn" onclick="switchTab('skills')">Skills Lab</button>
+            <button class="nav-btn" onclick="switchTab('tutorial')">Tutorial</button>
+            <button class="nav-btn" onclick="switchTab('materi')">Materi</button>
+        </nav>
+
+        <main>
+            <!-- TAB 1: DASHBOARD -->
+            <section id="tab-dashboard" class="tab-content">
+                <div class="card">
+                    <h3>📢 Pengumuman</h3>
+                    <div id="admin-pengumuman-form" class="admin-only" style="margin-bottom: 15px; background: #f8fafc; padding: 15px; border-radius: 6px;">
+                        <h4>Tambah Pengumuman (Admin)</h4>
+                        <input type="text" id="p-judul" placeholder="Judul Pengumuman" style="margin: 5px 0; width: 100%; padding: 8px;">
+                        <textarea id="p-isi" placeholder="Isi Pengumuman" style="margin: 5px 0; width: 100%; padding: 8px;"></textarea>
+                        <label>Tampilkan Sampai Tanggal:</label>
+                        <input type="date" id="p-deadline" style="margin: 5px 0; padding: 8px;">
+                        <br>
+                        <label><input type="checkbox" id="p-wa"> Kirim Notifikasi ke WhatsApp</label>
+                        <button class="btn" style="margin-top: 10px;" onclick="addPengumuman()">Post Pengumuman</button>
+                    </div>
+                    <div id="pengumuman-list"></div>
+                </div>
+
+                <div class="card">
+                    <h3>⏰ Reminder Harian / Deadline</h3>
+                    <ul id="reminder-list" style="padding-left: 20px;"></ul>
+                </div>
+
+                <div class="card">
+                    <h3>📅 Jadwal Mingguan (Blok 1.2)</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Hari / Tanggal</th>
+                                <th>Jam</th>
+                                <th>Kelas A</th>
+                                <th>Kelas B</th>
+                            </tr>
+                        </thead>
+                        <tbody id="jadwal-table-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB 2: TUGAS -->
+            <section id="tab-tugas" class="tab-content" style="display:none;">
+                <div class="card">
+                    <h3>📝 Daftar Tugas</h3>
+                    <div class="admin-only" style="margin-bottom: 15px;">
+                        <button class="btn" onclick="openAddTugasModal()">+ Tambah Tugas Baru</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nama Tugas</th>
+                                <th>Deadline</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tugas-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB 3: LABORATORIUM -->
+            <section id="tab-lab" class="tab-content" style="display:none;">
+                <div class="card">
+                    <h3>🔬 Laboratorium</h3>
+                    <div id="lab-list"></div>
+                </div>
+            </section>
+
+            <!-- TAB 4: SKILLS LAB -->
+            <section id="tab-skills" class="tab-content" style="display:none;">
+                <div class="card">
+                    <h3>🩺 Skills Lab</h3>
+                    <div id="skills-list"></div>
+                </div>
+            </section>
+
+            <!-- TAB 5: TUTORIAL -->
+            <section id="tab-tutorial" class="tab-content" style="display:none;">
+                <div class="card">
+                    <h3>👥 Tutorial</h3>
+                    <div id="tutorial-list"></div>
+                </div>
+            </section>
+
+            <!-- TAB 6: MATERI -->
+            <section id="tab-materi" class="tab-content" style="display:none;">
+                <div class="card">
+                    <h3>📚 Materi Perkuliahan</h3>
+                    <div class="admin-only" style="margin-bottom: 15px;">
+                        <button class="btn" onclick="openAddMateriModal()">+ Upload / Tambah Materi</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nama Kuliah</th>
+                                <th>Nama Materi</th>
+                                <th>File / Link</th>
+                            </tr>
+                        </thead>
+                        <tbody id="materi-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- FLOATING MODAL DETAIL / KETERANGAN -->
+    <div id="info-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('info-modal')">&times;</span>
+            <h3 id="modal-title">Detail Keterangan</h3>
+            <p id="modal-body" style="margin: 15px 0;"></p>
+            <div id="modal-link-container"></div>
+        </div>
+    </div>
+
+    <script>
+        // DATA DUMMY MAHASISWA DARI ADMIN.PDF
+        const allowedUsers = {
+            "21105032610023": "ALICA MARATU SULHA",
+            "21105032610047": "AYESHA LILIAN PUTRI",
+            "21105032610049": "AYSAR HAMMAM IBRAHIM",
+            "21105032610087": "FATHURAHMAN NUR AZIZ DENIRA",
+            "21105032610089": "FATIKHATUNNISA ALYA FAHIRA",
+            "21105032610125": "KEYSHA AURELL ANINDIKAZZAHRA",
+            "21105032610149": "MUHAMMAD FIKRI HIDAYATULLOH",
+            "21105032610171": "NATHANIA MENGDA JAMIPUTRI",
+            "21105032610201": "RAFIDA HAMIDAH PUTRI",
+            "21105032610227": "SADRAKH KRISTANDE GWIHARTO",
+            "21105032610239": "SHERILLA AUDREY NASYWA"
+        };
+
+        let currentUser = null;
+
+        // JADWAL DARI PDF JADWAL
+        const sampleJadwal = [
+            { tgl: "Senin, 21-Sep-26", jam: "07.50-09.30", kelasA: "SL 8", kelasB: "SL 8" },
+            { tgl: "Senin, 21-Sep-26", jam: "09.50-11.30", kelasA: "UJIAN BLOK 1.1 - CBT", kelasB: "UJIAN BLOK 1.1 - CBT" },
+            { tgl: "Selasa, 22-Sep-26", jam: "07.50-09.30", kelasA: "KULIAH 1- RK 1 Histologi Integument (Dr. Muthmainah, dr, MKes)", kelasB: "KULIAH 2- RK 2 Terminologi dan Pengantar Anatomi Manusia (Yunia Hastami, dr, MMedEd)" },
+            { tgl: "Rabu, 23-Sep-26", jam: "07.00-07.50", kelasA: "Asistensi Anatomi RK 1,2", kelasB: "Asistensi Anatomi RK 1,2" },
+            { tgl: "Rabu, 23-Sep-26", jam: "07.50-09.30", kelasA: "KULIAH 5-RK 1 Anatomi Ekstremitas Superior 1", kelasB: "SL 9" }
+        ];
+
+        function toggleLoginFields() {
+            const role = document.getElementById('login-role').value;
+            document.getElementById('guest-fields').style.display = role === 'guest' ? 'block' : 'none';
+            document.getElementById('admin-fields').style.display = role === 'admin' ? 'block' : 'none';
+        }
+
+        function handleLogin() {
+            const role = document.getElementById('login-role').value;
+            if (role === 'admin') {
+                const code = document.getElementById('login-admin-code').value;
+                if (code === 'A9') {
+                    currentUser = { role: 'admin', name: 'Admin Utama (A9)' };
+                    initApp();
+                } else {
+                    alert('Kode Admin Salah!');
+                }
+            } else {
+                const nim = document.getElementById('login-nim').value.trim();
+                if (allowedUsers[nim]) {
+                    currentUser = { role: 'guest', name: allowedUsers[nim], nim: nim };
+                    initApp();
+                } else {
+                    alert('NIM tidak terdaftar!');
+                }
+            }
+        }
+
+        function initApp() {
+            document.getElementById('login-page').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            document.getElementById('user-info').innerText = `${currentUser.name} (${currentUser.role.toUpperCase()})`;
+
+            if (currentUser.role === 'admin') {
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+            } else {
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+            }
+
+            renderJadwal();
+            renderSampleData();
+        }
+
+        function handleLogout() {
+            location.reload();
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).style.display = 'block';
+            event.target.classList.add('active');
+        }
+
+        function renderJadwal() {
+            const tbody = document.getElementById('jadwal-table-body');
+            tbody.innerHTML = '';
+            sampleJadwal.forEach(j => {
+                tbody.innerHTML += `<tr>
+                    <td>${j.tgl}</td>
+                    <td>${j.jam}</td>
+                    <td>${j.kelasA}</td>
+                    <td>${j.kelasB}</td>
+                </tr>`;
+            });
+        }
+
+        function renderSampleData() {
+            // Sample Tugas
+            document.getElementById('tugas-table-body').innerHTML = `
+                <tr>
+                    <td>Laporan Praktikum Histologi 1</td>
+                    <td>29 September 2026, 23:59</td>
+                    <td><button class="btn" style="width:auto; padding: 4px 8px;" onclick="openModal('Detail Tugas', 'Kumpulkan laporan jaringan epitel kulit.', 'https://google.com')">Keterangan & Pengumpulan</button></td>
+                </tr>
+            `;
+
+            // Sample Materi
+            document.getElementById('materi-table-body').innerHTML = `
+                <tr>
+                    <td>Histologi Integument</td>
+                    <td>Slide Kuliah Dr. Muthmainah</td>
+                    <td><a href="#" target="_blank">Download PDF / Drive Link</a></td>
+                </tr>
+            `;
+        }
+
+        function openModal(title, text, link) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-body').innerText = text;
+            const linkBox = document.getElementById('modal-link-container');
+            if(link) {
+                linkBox.innerHTML = `<a href="${link}" target="_blank" class="btn" style="display:inline-block; text-align:center; text-decoration:none;">Buka Link / Pengumpulan Online</a>`;
+            } else {
+                linkBox.innerHTML = '';
+            }
+            document.getElementById('info-modal').style.display = 'flex';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+    </script>
+</body>
+</html>
