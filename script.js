@@ -56,7 +56,6 @@ function saveData() {
     renderAll();
 }
 
-// Fungsi Toggle Switch Tema (Light / Dark)
 window.toggleThemeSwitch = function() {
     const checkbox = document.getElementById('theme-toggle-checkbox');
     const newTheme = checkbox.checked ? 'dark' : 'light';
@@ -79,7 +78,6 @@ function applyTheme(themeName) {
     }
 }
 
-// Pengaturan Maintenance Mode
 function checkMaintenanceStatus() {
     const banner = document.getElementById('maintenance-banner');
     const toggleBtn = document.getElementById('maintenance-toggle-btn');
@@ -105,7 +103,6 @@ window.toggleMaintenanceMode = function() {
     alert(dbData.maintenance ? "Maintenance Mode diaktifkan. Guest tidak dapat masuk." : "Maintenance Mode dinonaktifkan.");
 };
 
-// Jam WIB Realtime
 setInterval(() => {
     const now = new Date();
     const options = { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -238,20 +235,18 @@ async function renderJadwal() {
     if(!tbody) return;
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Memuat agenda jadwal...</td></tr>';
     
-    let jadwalList = [];
-    if(dbData.jadwalCustom && dbData.jadwalCustom.length > 0) {
-        jadwalList = dbData.jadwalCustom;
-    } else {
+    if(!dbData.jadwalCustom) {
         try {
             const response = await fetch('jadwal.json');
             const data = await response.json();
-            jadwalList = data.jadwal;
+            dbData.jadwalCustom = data.jadwal;
         } catch (error) {
             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Gagal memuat jadwal.json. Pastikan file ada di GitHub.</td></tr>';
             return;
         }
     }
 
+    const jadwalList = dbData.jadwalCustom;
     tbody.innerHTML = '';
 
     const nowWIB = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
@@ -279,7 +274,10 @@ async function renderJadwal() {
         return;
     }
 
-    filteredJadwal.forEach((j, index) => {
+    filteredJadwal.forEach((j) => {
+        // Cari index asli di dbData.jadwalCustom agar tombol Edit/Hapus tepat sasaran
+        const actualIndex = dbData.jadwalCustom.findIndex(item => item.tgl === j.tgl);
+
         const isToday = j.tgl.includes(todayStr);
         let badgeClass = isToday ? 'highlight-today' : 'highlight-tomorrow';
         let badgeLabel = isToday ? '<span class="badge" style="background:#eab308; color:white;">Hari Ini</span>' : '<span class="badge" style="background:#3b82f6; color:white;">Besok</span>';
@@ -290,8 +288,8 @@ async function renderJadwal() {
         let s4 = j.sesi[3] ? `<small style="color:var(--text-muted)">${j.sesi[3].jam}</small><br><strong>${j.sesi[3].kegiatan}</strong>` : '-';
 
         let actionBtn = currentUser.role === 'admin' ? `
-            <button class="btn" style="width: auto; padding: 3px 6px; font-size: 11px; margin-bottom: 4px;" onclick="editJadwalItem(${index})">Edit</button>
-            <button class="btn btn-danger" style="width: auto; padding: 3px 6px; font-size: 11px;" onclick="deleteJadwalItem(${index})">Hapus</button>
+            <button class="btn" style="width: auto; padding: 3px 6px; font-size: 11px; margin-bottom: 4px;" onclick="editJadwalItem(${actualIndex})">Edit</button>
+            <button class="btn btn-danger" style="width: auto; padding: 3px 6px; font-size: 11px;" onclick="deleteJadwalItem(${actualIndex})">Hapus</button>
         ` : '';
 
         tbody.innerHTML += `<tr class="${badgeClass}">
@@ -377,50 +375,108 @@ window.deleteJadwalItem = async function(index) {
     }
 };
 
+// Fungsi Upload File untuk Tugas
 window.addTugasItem = function() {
     const nama = document.getElementById('t-nama').value;
     const deadline = document.getElementById('t-deadline').value;
     const ket = document.getElementById('t-ket').value;
-    const link = document.getElementById('t-link').value;
+    const fileInput = document.getElementById('t-file');
+    const linkInput = document.getElementById('t-link').value;
 
     if(!nama || !deadline) return alert('Nama dan Deadline wajib diisi!');
-    dbData.tugas.push({ id: Date.now(), nama, deadline, ket, link });
-    saveData();
+
+    if(fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const fileLink = e.target.result;
+            dbData.tugas.push({ id: Date.now(), nama, deadline, ket, link: fileLink, fileName: file.name });
+            saveData();
+            resetTugasForm();
+            alert('Tugas dan file berhasil disimpan!');
+        };
+        reader.readAsDataURL(file);
+    } else {
+        dbData.tugas.push({ id: Date.now(), nama, deadline, ket, link: linkInput || '#' });
+        saveData();
+        resetTugasForm();
+        alert('Tugas berhasil ditambahkan!');
+    }
+};
+
+function resetTugasForm() {
     document.getElementById('t-nama').value = '';
     document.getElementById('t-deadline').value = '';
     document.getElementById('t-ket').value = '';
     document.getElementById('t-link').value = '';
-    alert('Tugas berhasil ditambahkan!');
-};
+    document.getElementById('t-file').value = '';
+}
 
-window.addPraktikumItem = function(category, idNama, idSkenario, idKet, idLink) {
+// Fungsi Upload File untuk Lab / Skills Lab / Tutorial
+window.handlePraktikumUpload = function(category, idNama, idSkenario, idKet, idFile, idLink) {
     const nama = document.getElementById(idNama).value;
     const skenario = document.getElementById(idSkenario).value;
     const ket = document.getElementById(idKet).value;
-    const link = document.getElementById(idLink).value;
+    const fileInput = document.getElementById(idFile);
+    const linkInput = document.getElementById(idLink).value;
 
     if(!nama) return alert('Nama kegiatan wajib diisi!');
-    dbData[category].push({ id: Date.now(), nama, skenario, ket, link });
-    saveData();
-    document.getElementById(idNama).value = '';
-    document.getElementById(idSkenario).value = '';
-    document.getElementById(idKet).value = '';
-    document.getElementById(idLink).value = '';
-    alert('Data berhasil ditambahkan!');
+
+    if(fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            dbData[category].push({ id: Date.now(), nama, skenario, ket, link: e.target.result, fileName: file.name });
+            saveData();
+            document.getElementById(idNama).value = '';
+            document.getElementById(idSkenario).value = '';
+            document.getElementById(idKet).value = '';
+            document.getElementById(idLink).value = '';
+            fileInput.value = '';
+            alert('Data dan file berhasil disimpan!');
+        };
+        reader.readAsDataURL(file);
+    } else {
+        dbData[category].push({ id: Date.now(), nama, skenario, ket, link: linkInput || '#' });
+        saveData();
+        document.getElementById(idNama).value = '';
+        document.getElementById(idSkenario).value = '';
+        document.getElementById(idKet).value = '';
+        document.getElementById(idLink).value = '';
+        alert('Data berhasil ditambahkan!');
+    }
 };
 
-window.addMateriItem = function() {
+// Fungsi Upload File untuk Materi Kuliah
+window.handleMateriUpload = function() {
     const kuliah = document.getElementById('m-kuliah').value;
     const materi = document.getElementById('m-materi').value;
-    const link = document.getElementById('m-link').value;
+    const fileInput = document.getElementById('m-file');
+    const linkInput = document.getElementById('m-link').value;
 
     if(!kuliah || !materi) return alert('Nama kuliah dan materi wajib diisi!');
-    dbData.materi.push({ id: Date.now(), kuliah, materi, link: link || '#' });
-    saveData();
-    document.getElementById('m-kuliah').value = '';
-    document.getElementById('m-materi').value = '';
-    document.getElementById('m-link').value = '';
-    alert('Materi berhasil ditambahkan!');
+
+    if(fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            dbData.materi.push({ id: Date.now(), kuliah, materi, link: e.target.result, fileName: file.name });
+            saveData();
+            document.getElementById('m-kuliah').value = '';
+            document.getElementById('m-materi').value = '';
+            document.getElementById('m-link').value = '';
+            fileInput.value = '';
+            alert('Materi dan file berhasil diunggah!');
+        };
+        reader.readAsDataURL(file);
+    } else {
+        dbData.materi.push({ id: Date.now(), kuliah, materi, link: linkInput || '#' });
+        saveData();
+        document.getElementById('m-kuliah').value = '';
+        document.getElementById('m-materi').value = '';
+        document.getElementById('m-link').value = '';
+        alert('Materi berhasil ditambahkan!');
+    }
 };
 
 function renderTugas() {
@@ -428,12 +484,13 @@ function renderTugas() {
     if(!tbody) return;
     tbody.innerHTML = '';
     dbData.tugas.forEach((t, idx) => {
+        let linkBtn = t.fileName ? `<a href="${t.link}" download="${t.fileName}" class="btn" style="width: auto; padding: 5px 10px; font-size: 12px; text-decoration:none; display:inline-block; margin-right:5px;">📥 Unduh File (${t.fileName})</a>` : `<button class="btn" style="width: auto; padding: 5px 10px; font-size: 12px; margin-right:5px;" onclick="openInfoModal('${t.nama}', '${t.ket}', '${t.link}')">Keterangan & Link</button>`;
         tbody.innerHTML += `<tr>
             <td><strong>${t.nama}</strong></td>
             <td>${t.deadline}</td>
             <td>
-                <button class="btn" style="width: auto; padding: 5px 10px; font-size: 12px;" onclick="openInfoModal('${t.nama}', '${t.ket}', '${t.link}')">Keterangan & Link</button>
-                ${currentUser.role === 'admin' ? `<button class="btn btn-danger" style="width: auto; padding: 5px 10px; font-size: 12px; margin-left: 5px;" onclick="deleteItem('tugas', ${idx})">Hapus</button>` : ''}
+                ${linkBtn}
+                ${currentUser.role === 'admin' ? `<button class="btn btn-danger" style="width: auto; padding: 5px 10px; font-size: 12px;" onclick="deleteItem('tugas', ${idx})">Hapus</button>` : ''}
             </td>
         </tr>`;
     });
@@ -444,6 +501,7 @@ function renderPraktikum(category, elementId) {
     if(!container) return;
     container.innerHTML = '';
     dbData[category].forEach((item, idx) => {
+        let actionLink = item.fileName ? `<a href="${item.link}" download="${item.fileName}" class="btn" style="width: auto; padding: 6px 12px; font-size: 12px; text-decoration:none; display:inline-block;">📥 Unduh Modul (${item.fileName})</a>` : `<button class="btn" style="width: auto; padding: 6px 12px; font-size: 12px;" onclick="openInfoModal('${item.nama}', '${item.ket}', '${item.link}')">Lihat Keterangan & Modul</button>`;
         container.innerHTML += `
             <div style="background: var(--bg-light); border: 1px solid var(--border); padding: 15px; border-radius: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
@@ -451,7 +509,7 @@ function renderPraktikum(category, elementId) {
                     <p style="font-size: 13px; color: var(--text-muted); margin-top: 3px;">Modul: ${item.skenario}</p>
                 </div>
                 <div>
-                    <button class="btn" style="width: auto; padding: 6px 12px; font-size: 12px;" onclick="openInfoModal('${item.nama}', '${item.ket}', '${item.link}')">Lihat Keterangan & Modul</button>
+                    ${actionLink}
                     ${currentUser.role === 'admin' ? `<button class="btn btn-danger" style="width: auto; padding: 6px 10px; font-size: 12px; margin-left: 5px;" onclick="deleteItem('${category}',${idx})">Hapus</button>` : ''}
                 </div>
             </div>
@@ -464,11 +522,12 @@ function renderMateri() {
     if(!tbody) return;
     tbody.innerHTML = '';
     dbData.materi.forEach((m, idx) => {
+        let aksesHtml = m.fileName ? `<a href="${m.link}" download="${m.fileName}" style="color: var(--accent); font-weight: 600; text-decoration: none;">📥 Unduh File (${m.fileName})</a>` : `<a href="${m.link}" target="_blank" style="color: var(--accent); font-weight: 600; text-decoration: none;">Akses File ↗</a>`;
         tbody.innerHTML += `<tr>
             <td><strong>${m.kuliah}</strong></td>
             <td>${m.materi}</td>
             <td>
-                <a href="${m.link}" target="_blank" style="color: var(--accent); font-weight: 600; text-decoration: none;">Akses File ↗</a>
+                ${aksesHtml}
                 ${currentUser.role === 'admin' ? `<button class="btn btn-danger" style="width: auto; padding: 3px 6px; font-size: 11px; margin-left: 10px;" onclick="deleteItem('materi', ${idx})">Hapus</button>` : ''}
             </td>
         </tr>`;
@@ -479,7 +538,7 @@ window.openInfoModal = function(title, text, link) {
     document.getElementById('modal-title').innerText = title;
     document.getElementById('modal-body').innerText = text || "Tidak ada keterangan tambahan.";
     const linkBox = document.getElementById('modal-link-container');
-    if(link) {
+    if(link && link !== '#') {
         linkBox.innerHTML = `<a href="${link}" target="_blank" class="btn" style="display:block; text-align:center; text-decoration:none;">Buka Tautan / File ↗</a>`;
     } else {
         linkBox.innerHTML = '<span style="color:var(--text-muted); font-size:13px;">Tidak ada tautan.</span>';
