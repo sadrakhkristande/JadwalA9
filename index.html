@@ -76,9 +76,10 @@
                 <label>Masukkan NIM / Kode Guest</label>
                 <input type="text" id="login-nim-input" placeholder="Cth: 12345 atau NIM resmi">
             </div>
+            <!-- Password Admin disamarkan menggunakan type="password" -->
             <div id="admin-fields" class="form-group" style="display: none;">
                 <label>Kode Admin</label>
-                <input type="password" id="login-admin-code" placeholder="Masukkan Kode Admin (A9ACOR)">
+                <input type="password" id="login-admin-code" placeholder="••••••••">
             </div>
             <button class="btn" onclick="handleLogin()">Masuk Aplikasi</button>
         </div>
@@ -132,11 +133,10 @@
                         <ul id="reminder-list" style="padding-left: 20px;"></ul>
                     </div>
 
-                    <!-- Bagian Update Jadwal PC Khusus Admin -->
                     <div class="card">
-                        <h3>📌 Update Jadwal Harian / File PC</h3>
+                        <h3>📌 Update Jadwal Harian / File PDF Resmi</h3>
                         <div id="admin-update-box" class="admin-only" style="margin-bottom: 10px;">
-                            <input type="text" id="up-title" placeholder="Keterangan file..." style="width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 6px;">
+                            <input type="text" id="up-title" placeholder="Keterangan file jadwal..." style="width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 6px;">
                             <input type="file" id="up-file" style="width: 100%; font-size: 13px; margin-bottom: 6px;">
                             <button class="btn" onclick="addJadwalUpdateWithFile()">Upload dari PC</button>
                         </div>
@@ -146,7 +146,7 @@
 
                 <div class="card">
                     <h3>
-                        📅 Jadwal Mingguan (Fokus Hari Ini: Selasa, 13 Oktober 2026)
+                        📅 Jadwal Kuliah Hari Ini (Selasa, 13 Oktober 2026)
                         <span class="admin-only"><button class="btn" style="width: auto; padding: 4px 10px; font-size: 12px;" onclick="openAddJadwalModal()">+ Tambah Jadwal</button></span>
                     </h3>
                     <table>
@@ -285,10 +285,9 @@
                 "Praktikum Histologi Kartilago & Tulang"
             ],
             jadwalUpdates: [
-                "Pengumuman: Jadwal shift laboratorium anatomi diperbarui."
+                "File Jadwal Resmi: Silakan cek menu update atau unduh file PDF jadwal."
             ],
             jadwal: [
-                { tgl: "Senin, 12 Oct 2026", jam: "07.50-09.30", kelasA: "TUTOR 3", kelasB: "SL 14" },
                 { tgl: "Selasa, 13 Oct 2026", jam: "07.50-09.30", kelasA: "Anatomi 3: Extremitas Inferior", kelasB: "Histologi 3: Kartilago & Tulang" },
                 { tgl: "Selasa, 13 Oct 2026", jam: "12.30-14.10", kelasA: "Anatomi 3: Extremitas Inferior", kelasB: "Histologi 3: Kartilago & Tulang" },
                 { tgl: "Rabu, 14 Oct 2026", jam: "09.50-11.30", kelasA: "REMIDI FISIO BLOK 1.2", kelasB: "REMIDI FISIO BLOK 1.2" }
@@ -315,7 +314,6 @@
             renderAll();
         }
 
-        // JAM WIB REAL TIME
         setInterval(() => {
             const now = new Date();
             const options = { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -336,7 +334,7 @@
                     currentUser = { role: 'admin', name: 'Admin Utama (A9ACOR)' };
                     initApp();
                 } else {
-                    alert('Kode Admin Salah! Gunakan A9ACOR');
+                    alert('Kode Admin Salah!');
                 }
             } else {
                 const nim = document.getElementById('login-nim-input').value.trim();
@@ -534,7 +532,7 @@
                 const file = fileInput.files[0];
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    dbData.jadwalUpdates.push(`${title} (<a href="${e.target.result}" download="${file.name}">Unduh: ${file.name}</a>)`);
+                    dbData.jadwalUpdates.push(`${title} (<a href="${e.target.result}" download="${file.name}">Unduh PDF Resmi: ${file.name}</a>)`);
                     saveData();
                     document.getElementById('up-title').value = '';
                     fileInput.value = '';
