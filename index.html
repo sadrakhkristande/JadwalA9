@@ -43,7 +43,6 @@
                 <div id="wib-clock" style="font-size: 12px; color: #38bdf8; margin-top: 2px;"></div>
             </div>
             <div style="display: flex; gap: 20px; align-items: center;">
-                <!-- Switch Toggle Light/Dark Mode di Pojok Kanan Atas -->
                 <div class="theme-switch-wrapper">
                     <span>☀️ Light</span>
                     <label class="switch">
@@ -140,7 +139,11 @@
                         <div class="form-group"><input type="text" id="t-nama" placeholder="Nama Tugas"></div>
                         <div class="form-group"><input type="text" id="t-deadline" placeholder="Deadline (Cth: 16 Okt 2026)"></div>
                         <div class="form-group"><textarea id="t-ket" placeholder="Keterangan tugas..." rows="2"></textarea></div>
-                        <div class="form-group"><input type="text" id="t-link" placeholder="Link / Tautan Tugas"></div>
+                        <div class="form-group">
+                            <label>Upload File / Masukkan Link:</label>
+                            <input type="file" id="t-file" style="margin-bottom: 6px;">
+                            <input type="text" id="t-link" placeholder="Atau masukkan tautan URL...">
+                        </div>
                         <button class="btn btn-success" onclick="addTugasItem()">Simpan Tugas</button>
                     </div>
                     <table>
@@ -165,8 +168,12 @@
                         <div class="form-group"><input type="text" id="lab-nama" placeholder="Nama Kegiatan Lab"></div>
                         <div class="form-group"><input type="text" id="lab-skenario" placeholder="Skenario / Modul"></div>
                         <div class="form-group"><textarea id="lab-ket" placeholder="Keterangan..." rows="2"></textarea></div>
-                        <div class="form-group"><input type="text" id="lab-link" placeholder="Link Materi / Modul Lab"></div>
-                        <button class="btn btn-success" onclick="addPraktikumItem('laboratorium', 'lab-nama', 'lab-skenario', 'lab-ket', 'lab-link')">Simpan Lab</button>
+                        <div class="form-group">
+                            <label>Upload File Modul / Link:</label>
+                            <input type="file" id="lab-file" style="margin-bottom: 6px;">
+                            <input type="text" id="lab-link" placeholder="Atau masukkan tautan URL...">
+                        </div>
+                        <button class="btn btn-success" onclick="handlePraktikumUpload('laboratorium', 'lab-nama', 'lab-skenario', 'lab-ket', 'lab-file', 'lab-link')">Simpan Lab</button>
                     </div>
                     <div id="lab-list"></div>
                 </div>
@@ -181,8 +188,12 @@
                         <div class="form-group"><input type="text" id="skills-nama" placeholder="Nama Skills Lab"></div>
                         <div class="form-group"><input type="text" id="skills-skenario" placeholder="Skenario / Modul"></div>
                         <div class="form-group"><textarea id="skills-ket" placeholder="Keterangan..." rows="2"></textarea></div>
-                        <div class="form-group"><input type="text" id="skills-link" placeholder="Link Materi / Modul"></div>
-                        <button class="btn btn-success" onclick="addPraktikumItem('skills_lab', 'skills-nama', 'skills-skenario', 'skills-ket', 'skills-link')">Simpan Skills Lab</button>
+                        <div class="form-group">
+                            <label>Upload File Modul / Link:</label>
+                            <input type="file" id="skills-file" style="margin-bottom: 6px;">
+                            <input type="text" id="skills-link" placeholder="Atau masukkan tautan URL...">
+                        </div>
+                        <button class="btn btn-success" onclick="handlePraktikumUpload('skills_lab', 'skills-nama', 'skills-skenario', 'skills-ket', 'skills-file', 'skills-link')">Simpan Skills Lab</button>
                     </div>
                     <div id="skills-list"></div>
                 </div>
@@ -197,8 +208,12 @@
                         <div class="form-group"><input type="text" id="tut-nama" placeholder="Nama Sesi Tutorial"></div>
                         <div class="form-group"><input type="text" id="tut-skenario" placeholder="Skenario Kasus"></div>
                         <div class="form-group"><textarea id="tut-ket" placeholder="Keterangan..." rows="2"></textarea></div>
-                        <div class="form-group"><input type="text" id="tut-link" placeholder="Link Kasus / Literatur"></div>
-                        <button class="btn btn-success" onclick="addPraktikumItem('tutorial', 'tut-nama', 'tut-skenario', 'tut-ket', 'tut-link')">Simpan Tutorial</button>
+                        <div class="form-group">
+                            <label>Upload File Kasus / Link:</label>
+                            <input type="file" id="tut-file" style="margin-bottom: 6px;">
+                            <input type="text" id="tut-link" placeholder="Atau masukkan tautan URL...">
+                        </div>
+                        <button class="btn btn-success" onclick="handlePraktikumUpload('tutorial', 'tut-nama', 'tut-skenario', 'tut-ket', 'tut-file', 'tut-link')">Simpan Tutorial</button>
                     </div>
                     <div id="tutorial-list"></div>
                 </div>
@@ -212,8 +227,12 @@
                         <h4 style="margin-bottom: 12px; color: var(--primary);">Tambah Materi Kuliah Baru</h4>
                         <div class="form-group"><input type="text" id="m-kuliah" placeholder="Nama Mata Kuliah / Kuliah ke-"></div>
                         <div class="form-group"><input type="text" id="m-materi" placeholder="Judul / Topik Materi"></div>
-                        <div class="form-group"><input type="text" id="m-link" placeholder="Link Akses File Materi"></div>
-                        <button class="btn btn-success" onclick="addMateriItem()">Simpan Materi</button>
+                        <div class="form-group">
+                            <label>Upload File Materi dari PC / Link:</label>
+                            <input type="file" id="m-file" style="margin-bottom: 6px;">
+                            <input type="text" id="m-link" placeholder="Atau masukkan tautan URL...">
+                        </div>
+                        <button class="btn btn-success" onclick="handleMateriUpload()">Simpan Materi</button>
                     </div>
                     <table>
                         <thead>
