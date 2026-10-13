@@ -275,9 +275,7 @@ async function renderJadwal() {
     }
 
     filteredJadwal.forEach((j) => {
-        // Cari index asli di dbData.jadwalCustom agar tombol Edit/Hapus tepat sasaran
         const actualIndex = dbData.jadwalCustom.findIndex(item => item.tgl === j.tgl);
-
         const isToday = j.tgl.includes(todayStr);
         let badgeClass = isToday ? 'highlight-today' : 'highlight-tomorrow';
         let badgeLabel = isToday ? '<span class="badge" style="background:#eab308; color:white;">Hari Ini</span>' : '<span class="badge" style="background:#3b82f6; color:white;">Besok</span>';
@@ -375,7 +373,7 @@ window.deleteJadwalItem = async function(index) {
     }
 };
 
-// Fungsi Upload File untuk Tugas
+// Fungsi Upload Tugas
 window.addTugasItem = function() {
     const nama = document.getElementById('t-nama').value;
     const deadline = document.getElementById('t-deadline').value;
@@ -389,8 +387,7 @@ window.addTugasItem = function() {
         const file = fileInput.files[0];
         const reader = new FileReader();
         reader.onload = function(e) {
-            const fileLink = e.target.result;
-            dbData.tugas.push({ id: Date.now(), nama, deadline, ket, link: fileLink, fileName: file.name });
+            dbData.tugas.push({ id: Date.now(), nama, deadline, ket, link: e.target.result, fileName: file.name });
             saveData();
             resetTugasForm();
             alert('Tugas dan file berhasil disimpan!');
@@ -412,7 +409,7 @@ function resetTugasForm() {
     document.getElementById('t-file').value = '';
 }
 
-// Fungsi Upload File untuk Lab / Skills Lab / Tutorial
+// Fungsi Upload Praktikum
 window.handlePraktikumUpload = function(category, idNama, idSkenario, idKet, idFile, idLink) {
     const nama = document.getElementById(idNama).value;
     const skenario = document.getElementById(idSkenario).value;
@@ -447,7 +444,7 @@ window.handlePraktikumUpload = function(category, idNama, idSkenario, idKet, idF
     }
 };
 
-// Fungsi Upload File untuk Materi Kuliah
+// Fungsi Upload Materi
 window.handleMateriUpload = function() {
     const kuliah = document.getElementById('m-kuliah').value;
     const materi = document.getElementById('m-materi').value;
@@ -479,18 +476,109 @@ window.handleMateriUpload = function() {
     }
 };
 
+// --- FUNGSI EDIT GENERIC (Materi, Tugas, Lab, Skills, Tutorial) ---
+window.openGenericEditModal = function(category, index) {
+    document.getElementById('edit-cat').value = category;
+    document.getElementById('edit-idx').value = index;
+    const item = dbData[category][index];
+
+    const titleEl = document.getElementById('generic-modal-title');
+    const label1 = document.getElementById('label-field1');
+    const label2 = document.getElementById('label-field2');
+    const val1 = document.getElementById('edit-val1');
+    const val2 = document.getElementById('edit-val2');
+    const val3 = document.getElementById('edit-val3');
+    const linkInput = document.getElementById('edit-link');
+
+    linkInput.value = item.link && item.link !== '#' ? item.link : '';
+    val3.value = item.ket || '';
+
+    if(category === 'materi') {
+        titleEl.innerText = "Edit Materi Kuliah";
+        label1.innerText = "Nama Kuliah";
+        label2.innerText = "Topik / Nama Materi";
+        val1.value = item.kuliah;
+        val2.value = item.materi;
+    } else if(category === 'tugas') {
+        titleEl.innerText = "Edit Penugasan";
+        label1.innerText = "Nama Tugas";
+        label2.innerText = "Deadline";
+        val1.value = item.nama;
+        val2.value = item.deadline;
+    } else {
+        titleEl.innerText = "Edit " + category.replace('_', ' ').toUpperCase();
+        label1.innerText = "Nama Kegiatan";
+        label2.innerText = "Skenario / Modul";
+        val1.value = item.nama;
+        val2.value = item.skenario;
+    }
+
+    document.getElementById('generic-edit-modal').style.display = 'flex';
+};
+
+window.saveGenericEdit = function() {
+    const category = document.getElementById('edit-cat').value;
+    const index = parseInt(document.getElementById('edit-idx').value);
+    const item = dbData[category][index];
+
+    const v1 = document.getElementById('edit-val1').value;
+    const v2 = document.getElementById('edit-val2').value;
+    const v3 = document.getElementById('edit-val3').value;
+    const linkInput = document.getElementById('edit-link').value;
+    const fileInput = document.getElementById('edit-file');
+
+    if(category === 'materi') {
+        item.kuliah = v1;
+        item.materi = v2;
+    } else if(category === 'tugas') {
+        item.nama = v1;
+        item.deadline = v2;
+        item.ket = v3;
+    } else {
+        item.nama = v1;
+        item.skenario = v2;
+        item.ket = v3;
+    }
+
+    if(linkInput) {
+        item.link = linkInput;
+        delete item.fileName;
+    }
+
+    if(fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            item.link = e.target.result;
+            item.fileName = file.name;
+            saveData();
+            closeModal('generic-edit-modal');
+            alert('Perubahan dan file berhasil disimpan!');
+        };
+        reader.readAsDataURL(file);
+    } else {
+        saveData();
+        closeModal('generic-edit-modal');
+        alert('Perubahan berhasil disimpan!');
+    }
+};
+
 function renderTugas() {
     const tbody = document.getElementById('tugas-table-body');
     if(!tbody) return;
     tbody.innerHTML = '';
     dbData.tugas.forEach((t, idx) => {
         let linkBtn = t.fileName ? `<a href="${t.link}" download="${t.fileName}" class="btn" style="width: auto; padding: 5px 10px; font-size: 12px; text-decoration:none; display:inline-block; margin-right:5px;">📥 Unduh File (${t.fileName})</a>` : `<button class="btn" style="width: auto; padding: 5px 10px; font-size: 12px; margin-right:5px;" onclick="openInfoModal('${t.nama}', '${t.ket}', '${t.link}')">Keterangan & Link</button>`;
+        let adminBtns = currentUser.role === 'admin' ? `
+            <button class="btn" style="width: auto; padding: 3px 6px; font-size: 11px; margin-left: 5px;" onclick="openGenericEditModal('tugas', ${idx})">Edit</button>
+            <button class="btn btn-danger" style="width: auto; padding: 3px 6px; font-size: 11px; margin-left: 5px;" onclick="deleteItem('tugas', ${idx})">Hapus</button>
+        ` : '';
         tbody.innerHTML += `<tr>
             <td><strong>${t.nama}</strong></td>
             <td>${t.deadline}</td>
             <td>
                 ${linkBtn}
-                ${currentUser.role === 'admin' ? `<button class="btn btn-danger" style="width: auto; padding: 5px 10px; font-size: 12px;" onclick="deleteItem('tugas', ${idx})">Hapus</button>` : ''}
+                ${adminBtns}
             </td>
         </tr>`;
     });
@@ -502,6 +590,10 @@ function renderPraktikum(category, elementId) {
     container.innerHTML = '';
     dbData[category].forEach((item, idx) => {
         let actionLink = item.fileName ? `<a href="${item.link}" download="${item.fileName}" class="btn" style="width: auto; padding: 6px 12px; font-size: 12px; text-decoration:none; display:inline-block;">📥 Unduh Modul (${item.fileName})</a>` : `<button class="btn" style="width: auto; padding: 6px 12px; font-size: 12px;" onclick="openInfoModal('${item.nama}', '${item.ket}', '${item.link}')">Lihat Keterangan & Modul</button>`;
+        let adminBtns = currentUser.role === 'admin' ? `
+            <button class="btn" style="width: auto; padding: 4px 8px; font-size: 11px; margin-left: 5px;" onclick="openGenericEditModal('${category}', ${idx})">Edit</button>
+            <button class="btn btn-danger" style="width: auto; padding: 4px 8px; font-size: 11px; margin-left: 5px;" onclick="deleteItem('${category}', ${idx})">Hapus</button>
+        ` : '';
         container.innerHTML += `
             <div style="background: var(--bg-light); border: 1px solid var(--border); padding: 15px; border-radius: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
@@ -510,7 +602,7 @@ function renderPraktikum(category, elementId) {
                 </div>
                 <div>
                     ${actionLink}
-                    ${currentUser.role === 'admin' ? `<button class="btn btn-danger" style="width: auto; padding: 6px 10px; font-size: 12px; margin-left: 5px;" onclick="deleteItem('${category}',${idx})">Hapus</button>` : ''}
+                    ${adminBtns}
                 </div>
             </div>
         `;
@@ -523,12 +615,16 @@ function renderMateri() {
     tbody.innerHTML = '';
     dbData.materi.forEach((m, idx) => {
         let aksesHtml = m.fileName ? `<a href="${m.link}" download="${m.fileName}" style="color: var(--accent); font-weight: 600; text-decoration: none;">📥 Unduh File (${m.fileName})</a>` : `<a href="${m.link}" target="_blank" style="color: var(--accent); font-weight: 600; text-decoration: none;">Akses File ↗</a>`;
+        let adminBtns = currentUser.role === 'admin' ? `
+            <button class="btn" style="width: auto; padding: 3px 6px; font-size: 11px; margin-left: 8px;" onclick="openGenericEditModal('materi', ${idx})">Edit</button>
+            <button class="btn btn-danger" style="width: auto; padding: 3px 6px; font-size: 11px; margin-left: 5px;" onclick="deleteItem('materi', ${idx})">Hapus</button>
+        ` : '';
         tbody.innerHTML += `<tr>
             <td><strong>${m.kuliah}</strong></td>
             <td>${m.materi}</td>
             <td>
                 ${aksesHtml}
-                ${currentUser.role === 'admin' ? `<button class="btn btn-danger" style="width: auto; padding: 3px 6px; font-size: 11px; margin-left: 10px;" onclick="deleteItem('materi', ${idx})">Hapus</button>` : ''}
+                ${adminBtns}
             </td>
         </tr>`;
     });
