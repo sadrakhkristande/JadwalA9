@@ -48,6 +48,7 @@ function saveData() {
     renderAll();
 }
 
+// Jam WIB Realtime
 setInterval(() => {
     const now = new Date();
     const options = { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -55,13 +56,13 @@ setInterval(() => {
     if(clockEl) clockEl.innerText = `Waktu WIB: ${now.toLocaleDateString('id-ID', options)}`;
 }, 1000);
 
-function toggleLoginFields() {
+window.toggleLoginFields = function() {
     const role = document.getElementById('login-role').value;
     document.getElementById('guest-fields').style.display = role === 'guest' ? 'block' : 'none';
     document.getElementById('admin-fields').style.display = role === 'admin' ? 'block' : 'none';
-}
+};
 
-function handleLogin() {
+window.handleLogin = function() {
     const role = document.getElementById('login-role').value;
     if (role === 'admin') {
         const code = document.getElementById('login-admin-code').value;
@@ -80,7 +81,7 @@ function handleLogin() {
             alert('NIM atau Kode Guest tidak valid!');
         }
     }
-}
+};
 
 function initApp() {
     document.getElementById('login-page').style.display = 'none';
@@ -95,20 +96,20 @@ function initApp() {
     renderAll();
 }
 
-function handleLogout() {
+window.handleLogout = function() {
     location.reload();
-}
+};
 
-function switchTab(tabName) {
+window.switchTab = function(tabName) {
     document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
     document.getElementById(`tab-${tabName}`).style.display = 'block';
-    event.target.classList.add('active');
-}
+    if(event && event.target) event.target.classList.add('active');
+};
 
-function closeModal(id) {
+window.closeModal = function(id) {
     document.getElementById(id).style.display = 'none';
-}
+};
 
 function renderAll() {
     renderPengumuman();
@@ -163,7 +164,7 @@ function renderJadwalUpdates() {
     });
 }
 
-// FILTER JADWAL HARI INI & BESOK DARI JADWAL.JSON
+// Filter jadwal Hari Ini & Besok
 async function renderJadwal() {
     const tbody = document.getElementById('jadwal-table-body');
     if(!tbody) return;
@@ -255,7 +256,7 @@ function renderMateri() {
     });
 }
 
-function openInfoModal(title, text, link) {
+window.openInfoModal = function(title, text, link) {
     document.getElementById('modal-title').innerText = title;
     document.getElementById('modal-body').innerText = text || "Tidak ada keterangan tambahan.";
     const linkBox = document.getElementById('modal-link-container');
@@ -265,9 +266,9 @@ function openInfoModal(title, text, link) {
         linkBox.innerHTML = '<span style="color:#64748b; font-size:13px;">Tidak ada tautan.</span>';
     }
     document.getElementById('info-modal').style.display = 'flex';
-}
+};
 
-function addPengumuman() {
+window.addPengumuman = function() {
     const judul = document.getElementById('p-judul').value;
     const isi = document.getElementById('p-isi').value;
     const deadline = document.getElementById('p-deadline').value;
@@ -278,17 +279,17 @@ function addPengumuman() {
     document.getElementById('p-judul').value = '';
     document.getElementById('p-isi').value = '';
     document.getElementById('p-deadline').value = '';
-}
+};
 
-function addReminder() {
+window.addReminder = function() {
     const val = document.getElementById('rem-text').value;
     if(!val) return;
     dbData.reminder.push(val);
     saveData();
     document.getElementById('rem-text').value = '';
-}
+};
 
-function addJadwalUpdateWithFile() {
+window.addJadwalUpdateWithFile = function() {
     const title = document.getElementById('up-title').value;
     const fileInput = document.getElementById('up-file');
     
@@ -309,11 +310,11 @@ function addJadwalUpdateWithFile() {
         saveData();
         document.getElementById('up-title').value = '';
     }
-}
+};
 
-function deleteItem(category, index) {
+window.deleteItem = function(category, index) {
     if(confirm('Yakin ingin menghapus item ini dari sistem?')) {
         dbData[category].splice(index, 1);
         saveData();
     }
-}
+};
