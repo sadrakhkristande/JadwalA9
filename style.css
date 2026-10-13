@@ -224,11 +224,11 @@ nav {
     padding: 10px 20px;
     display: flex;
     gap: 8px;
-    overflow-x: auto; /* Agar menu bisa digeser horizontal di HP jika layar terlalu kecil */
+    overflow-x: auto;
     white-space: nowrap;
-    scrollbar-width: none; /* Hilangkan scrollbar di Firefox */
+    scrollbar-width: none;
 }
-nav::-webkit-scrollbar { display: none; /* Hilangkan scrollbar di Chrome/Safari */ }
+nav::-webkit-scrollbar { display: none; }
 
 nav button {
     background: transparent;
@@ -342,7 +342,6 @@ table tr:hover td { background-color: rgba(0,0,0,0.02); }
 body.theme-dark .highlight-today { background-color: #713f12 !important; color: #fef08a !important; }
 body.theme-dark .highlight-tomorrow { background-color: #1e293b !important; color: #f1f5f9 !important; }
 
-
 /* ==========================================================
    RESPONSIVE DESIGN KHUSUS SMARTPHONE (Layar di bawah 768px)
    ========================================================== */
@@ -377,13 +376,13 @@ body.theme-dark .highlight-tomorrow { background-color: #1e293b !important; colo
         gap: 16px;
     }
 
-    /* Ubah Tabel Jadwal Kuliah Jadi Card Vertikal di HP agar tidak kekecilan/terpotong */
+    /* Transformasi Tabel Jadwal Kuliah Menjadi Card Vertikal di HP */
     table, thead, tbody, th, td, tr {
         display: block;
     }
 
     table th {
-        display: none; /* Sembunyikan header tabel standar di HP */
+        display: none;
     }
 
     table tr {
@@ -412,7 +411,7 @@ body.theme-dark .highlight-tomorrow { background-color: #1e293b !important; colo
         align-items: center;
     }
 
-    /* Tabel Lain (Tugas & Materi) tetap bisa di-scroll horizontal dengan aman */
+    /* Tabel Lain (Tugas & Materi) Tetap Tabel dengan Scroll Horizontal yang Aman */
     #tab-tugas table, #tab-materi table {
         display: table;
     }
