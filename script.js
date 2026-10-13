@@ -17,45 +17,30 @@ let currentUser = null;
 const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 Menit
 
 // Konfigurasi GitHub Repository Anda
-// (Sesuaikan OWNER dan REPO dengan nama akun dan repository GitHub Anda)
 const GH_CONFIG = {
     owner: "sadrakhgwin", // Ganti jika username GitHub Anda berbeda
     repo: "portal-blok12", // Ganti dengan nama repository Anda di GitHub
-    token: "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"
+    token: "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",
+    path: "database.json"
 };
 
-let dbData = JSON.parse(localStorage.getItem('portal_blok12_db')) || {
-    pengumuman: [
-        { id: 1, judul: "Pengumuman Blok 1.2", isi: "Perkuliahan dan praktikum berjalan sesuai jadwal.", deadline: "2026-11-01" }
-    ],
-    reminder: [
-        "Cek jadwal harian Anatomi & Histologi",
-        "Deadline tugas mandiri"
-    ],
-    jadwalUpdates: [
-        "File Jadwal Resmi: Terhubung dengan GitHub API."
-    ],
-    tugas: [
-        { id: 1, nama: "Laporan Praktikum Anatomi", deadline: "16 Okt 2026", ket: "Kumpulkan laporan tepat waktu.", link: "https://forms.gle/contoh" }
-    ],
-    laboratorium: [
-        { id: 1, nama: "Lab Anatomi Ekstremitas", skenario: "Modul Tulang & Sendi", ket: "Bawa penuntun praktikum masing-masing.", link: "https://drive.google.com/contoh" }
-    ],
-    skills_lab: [
-        { id: 1, nama: "Skills Lab Palpasi", skenario: "Modul Pemeriksaan Fisik", ket: "Pakaian rapi berjas lab.", link: "https://drive.google.com/contoh" }
-    ],
-    tutorial: [
-        { id: 1, nama: "Tutorial Kasus Skenario", skenario: "Diseminasi Kasus Klinik", ket: "Membawa referensi literatur.", link: "https://drive.google.com/contoh" }
-    ],
-    materi: [
-        { id: 1, kuliah: "Anatomi Manusia", materi: "Slide Kuliah Pengantar", link: "#" }
-    ],
+let dbData = {
+    pengumuman: [],
+    reminder: [],
+    jadwalUpdates: [],
+    tugas: [],
+    laboratorium: [],
+    skills_lab: [],
+    tutorial: [],
+    materi: [],
     jadwalCustom: null,
     maintenance: false,
     theme: 'light'
 };
 
-window.addEventListener('DOMContentLoaded', () => {
+// Ambil data global online dari GitHub saat pertama kali dibuka
+window.addEventListener('DOMContentLoaded', async () => {
+    await fetchDatabaseFromGitHub();
     applyTheme(dbData.theme || 'light');
     checkMaintenanceStatus();
     
@@ -75,30 +60,46 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-function saveData() {
-    localStorage.setItem('portal_blok12_db', JSON.stringify(dbData));
+async function fetchDatabaseFromGitHub() {
+    try {
+        const url = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
+        const res = await fetch(url, {
+            headers: { 'Authorization': `token ${GH_CONFIG.token}` }
+        });
+        if(res.ok) {
+            const data = await res.json();
+            const decodedContent = decodeURIComponent(escape(atob(data.content)));
+            dbData = JSON.parse(decodedContent);
+        }
+    } catch (err) {
+        console.error("Gagal mengambil database online, menggunakan memori lokal cadangan.", err);
+        const localFallback = localStorage.getItem('portal_blok12_db_fallback');
+        if(localFallback) dbData = JSON.parse(localFallback);
+    }
     renderAll();
 }
 
-// Fungsi Otomatis Sync Perubahan Jadwal ke GitHub `jadwal.json`
-async function syncJadwalToGitHub() {
-    if (!dbData.jadwalCustom) return;
+async function saveData() {
+    // Simpan backup lokal
+    localStorage.setItem('portal_blok12_db_fallback', JSON.stringify(dbData));
+    renderAll();
+
+    // Kirim pembaruan ke GitHub secara global
     try {
-        const url = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/jadwal.json`;
+        const url = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/${GH_CONFIG.path}`;
         
-        // 1. Ambil SHA file terbaru di GitHub
+        // 1. Ambil SHA file terbaru
         const getRes = await fetch(url, {
             headers: { 'Authorization': `token ${GH_CONFIG.token}` }
         });
-        if(!getRes.ok) throw new Error("Gagal mengambil SHA file GitHub.");
+        if(!getRes.ok) throw new Error("Gagal mengambil SHA database GitHub.");
         const fileData = await getRes.json();
         const sha = fileData.sha;
 
-        // 2. Susun data JSON baru
-        const payloadData = { jadwal: dbData.jadwalCustom };
-        const contentEncoded = btoa(unescape(encodeURIComponent(JSON.stringify(payloadData, null, 2))));
+        // 2. Encode konten baru ke Base64
+        const contentEncoded = btoa(unescape(encodeURIComponent(JSON.stringify(dbData, null, 2))));
 
-        // 3. Kirim update via PUT request
+        // 3. Push ke GitHub
         const putRes = await fetch(url, {
             method: 'PUT',
             headers: {
@@ -106,19 +107,17 @@ async function syncJadwalToGitHub() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                message: "Update jadwal global via portal web A9",
+                message: "Update database global via portal web A9",
                 content: contentEncoded,
                 sha: sha
             })
         });
 
-        if(putRes.ok) {
-            console.log("Jadwal berhasil disinkronkan secara global ke GitHub!");
-        } else {
-            console.error("Gagal melakukan sync ke GitHub.");
+        if(!putRes.ok) {
+            console.error("Gagal melakukan sync global ke GitHub.");
         }
     } catch (err) {
-        console.error("Error GitHub API Sync:", err);
+        console.error("Error Sync GitHub API:", err);
     }
 }
 
@@ -130,7 +129,7 @@ window.toggleThemeSwitch = function() {
 
 function applyTheme(themeName) {
     dbData.theme = themeName;
-    localStorage.setItem('portal_blok12_db', JSON.stringify(dbData));
+    saveData();
     
     const checkbox = document.getElementById('theme-toggle-checkbox');
     if(checkbox) {
@@ -166,7 +165,7 @@ window.toggleMaintenanceMode = function() {
     dbData.maintenance = !dbData.maintenance;
     saveData();
     checkMaintenanceStatus();
-    alert(dbData.maintenance ? "Maintenance Mode diaktifkan. Guest tidak dapat masuk." : "Maintenance Mode dinonaktifkan.");
+    alert(dbData.maintenance ? "Maintenance Mode diaktifkan secara global." : "Maintenance Mode dinonaktifkan secara global.");
 };
 
 setInterval(() => {
@@ -352,18 +351,20 @@ async function renderJadwal() {
     if(!tbody) return;
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Memuat agenda jadwal...</td></tr>';
     
-    if(!dbData.jadwalCustom) {
+    let jadwalList = [];
+    if(dbData.jadwalCustom && dbData.jadwalCustom.length > 0) {
+        jadwalList = dbData.jadwalCustom;
+    } else {
         try {
             const response = await fetch('jadwal.json');
             const data = await response.json();
-            dbData.jadwalCustom = data.jadwal;
+            jadwalList = data.jadwal;
         } catch (error) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Gagal memuat jadwal.json. Pastikan file ada di GitHub.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Gagal memuat jadwal.json.</td></tr>';
             return;
         }
     }
 
-    const jadwalList = dbData.jadwalCustom;
     tbody.innerHTML = '';
 
     const nowWIB = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
@@ -392,7 +393,7 @@ async function renderJadwal() {
     }
 
     filteredJadwal.forEach((j) => {
-        const actualIndex = dbData.jadwalCustom.findIndex(item => item.tgl === j.tgl);
+        const actualIndex = jadwalList.findIndex(item => item.tgl === j.tgl);
         const isToday = j.tgl.includes(todayStr);
         let badgeClass = isToday ? 'highlight-today' : 'highlight-tomorrow';
         let badgeLabel = isToday ? '<span class="badge" style="background:#eab308; color:white;">Hari Ini</span>' : '<span class="badge" style="background:#3b82f6; color:white;">Besok</span>';
@@ -455,6 +456,12 @@ window.openJadwalModal = async function(index = -1) {
 
 window.saveJadwalItem = async function() {
     const idx = parseInt(document.getElementById('edit-jadwal-index').value);
+    if(!dbData.jadwalCustom) {
+        const res = await fetch('jadwal.json');
+        const data = await res.json();
+        dbData.jadwalCustom = data.jadwal;
+    }
+
     const newEntry = {
         tgl: document.getElementById('j-tgl').value,
         sesi: [
@@ -471,10 +478,9 @@ window.saveJadwalItem = async function() {
         dbData.jadwalCustom.push(newEntry);
     }
     
-    saveData();
-    await syncJadwalToGitHub(); // Sinkronisasi otomatis ke GitHub
+    await saveData();
     closeModal('jadwal-modal');
-    alert('Jadwal berhasil disimpan dan diperbarui secara global!');
+    alert('Jadwal berhasil disimpan secara global!');
 };
 
 window.editJadwalItem = function(index) {
@@ -483,19 +489,13 @@ window.editJadwalItem = function(index) {
 
 window.deleteJadwalItem = async function(index) {
     if(confirm('Yakin ingin menghapus jadwal ini secara global?')) {
-        if(!dbData.jadwalCustom) {
-            const res = await fetch('jadwal.json');
-            const data = await res.json();
-            dbData.jadwalCustom = data.jadwal;
-        }
         dbData.jadwalCustom.splice(index, 1);
-        saveData();
-        await syncJadwalToGitHub(); // Sinkronisasi otomatis ke GitHub
+        await saveData();
         alert('Jadwal berhasil dihapus secara global!');
     }
 };
 
-window.addTugasItem = function() {
+window.addTugasItem = async function() {
     const nama = document.getElementById('t-nama').value;
     const deadline = document.getElementById('t-deadline').value;
     const ket = document.getElementById('t-ket').value;
@@ -507,18 +507,18 @@ window.addTugasItem = function() {
     if(fileInput.files.length > 0) {
         const file = fileInput.files[0];
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = async function(e) {
             dbData.tugas.push({ id: Date.now(), nama, deadline, ket, link: e.target.result, fileName: file.name });
-            saveData();
+            await saveData();
             resetTugasForm();
-            alert('Tugas dan file berhasil disimpan!');
+            alert('Tugas dan file berhasil disimpan secara global!');
         };
         reader.readAsDataURL(file);
     } else {
         dbData.tugas.push({ id: Date.now(), nama, deadline, ket, link: linkInput || '#' });
-        saveData();
+        await saveData();
         resetTugasForm();
-        alert('Tugas berhasil ditambahkan!');
+        alert('Tugas berhasil ditambahkan secara global!');
     }
 };
 
@@ -530,7 +530,7 @@ function resetTugasForm() {
     document.getElementById('t-file').value = '';
 }
 
-window.handlePraktikumUpload = function(category, idNama, idSkenario, idKet, idFile, idLink) {
+window.handlePraktikumUpload = async function(category, idNama, idSkenario, idKet, idFile, idLink) {
     const nama = document.getElementById(idNama).value;
     const skenario = document.getElementById(idSkenario).value;
     const ket = document.getElementById(idKet).value;
@@ -542,29 +542,29 @@ window.handlePraktikumUpload = function(category, idNama, idSkenario, idKet, idF
     if(fileInput.files.length > 0) {
         const file = fileInput.files[0];
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = async function(e) {
             dbData[category].push({ id: Date.now(), nama, skenario, ket, link: e.target.result, fileName: file.name });
-            saveData();
+            await saveData();
             document.getElementById(idNama).value = '';
             document.getElementById(idSkenario).value = '';
             document.getElementById(idKet).value = '';
             document.getElementById(idLink).value = '';
             fileInput.value = '';
-            alert('Data dan file berhasil disimpan!');
+            alert('Data dan file berhasil disimpan secara global!');
         };
         reader.readAsDataURL(file);
     } else {
         dbData[category].push({ id: Date.now(), nama, skenario, ket, link: linkInput || '#' });
-        saveData();
+        await saveData();
         document.getElementById(idNama).value = '';
         document.getElementById(idSkenario).value = '';
         document.getElementById(idKet).value = '';
         document.getElementById(idLink).value = '';
-        alert('Data berhasil ditambahkan!');
+        alert('Data berhasil ditambahkan secara global!');
     }
 };
 
-window.handleMateriUpload = function() {
+window.handleMateriUpload = async function() {
     const kuliah = document.getElementById('m-kuliah').value;
     const materi = document.getElementById('m-materi').value;
     const fileInput = document.getElementById('m-file');
@@ -575,23 +575,23 @@ window.handleMateriUpload = function() {
     if(fileInput.files.length > 0) {
         const file = fileInput.files[0];
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = async function(e) {
             dbData.materi.push({ id: Date.now(), kuliah, materi, link: e.target.result, fileName: file.name });
-            saveData();
+            await saveData();
             document.getElementById('m-kuliah').value = '';
             document.getElementById('m-materi').value = '';
             document.getElementById('m-link').value = '';
             fileInput.value = '';
-            alert('Materi dan file berhasil diunggah!');
+            alert('Materi dan file berhasil diunggah secara global!');
         };
         reader.readAsDataURL(file);
     } else {
         dbData.materi.push({ id: Date.now(), kuliah, materi, link: linkInput || '#' });
-        saveData();
+        await saveData();
         document.getElementById('m-kuliah').value = '';
         document.getElementById('m-materi').value = '';
         document.getElementById('m-link').value = '';
-        alert('Materi berhasil ditambahkan!');
+        alert('Materi berhasil ditambahkan secara global!');
     }
 };
 
@@ -634,7 +634,7 @@ window.openGenericEditModal = function(category, index) {
     document.getElementById('generic-edit-modal').style.display = 'flex';
 };
 
-window.saveGenericEdit = function() {
+window.saveGenericEdit = async function() {
     const category = document.getElementById('edit-cat').value;
     const index = parseInt(document.getElementById('edit-idx').value);
     const item = dbData[category][index];
@@ -666,18 +666,18 @@ window.saveGenericEdit = function() {
     if(fileInput.files.length > 0) {
         const file = fileInput.files[0];
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = async function(e) {
             item.link = e.target.result;
             item.fileName = file.name;
-            saveData();
+            await saveData();
             closeModal('generic-edit-modal');
-            alert('Perubahan dan file berhasil disimpan!');
+            alert('Perubahan dan file berhasil disimpan secara global!');
         };
         reader.readAsDataURL(file);
     } else {
-        saveData();
+        await saveData();
         closeModal('generic-edit-modal');
-        alert('Perubahan berhasil disimpan!');
+        alert('Perubahan berhasil disimpan secara global!');
     }
 };
 
@@ -760,29 +760,29 @@ window.openInfoModal = function(title, text, link) {
     document.getElementById('info-modal').style.display = 'flex';
 };
 
-window.addPengumuman = function() {
+window.addPengumuman = async function() {
     const judul = document.getElementById('p-judul').value;
     const isi = document.getElementById('p-isi').value;
     const deadline = document.getElementById('p-deadline').value;
 
     if(!judul || !isi || !deadline) return alert('Semua kolom wajib diisi!');
     dbData.pengumuman.push({ id: Date.now(), judul, isi, deadline });
-    saveData();
+    await saveData();
     document.getElementById('p-judul').value = '';
     document.getElementById('p-isi').value = '';
     document.getElementById('p-deadline').value = '';
-    alert('Pengumuman berhasil ditambahkan!');
+    alert('Pengumuman berhasil ditambahkan secara global!');
 };
 
-window.addReminder = function() {
+window.addReminder = async function() {
     const val = document.getElementById('rem-text').value;
     if(!val) return;
     dbData.reminder.push(val);
-    saveData();
+    await saveData();
     document.getElementById('rem-text').value = '';
 };
 
-window.addJadwalUpdateWithFile = function() {
+window.addJadwalUpdateWithFile = async function() {
     const title = document.getElementById('up-title').value;
     const fileInput = document.getElementById('up-file');
     
@@ -791,23 +791,24 @@ window.addJadwalUpdateWithFile = function() {
     if(fileInput.files.length > 0) {
         const file = fileInput.files[0];
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = async function(e) {
             dbData.jadwalUpdates.push(`${title} (<a href="${e.target.result}" download="${file.name}">Unduh File: ${file.name}</a>)`);
-            saveData();
+            await saveData();
             document.getElementById('up-title').value = '';
             fileInput.value = '';
         };
         reader.readAsDataURL(file);
     } else {
         dbData.jadwalUpdates.push(title);
-        saveData();
+        await saveData();
         document.getElementById('up-title').value = '';
     }
 };
 
-window.deleteItem = function(category, index) {
-    if(confirm('Yakin ingin menghapus item ini dari sistem?')) {
+window.deleteItem = async function(category, index) {
+    if(confirm('Yakin ingin menghapus item ini secara global?')) {
         dbData[category].splice(index, 1);
-        saveData();
+        await saveData();
+        alert('Item berhasil dihapus secara global!');
     }
 };
