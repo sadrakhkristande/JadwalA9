@@ -1,0 +1,30 @@
+{
+    "pengumuman": [
+        { "id": 1, "judul": "Pengumuman Blok 1.2", "isi": "Perkuliahan dan praktikum berjalan sesuai jadwal.", "deadline": "2026-11-01" }
+    ],
+    "reminder": [
+        "Cek jadwal harian Anatomi & Histologi",
+        "Deadline tugas mandiri"
+    ],
+    "jadwalUpdates": [
+        "File Jadwal Resmi: Terhubung dengan GitHub API."
+    ],
+    "tugas": [
+        { "id": 1, "nama": "Laporan Praktikum Anatomi", "deadline": "16 Okt 2026", "ket": "Kumpulkan laporan tepat waktu.", "link": "https://forms.gle/contoh" }
+    ],
+    "laboratorium": [
+        { "id": 1, "nama": "Lab Anatomi Ekstremitas", "skenario": "Modul Tulang & Sendi", "ket": "Bawa penuntun praktikum masing-masing.", "link": "https://drive.google.com/contoh" }
+    ],
+    "skills_lab": [
+        { "id": 1, "nama": "Skills Lab Palpasi", "skenario": "Modul Pemeriksaan Fisik", "ket": "Pakaian rapi berjas lab.", "link": "https://drive.google.com/contoh" }
+    ],
+    "tutorial": [
+        { "id": 1, "nama": "Tutorial Kasus Skenario", "skenario": "Diseminasi Kasus Klinik", "ket": "Membawa referensi literatur.", "link": "https://drive.google.com/contoh" }
+    ],
+    "materi": [
+        { "id": 1, "kuliah": "Anatomi Manusia", "materi": "Slide Kuliah Pengantar", "link": "#" }
+    ],
+    "jadwalCustom": null,
+    "maintenance": false,
+    "theme": "light"
+}
