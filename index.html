@@ -12,6 +12,9 @@
     <div id="login-page">
         <div class="login-card">
             <h2>Website A9</h2>
+            <div id="maintenance-banner" style="display:none; background:#fee2e2; color:#991b1b; padding:10px; border-radius:6px; font-size:13px; text-align:center; margin-bottom:15px; font-weight:600;">
+                ⚠️ Portal sedang dalam mode Maintenance. Hanya Admin yang dapat masuk.
+            </div>
             <div class="form-group">
                 <label>Jenis Login</label>
                 <select id="login-role" onchange="toggleLoginFields()">
@@ -28,6 +31,13 @@
                 <input type="password" id="login-admin-code" placeholder="••••••••">
             </div>
             <button type="button" class="btn" onclick="handleLogin()">Masuk Aplikasi</button>
+            
+            <div style="margin-top: 20px; text-align: center;">
+                <label style="font-size: 12px; color: var(--text-muted); display:block; margin-bottom:5px;">Pilih Tampilan:</label>
+                <button class="btn" style="width: auto; padding: 6px 12px; font-size: 12px; background: #475569;" onclick="setTheme('light')">Light</button>
+                <button class="btn" style="width: auto; padding: 6px 12px; font-size: 12px; background: #0f172a;" onclick="setTheme('dark')">Dark</button>
+                <button class="btn" style="width: auto; padding: 6px 12px; font-size: 12px; background: #2563eb;" onclick="setTheme('white')">White</button>
+            </div>
         </div>
     </div>
 
@@ -39,7 +49,15 @@
                 <small id="user-info" style="color: #cbd5e1;"></small>
                 <div id="wib-clock" style="font-size: 12px; color: #38bdf8; margin-top: 2px;"></div>
             </div>
-            <button class="btn btn-danger" style="width: auto; padding: 8px 16px;" onclick="handleLogout()">Keluar</button>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <!-- Kontrol Tema di Header -->
+                <select id="theme-selector" onchange="setTheme(this.value)" style="padding: 6px; border-radius: 6px; font-size: 12px;">
+                    <option value="light">Light Mode</option>
+                    <option value="dark">Dark Mode</option>
+                    <option value="white">White Mode</option>
+                </select>
+                <button class="btn btn-danger" style="width: auto; padding: 6px 14px;" onclick="handleLogout()">Keluar</button>
+            </div>
         </header>
 
         <nav>
@@ -54,9 +72,16 @@
         <main>
             <!-- TAB 1: DASHBOARD -->
             <section id="tab-dashboard" class="tab-content">
+                <!-- Panel Khusus Kontrol Admin (Maintenance Mode) -->
+                <div class="card admin-only" style="background: #eff6ff; border-left: 4px solid var(--accent);">
+                    <h3>🛠️ Kontrol Panel Admin (Maintenance Mode)</h3>
+                    <p style="font-size: 13.5px; margin-bottom: 12px;">Aktifkan mode pemeliharaan untuk menutup akses login bagi mahasiswa/guest.</p>
+                    <button id="maintenance-toggle-btn" class="btn btn-warning" style="width: auto; padding: 8px 16px;" onclick="toggleMaintenanceMode()">Aktifkan Maintenance Mode</button>
+                </div>
+
                 <div class="card">
                     <h3>📢 Pengumuman Akademik</h3>
-                    <div id="admin-pengumuman-form" class="admin-only card" style="background: #f8fafc; margin-bottom: 20px;">
+                    <div id="admin-pengumuman-form" class="admin-only card" style="background: var(--card-bg); margin-bottom: 20px;">
                         <h4 style="margin-bottom: 10px; color: var(--primary);">Tambah Pengumuman Baru</h4>
                         <div class="form-group"><input type="text" id="p-judul" placeholder="Judul Pengumuman"></div>
                         <div class="form-group"><textarea id="p-isi" placeholder="Isi Pengumuman" rows="3"></textarea></div>
@@ -115,7 +140,7 @@
             <section id="tab-tugas" class="tab-content" style="display:none;">
                 <div class="card">
                     <h3>📝 Penugasan Kuliah</h3>
-                    <div class="admin-only card" style="background: #f8fafc; margin-bottom: 25px;">
+                    <div class="admin-only card" style="background: var(--card-bg); margin-bottom: 25px;">
                         <h4 style="margin-bottom: 12px; color: var(--primary);">Tambah Tugas Baru</h4>
                         <div class="form-group"><input type="text" id="t-nama" placeholder="Nama Tugas"></div>
                         <div class="form-group"><input type="text" id="t-deadline" placeholder="Deadline (Cth: 16 Okt 2026)"></div>
@@ -140,7 +165,7 @@
             <section id="tab-lab" class="tab-content" style="display:none;">
                 <div class="card">
                     <h3>🔬 Laboratorium</h3>
-                    <div class="admin-only card" style="background: #f8fafc; margin-bottom: 25px;">
+                    <div class="admin-only card" style="background: var(--card-bg); margin-bottom: 25px;">
                         <h4 style="margin-bottom: 12px; color: var(--primary);">Tambah Jadwal / Modul Lab Baru</h4>
                         <div class="form-group"><input type="text" id="lab-nama" placeholder="Nama Kegiatan Lab"></div>
                         <div class="form-group"><input type="text" id="lab-skenario" placeholder="Skenario / Modul"></div>
@@ -156,7 +181,7 @@
             <section id="tab-skills" class="tab-content" style="display:none;">
                 <div class="card">
                     <h3>🩺 Skills Lab (Skenario & Modul)</h3>
-                    <div class="admin-only card" style="background: #f8fafc; margin-bottom: 25px;">
+                    <div class="admin-only card" style="background: var(--card-bg); margin-bottom: 25px;">
                         <h4 style="margin-bottom: 12px; color: var(--primary);">Tambah Skills Lab Baru</h4>
                         <div class="form-group"><input type="text" id="skills-nama" placeholder="Nama Skills Lab"></div>
                         <div class="form-group"><input type="text" id="skills-skenario" placeholder="Skenario / Modul"></div>
@@ -172,7 +197,7 @@
             <section id="tab-tutorial" class="tab-content" style="display:none;">
                 <div class="card">
                     <h3>👥 Tutorial (Skenario & Modul)</h3>
-                    <div class="admin-only card" style="background: #f8fafc; margin-bottom: 25px;">
+                    <div class="admin-only card" style="background: var(--card-bg); margin-bottom: 25px;">
                         <h4 style="margin-bottom: 12px; color: var(--primary);">Tambah Skenario Tutorial Baru</h4>
                         <div class="form-group"><input type="text" id="tut-nama" placeholder="Nama Sesi Tutorial"></div>
                         <div class="form-group"><input type="text" id="tut-skenario" placeholder="Skenario Kasus"></div>
@@ -188,7 +213,7 @@
             <section id="tab-materi" class="tab-content" style="display:none;">
                 <div class="card">
                     <h3>📚 Materi Perkuliahan</h3>
-                    <div class="admin-only card" style="background: #f8fafc; margin-bottom: 25px;">
+                    <div class="admin-only card" style="background: var(--card-bg); margin-bottom: 25px;">
                         <h4 style="margin-bottom: 12px; color: var(--primary);">Tambah Materi Kuliah Baru</h4>
                         <div class="form-group"><input type="text" id="m-kuliah" placeholder="Nama Mata Kuliah / Kuliah ke-"></div>
                         <div class="form-group"><input type="text" id="m-materi" placeholder="Judul / Topik Materi"></div>
