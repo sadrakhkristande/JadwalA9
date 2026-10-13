@@ -16,6 +16,14 @@ const allowedUsers = {
 let currentUser = null;
 const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 Menit
 
+// Konfigurasi GitHub Repository Anda
+// (Sesuaikan OWNER dan REPO dengan nama akun dan repository GitHub Anda)
+const GH_CONFIG = {
+    owner: "sadrakhgwin", // Ganti jika username GitHub Anda berbeda
+    repo: "portal-blok12", // Ganti dengan nama repository Anda di GitHub
+    token: "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"
+};
+
 let dbData = JSON.parse(localStorage.getItem('portal_blok12_db')) || {
     pengumuman: [
         { id: 1, judul: "Pengumuman Blok 1.2", isi: "Perkuliahan dan praktikum berjalan sesuai jadwal.", deadline: "2026-11-01" }
@@ -25,7 +33,7 @@ let dbData = JSON.parse(localStorage.getItem('portal_blok12_db')) || {
         "Deadline tugas mandiri"
     ],
     jadwalUpdates: [
-        "File Jadwal Resmi: Database jadwal.json terhubung otomatis."
+        "File Jadwal Resmi: Terhubung dengan GitHub API."
     ],
     tugas: [
         { id: 1, nama: "Laporan Praktikum Anatomi", deadline: "16 Okt 2026", ket: "Kumpulkan laporan tepat waktu.", link: "https://forms.gle/contoh" }
@@ -51,7 +59,6 @@ window.addEventListener('DOMContentLoaded', () => {
     applyTheme(dbData.theme || 'light');
     checkMaintenanceStatus();
     
-    // Cek sesi yang tersimpan saat reload
     const savedUser = sessionStorage.getItem('portal_current_user');
     const lastActive = sessionStorage.getItem('portal_last_active');
     const now = Date.now();
@@ -71,6 +78,48 @@ window.addEventListener('DOMContentLoaded', () => {
 function saveData() {
     localStorage.setItem('portal_blok12_db', JSON.stringify(dbData));
     renderAll();
+}
+
+// Fungsi Otomatis Sync Perubahan Jadwal ke GitHub `jadwal.json`
+async function syncJadwalToGitHub() {
+    if (!dbData.jadwalCustom) return;
+    try {
+        const url = `https://api.github.com/repos/${GH_CONFIG.owner}/${GH_CONFIG.repo}/contents/jadwal.json`;
+        
+        // 1. Ambil SHA file terbaru di GitHub
+        const getRes = await fetch(url, {
+            headers: { 'Authorization': `token ${GH_CONFIG.token}` }
+        });
+        if(!getRes.ok) throw new Error("Gagal mengambil SHA file GitHub.");
+        const fileData = await getRes.json();
+        const sha = fileData.sha;
+
+        // 2. Susun data JSON baru
+        const payloadData = { jadwal: dbData.jadwalCustom };
+        const contentEncoded = btoa(unescape(encodeURIComponent(JSON.stringify(payloadData, null, 2))));
+
+        // 3. Kirim update via PUT request
+        const putRes = await fetch(url, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `token ${GH_CONFIG.token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                message: "Update jadwal global via portal web A9",
+                content: contentEncoded,
+                sha: sha
+            })
+        });
+
+        if(putRes.ok) {
+            console.log("Jadwal berhasil disinkronkan secara global ke GitHub!");
+        } else {
+            console.error("Gagal melakukan sync ke GitHub.");
+        }
+    } catch (err) {
+        console.error("Error GitHub API Sync:", err);
+    }
 }
 
 window.toggleThemeSwitch = function() {
@@ -120,7 +169,6 @@ window.toggleMaintenanceMode = function() {
     alert(dbData.maintenance ? "Maintenance Mode diaktifkan. Guest tidak dapat masuk." : "Maintenance Mode dinonaktifkan.");
 };
 
-// Jam WIB Realtime
 setInterval(() => {
     const now = new Date();
     const options = { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -405,7 +453,7 @@ window.openJadwalModal = async function(index = -1) {
     document.getElementById('jadwal-modal').style.display = 'flex';
 };
 
-window.saveJadwalItem = function() {
+window.saveJadwalItem = async function() {
     const idx = parseInt(document.getElementById('edit-jadwal-index').value);
     const newEntry = {
         tgl: document.getElementById('j-tgl').value,
@@ -422,8 +470,11 @@ window.saveJadwalItem = function() {
     } else {
         dbData.jadwalCustom.push(newEntry);
     }
+    
     saveData();
+    await syncJadwalToGitHub(); // Sinkronisasi otomatis ke GitHub
     closeModal('jadwal-modal');
+    alert('Jadwal berhasil disimpan dan diperbarui secara global!');
 };
 
 window.editJadwalItem = function(index) {
@@ -431,7 +482,7 @@ window.editJadwalItem = function(index) {
 };
 
 window.deleteJadwalItem = async function(index) {
-    if(confirm('Yakin ingin menghapus jadwal ini?')) {
+    if(confirm('Yakin ingin menghapus jadwal ini secara global?')) {
         if(!dbData.jadwalCustom) {
             const res = await fetch('jadwal.json');
             const data = await res.json();
@@ -439,6 +490,8 @@ window.deleteJadwalItem = async function(index) {
         }
         dbData.jadwalCustom.splice(index, 1);
         saveData();
+        await syncJadwalToGitHub(); // Sinkronisasi otomatis ke GitHub
+        alert('Jadwal berhasil dihapus secara global!');
     }
 };
 
