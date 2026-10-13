@@ -14,6 +14,8 @@ const allowedUsers = {
 };
 
 let currentUser = null;
+const INACTIVITY_LIMIT = 30 * 60 * 1000; // Batas waktu tidak ada pergerakan: 30 Menit (dalam milidetik)
+let inactivityTimer = null;
 
 let dbData = JSON.parse(localStorage.getItem('portal_blok12_db')) || {
     pengumuman: [
@@ -49,6 +51,24 @@ let dbData = JSON.parse(localStorage.getItem('portal_blok12_db')) || {
 window.addEventListener('DOMContentLoaded', () => {
     applyTheme(dbData.theme || 'light');
     checkMaintenanceStatus();
+    
+    // Cek apakah ada sesi aktif di sessionStorage saat halaman di-reload
+    const savedUser = sessionStorage.getItem('portal_current_user');
+    const lastActive = sessionStorage.getItem('portal_last_active');
+    const now = Date.now();
+
+    if (savedUser && lastActive) {
+        // Cek apakah melewati batas waktu tidak ada pergerakan (Inactivity Timeout)
+        if (now - parseInt(lastActive) < INACTIVITY_LIMIT) {
+            currentUser = JSON.parse(savedUser);
+            initApp();
+            setupInactivityTracker();
+        } else {
+            // Jika sudah terlalu lama tidak ada pergerakan, hapus sesi
+            sessionStorage.removeItem('portal_current_user');
+            sessionStorage.removeItem('portal_last_active');
+        }
+    }
 });
 
 function saveData() {
@@ -103,6 +123,7 @@ window.toggleMaintenanceMode = function() {
     alert(dbData.maintenance ? "Maintenance Mode diaktifkan. Guest tidak dapat masuk." : "Maintenance Mode dinonaktifkan.");
 };
 
+// Jam WIB Realtime
 setInterval(() => {
     const now = new Date();
     const options = { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -122,7 +143,9 @@ window.handleLogin = function() {
         const code = document.getElementById('login-admin-code').value;
         if (code === 'A9ACOR') {
             currentUser = { role: 'admin', name: 'Admin Utama (A9ACOR)' };
+            saveUserSession();
             initApp();
+            setupInactivityTracker();
         } else {
             alert('Kode Admin Salah!');
         }
@@ -134,12 +157,44 @@ window.handleLogin = function() {
         const nim = document.getElementById('login-nim-input').value.trim();
         if (nim === "12345" || allowedUsers[nim]) {
             currentUser = { role: 'guest', name: allowedUsers[nim] || "Guest " + nim, nim: nim };
+            saveUserSession();
             initApp();
+            setupInactivityTracker();
         } else {
             alert('NIM atau Kode Guest tidak valid!');
         }
     }
 };
+
+function saveUserSession() {
+    sessionStorage.setItem('portal_current_user', JSON.stringify(currentUser));
+    sessionStorage.setItem('portal_last_active', Date.now().toString());
+}
+
+// Pelacak Aktivitas Pergerakan (Mouse, Ketikan, Klik, Scroll)
+function setupInactivityTracker() {
+    const updateActivity = () => {
+        if(currentUser) {
+            sessionStorage.setItem('portal_last_active', Date.now().toString());
+        }
+    };
+
+    window.addEventListener('mousemove', updateActivity);
+    window.addEventListener('keydown', updateActivity);
+    window.addEventListener('click', updateActivity);
+    window.addEventListener('scroll', updateActivity);
+
+    // Interval berkala untuk mengecek apakah sudah melebihi batas tidak ada pergerakan
+    setInterval(() => {
+        const lastActive = sessionStorage.getItem('portal_last_active');
+        if(currentUser && lastActive) {
+            if(Date.now() - parseInt(lastActive) > INACTIVITY_LIMIT) {
+                alert('Sesi Anda telah berakhir karena tidak ada pergerakan/aktivitas selama 30 menit.');
+                handleLogout();
+            }
+        }
+    }, 60000); // Cek tiap 1 menit
+}
 
 function initApp() {
     document.getElementById('login-page').style.display = 'none';
@@ -157,6 +212,8 @@ function initApp() {
 }
 
 window.handleLogout = function() {
+    sessionStorage.removeItem('portal_current_user');
+    sessionStorage.removeItem('portal_last_active');
     location.reload();
 };
 
@@ -373,7 +430,6 @@ window.deleteJadwalItem = async function(index) {
     }
 };
 
-// Fungsi Upload Tugas
 window.addTugasItem = function() {
     const nama = document.getElementById('t-nama').value;
     const deadline = document.getElementById('t-deadline').value;
@@ -409,7 +465,6 @@ function resetTugasForm() {
     document.getElementById('t-file').value = '';
 }
 
-// Fungsi Upload Praktikum
 window.handlePraktikumUpload = function(category, idNama, idSkenario, idKet, idFile, idLink) {
     const nama = document.getElementById(idNama).value;
     const skenario = document.getElementById(idSkenario).value;
@@ -444,7 +499,6 @@ window.handlePraktikumUpload = function(category, idNama, idSkenario, idKet, idF
     }
 };
 
-// Fungsi Upload Materi
 window.handleMateriUpload = function() {
     const kuliah = document.getElementById('m-kuliah').value;
     const materi = document.getElementById('m-materi').value;
@@ -476,7 +530,6 @@ window.handleMateriUpload = function() {
     }
 };
 
-// --- FUNGSI EDIT GENERIC (Materi, Tugas, Lab, Skills, Tutorial) ---
 window.openGenericEditModal = function(category, index) {
     document.getElementById('edit-cat').value = category;
     document.getElementById('edit-idx').value = index;
@@ -674,7 +727,7 @@ window.addJadwalUpdateWithFile = function() {
         const file = fileInput.files[0];
         const reader = new FileReader();
         reader.onload = function(e) {
-            dbData.jadwalUpdates.push(`${title} (<a href="${e.target.result}" download="${file.name}">Unduh File: ${file.name}</a>)`);
+            dbData.jadwalUpdates.push(`${title} (<a href="${e.target.result}" download="${file.name}">Unduh File: ${file.name}</a>)`;
             saveData();
             document.getElementById('up-title').value = '';
             fileInput.value = '';
