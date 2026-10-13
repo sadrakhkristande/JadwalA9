@@ -142,14 +142,13 @@
                 </div>
 
                 <div class="card">
-                    <h3>📅 Agenda Jadwal Kuliah (Khusus Hari Ini & Besok)</h3>
+                    <h3>📅 Agenda Jadwal Kuliah (Khusus Hari Ini & Besok - Kelas A)</h3>
                     <table>
                         <thead>
                             <tr>
                                 <th>Hari / Tanggal</th>
                                 <th>Jam</th>
-                                <th>Kelas A</th>
-                                <th>Kelas B</th>
+                                <th>Kegiatan / Kelas A</th>
                             </tr>
                         </thead>
                         <tbody id="jadwal-table-body"></tbody>
@@ -160,10 +159,7 @@
             <!-- TAB 2: TUGAS -->
             <section id="tab-tugas" class="tab-content" style="display:none;">
                 <div class="card">
-                    <h3>
-                        📝 Penugasan Kuliah
-                        <span class="admin-only"><button class="btn" style="width: auto; padding: 4px 10px; font-size: 12px;" onclick="openAddTugasModal()">+ Tambah Tugas</button></span>
-                    </h3>
+                    <h3>📝 Penugasan Kuliah</h3>
                     <table>
                         <thead>
                             <tr>
@@ -180,10 +176,7 @@
             <!-- TAB 3: LABORATORIUM -->
             <section id="tab-lab" class="tab-content" style="display:none;">
                 <div class="card">
-                    <h3>
-                        🔬 Laboratorium
-                        <span class="admin-only"><button class="btn" style="width: auto; padding: 4px 10px; font-size: 12px;" onclick="openAddPraktikumModal('laboratorium')">+ Tambah Lab</button></span>
-                    </h3>
+                    <h3>🔬 Laboratorium</h3>
                     <div id="lab-list"></div>
                 </div>
             </section>
@@ -191,10 +184,7 @@
             <!-- TAB 4: SKILLS LAB -->
             <section id="tab-skills" class="tab-content" style="display:none;">
                 <div class="card">
-                    <h3>
-                        🩺 Skills Lab (Skenario & Modul)
-                        <span class="admin-only"><button class="btn" style="width: auto; padding: 4px 10px; font-size: 12px;" onclick="openAddPraktikumModal('skills_lab')">+ Tambah Skills Lab</button></span>
-                    </h3>
+                    <h3>🩺 Skills Lab (Skenario & Modul)</h3>
                     <div id="skills-list"></div>
                 </div>
             </section>
@@ -202,10 +192,7 @@
             <!-- TAB 5: TUTORIAL -->
             <section id="tab-tutorial" class="tab-content" style="display:none;">
                 <div class="card">
-                    <h3>
-                        👥 Tutorial (Skenario & Modul)
-                        <span class="admin-only"><button class="btn" style="width: auto; padding: 4px 10px; font-size: 12px;" onclick="openAddPraktikumModal('tutorial')">+ Tambah Tutorial</button></span>
-                    </h3>
+                    <h3>👥 Tutorial (Skenario & Modul)</h3>
                     <div id="tutorial-list"></div>
                 </div>
             </section>
@@ -213,10 +200,7 @@
             <!-- TAB 6: MATERI -->
             <section id="tab-materi" class="tab-content" style="display:none;">
                 <div class="card">
-                    <h3>
-                        📚 Materi Perkuliahan
-                        <span class="admin-only"><button class="btn" style="width: auto; padding: 4px 10px; font-size: 12px;" onclick="openAddMateriModal()">+ Tambah Materi & Upload PC</button></span>
-                    </h3>
+                    <h3>📚 Materi Perkuliahan</h3>
                     <table>
                         <thead>
                             <tr>
@@ -242,15 +226,6 @@
         </div>
     </div>
 
-    <div id="admin-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeModal('admin-modal')">&times;</span>
-            <h3 id="admin-modal-title" style="margin-bottom: 15px; color: var(--primary);">Form Admin</h3>
-            <div id="admin-modal-body"></div>
-        </div>
-    </div>
-
-    <!-- Menghubungkan file logika JavaScript terpisah -->
     <script src="script.js"></script>
 </body>
 </html>
