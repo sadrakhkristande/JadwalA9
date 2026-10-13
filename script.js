@@ -164,7 +164,9 @@ function renderJadwalUpdates() {
     });
 }
 
-// Filter Jadwal Hari Ini & Besok (Khusus Kelas A)
+// ---------------------------------------------------------------------------
+// FILTER JADWAL OTOMATIS BERGESER (HARI INI & BESOK BERDASARKAN WAKTU SISTEM)
+// ---------------------------------------------------------------------------
 async function renderJadwal() {
     const tbody = document.getElementById('jadwal-table-body');
     if(!tbody) return;
@@ -175,22 +177,41 @@ async function renderJadwal() {
         const data = await response.json();
         
         tbody.innerHTML = '';
-        const keywordToday = "13-Oct";
-        const keywordTomorrow = "14-Oct";
 
+        // Mengambil tanggal sistem saat ini (WIB)
+        const nowWIB = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
+        
+        // Tanggal Besok
+        const tomorrowWIB = new Date(nowWIB);
+        tomorrowWIB.setDate(nowWIB.getDate() + 1);
+
+        // Helper untuk format pencocokan ke JSON (Contoh: "13-Oct-26")
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        
+        function formatDateStr(dateObj) {
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            const month = months[dateObj.getMonth()];
+            const year = String(dateObj.getFullYear()).slice(-2);
+            return `${day}-${month}-${year}`; // Contoh: 13-Oct-26
+        }
+
+        const todayStr = formatDateStr(nowWIB);
+        const tomorrowStr = formatDateStr(tomorrowWIB);
+
+        // Filter jadwal dari file jadwal.json berdasarkan hari ini dan besok secara otomatis
         const filteredJadwal = data.jadwal.filter(j => {
-            return j.tgl.includes(keywordToday) || j.tgl.includes(keywordTomorrow);
+            return j.tgl.includes(todayStr) || j.tgl.includes(tomorrowStr);
         });
 
         if(filteredJadwal.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#64748b;">Tidak ada jadwal untuk hari ini dan besok.</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#64748b;">Tidak ada jadwal untuk hari ini (${todayStr}) dan besok (${tomorrowStr}).</td></tr>`;
             return;
         }
 
         filteredJadwal.forEach(j => {
-            const isToday = j.tgl.includes(keywordToday);
+            const isToday = j.tgl.includes(todayStr);
             let badgeClass = isToday ? 'highlight-today' : 'highlight-tomorrow';
-            let badgeLabel = isToday ? '<span class="badge" style="background:#eab308; color:white;">Hari Ini (13 Okt)</span>' : '<span class="badge" style="background:#3b82f6; color:white;">Besok (14 Okt)</span>';
+            let badgeLabel = isToday ? '<span class="badge" style="background:#eab308; color:white;">Hari Ini</span>' : '<span class="badge" style="background:#3b82f6; color:white;">Besok</span>';
 
             tbody.innerHTML += `<tr class="${badgeClass}">
                 <td>${j.tgl} ${badgeLabel}</td>
