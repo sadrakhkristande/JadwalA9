@@ -293,6 +293,35 @@
         </div>
     </div>
 
+    <!-- MODAL EDIT GENERIC (MATERI, TUGAS, LAB, SKILLS, TUTORIAL) -->
+    <div id="generic-edit-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('generic-edit-modal')">&times;</span>
+            <h3 id="generic-modal-title" style="margin-bottom: 20px; color: var(--primary);">Edit Item</h3>
+            <input type="hidden" id="edit-cat">
+            <input type="hidden" id="edit-idx">
+            
+            <div class="form-group" id="group-field1">
+                <label id="label-field1">Nama / Kuliah</label>
+                <input type="text" id="edit-val1">
+            </div>
+            <div class="form-group" id="group-field2">
+                <label id="label-field2">Topik / Deadline / Skenario</label>
+                <input type="text" id="edit-val2">
+            </div>
+            <div class="form-group" id="group-field3">
+                <label>Keterangan Tambahan</label>
+                <textarea id="edit-val3" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Ganti File Baru (Opsional)</label>
+                <input type="file" id="edit-file" style="margin-bottom: 6px;">
+                <input type="text" id="edit-link" placeholder="Atau ubah URL Link...">
+            </div>
+            <button class="btn btn-success" onclick="saveGenericEdit()">Simpan Perubahan</button>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
