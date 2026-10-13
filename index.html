@@ -56,7 +56,8 @@
         
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         @media(max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
-        .highlight-row { background: #fef08a !important; font-weight: bold; }
+        .highlight-today { background: #fef08a !important; font-weight: bold; }
+        .highlight-tomorrow { background: #f1f5f9 !important; }
     </style>
 </head>
 <body>
@@ -145,8 +146,7 @@
 
                 <div class="card">
                     <h3>
-                        📅 Jadwal Kuliah (Database Terhubung: jadwal.json)
-                        <span class="admin-only"><button class="btn" style="width: auto; padding: 4px 10px; font-size: 12px;" onclick="openAddJadwalModal()">+ Tambah Jadwal Manual</button></span>
+                        📅 Agenda Jadwal Kuliah (Khusus Hari Ini & Besok)
                     </h3>
                     <table>
                         <thead>
@@ -155,7 +155,6 @@
                                 <th>Jam</th>
                                 <th>Kelas A</th>
                                 <th>Kelas B</th>
-                                <th class="admin-only" style="width: 80px;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="jadwal-table-body"></tbody>
@@ -166,10 +165,7 @@
             <!-- TAB 2: TUGAS -->
             <section id="tab-tugas" class="tab-content" style="display:none;">
                 <div class="card">
-                    <h3>
-                        📝 Penugasan Kuliah
-                        <span class="admin-only"><button class="btn" style="width: auto; padding: 4px 10px; font-size: 12px;" onclick="openAddTugasModal()">+ Tambah Tugas</button></span>
-                    </h3>
+                    <h3>📝 Penugasan Kuliah</h3>
                     <table>
                         <thead>
                             <tr>
@@ -186,10 +182,7 @@
             <!-- TAB 3: LABORATORIUM -->
             <section id="tab-lab" class="tab-content" style="display:none;">
                 <div class="card">
-                    <h3>
-                        🔬 Laboratorium
-                        <span class="admin-only"><button class="btn" style="width: auto; padding: 4px 10px; font-size: 12px;" onclick="openAddPraktikumModal('laboratorium')">+ Tambah Lab</button></span>
-                    </h3>
+                    <h3>🔬 Laboratorium</h3>
                     <div id="lab-list"></div>
                 </div>
             </section>
@@ -197,10 +190,7 @@
             <!-- TAB 4: SKILLS LAB -->
             <section id="tab-skills" class="tab-content" style="display:none;">
                 <div class="card">
-                    <h3>
-                        🩺 Skills Lab (Skenario & Modul)
-                        <span class="admin-only"><button class="btn" style="width: auto; padding: 4px 10px; font-size: 12px;" onclick="openAddPraktikumModal('skills_lab')">+ Tambah Skills Lab</button></span>
-                    </h3>
+                    <h3>🩺 Skills Lab (Skenario & Modul)</h3>
                     <div id="skills-list"></div>
                 </div>
             </section>
@@ -208,10 +198,7 @@
             <!-- TAB 5: TUTORIAL -->
             <section id="tab-tutorial" class="tab-content" style="display:none;">
                 <div class="card">
-                    <h3>
-                        👥 Tutorial (Skenario & Modul)
-                        <span class="admin-only"><button class="btn" style="width: auto; padding: 4px 10px; font-size: 12px;" onclick="openAddPraktikumModal('tutorial')">+ Tambah Tutorial</button></span>
-                    </h3>
+                    <h3>👥 Tutorial (Skenario & Modul)</h3>
                     <div id="tutorial-list"></div>
                 </div>
             </section>
@@ -219,10 +206,7 @@
             <!-- TAB 6: MATERI -->
             <section id="tab-materi" class="tab-content" style="display:none;">
                 <div class="card">
-                    <h3>
-                        📚 Materi Perkuliahan
-                        <span class="admin-only"><button class="btn" style="width: auto; padding: 4px 10px; font-size: 12px;" onclick="openAddMateriModal()">+ Tambah Materi & Upload PC</button></span>
-                    </h3>
+                    <h3>📚 Materi Perkuliahan</h3>
                     <table>
                         <thead>
                             <tr>
@@ -245,15 +229,6 @@
             <h3 id="modal-title" style="margin-bottom: 15px; color: var(--primary);">Detail Informasi</h3>
             <div id="modal-body" style="margin-bottom: 20px; font-size: 14px;"></div>
             <div id="modal-link-container"></div>
-        </div>
-    </div>
-
-    <!-- MODAL ADMIN -->
-    <div id="admin-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeModal('admin-modal')">&times;</span>
-            <h3 id="admin-modal-title" style="margin-bottom: 15px; color: var(--primary);">Form Admin</h3>
-            <div id="admin-modal-body"></div>
         </div>
     </div>
 
@@ -419,28 +394,47 @@
             });
         }
 
-        // FUNGSI FETCH DATA DARI JADWAL.JSON
+        // FUNGSI RENDER JADWAL KHUSUS HARI INI & BESOK SAJA
         async function renderJadwal() {
             const tbody = document.getElementById('jadwal-table-body');
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Memuat database jadwal.json...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Memuat agenda jadwal...</td></tr>';
             
             try {
                 const response = await fetch('jadwal.json');
                 const data = await response.json();
                 
                 tbody.innerHTML = '';
-                data.jadwal.forEach((j, idx) => {
-                    const isToday = j.tgl.includes("13-Oct") || j.tgl.includes("13 Oct");
-                    tbody.innerHTML += `<tr class="${isToday ? 'highlight-row' : ''}">
-                        <td>${j.tgl} ${isToday ? '<span class="badge" style="background:#eab308; color:white;">Hari Ini (13 Okt)</span>' : ''}</td>
+                
+                // Tanggal hari ini (13 Oktober 2026) dan besok (14 Oktober 2026)
+                const targetDatesToday = ["13-Oct-26", "13 Oct 2026", "13-Oct", "13 Okt"];
+                const targetDatesTomorrow = ["14-Oct-26", "14 Oct 2026", "14-Oct", "14 Okt"];
+
+                // Filter data hanya untuk hari ini dan besok
+                const filteredJadwal = data.jadwal.filter(j => {
+                    return targetDatesToday.some(d => j.tgl.includes(d)) || targetDatesTomorrow.some(d => j.tgl.includes(d));
+                });
+
+                if(filteredJadwal.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#64748b;">Tidak ada jadwal untuk hari ini dan besok.</td></tr>';
+                    return;
+                }
+
+                filteredJadwal.forEach(j => {
+                    const isToday = targetDatesToday.some(d => j.tgl.includes(d));
+                    const isTomorrow = targetDatesTomorrow.some(d => j.tgl.includes(d));
+                    
+                    let badgeClass = isToday ? 'highlight-today' : 'highlight-tomorrow';
+                    let badgeLabel = isToday ? '<span class="badge" style="background:#eab308; color:white;">Hari Ini (13 Okt)</span>' : '<span class="badge" style="background:#3b82f6; color:white;">Besok (14 Okt)</span>';
+
+                    tbody.innerHTML += `<tr class="${badgeClass}">
+                        <td>${j.tgl} ${badgeLabel}</td>
                         <td>${j.jam}</td>
                         <td>${j.kelasA}</td>
                         <td>${j.kelasB}</td>
-                        <td class="admin-only"><button class="btn btn-danger" style="width: auto; padding: 3px 6px; font-size: 11px;" onclick="alert('Untuk mengedit jadwal permanen, ubah file jadwal.json di GitHub.')">Info</button></td>
                     </tr>`;
                 });
             } catch (error) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Gagal memuat jadwal.json. Pastikan file jadwal.json sudah di-upload ke GitHub.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Gagal memuat jadwal.json. Pastikan file sudah ada di GitHub.</td></tr>';
             }
         }
 
@@ -546,104 +540,6 @@
                 dbData.jadwalUpdates.push(title);
                 saveData();
                 document.getElementById('up-title').value = '';
-            }
-        }
-
-        function openAddTugasModal() {
-            document.getElementById('admin-modal-title').innerText = "Tambah Tugas Baru";
-            document.getElementById('admin-modal-body').innerHTML = `
-                <div class="form-group"><input type="text" id="t-nama" placeholder="Nama Tugas"></div>
-                <div class="form-group"><input type="text" id="t-deadline" placeholder="Deadline (Cth: 16 Okt 2026)"></div>
-                <div class="form-group"><textarea id="t-ket" placeholder="Keterangan lengkap tugas..." rows="3"></textarea></div>
-                <div class="form-group"><input type="text" id="t-link" placeholder="Link Pengumpulan / Google Form"></div>
-                <button class="btn btn-success" onclick="saveNewTugas()">Simpan Tugas</button>
-            `;
-            document.getElementById('admin-modal').style.display = 'flex';
-        }
-
-        function saveNewTugas() {
-            dbData.tugas.push({
-                id: Date.now(),
-                nama: document.getElementById('t-nama').value,
-                deadline: document.getElementById('t-deadline').value,
-                ket: document.getElementById('t-ket').value,
-                link: document.getElementById('t-link').value
-            });
-            saveData();
-            closeModal('admin-modal');
-        }
-
-        function openAddPraktikumModal(category) {
-            const titleMap = { 'laboratorium': 'Laboratorium', 'skills_lab': 'Skills Lab', 'tutorial': 'Tutorial' };
-            document.getElementById('admin-modal-title').innerText = `Tambah ${titleMap[category]}`;
-            document.getElementById('admin-modal-body').innerHTML = `
-                <div class="form-group"><input type="text" id="pr-nama" placeholder="Nama Kegiatan / Topik"></div>
-                <div class="form-group"><input type="text" id="pr-skenario" placeholder="Nama Skenario / Modul"></div>
-                <div class="form-group"><textarea id="pr-ket" placeholder="Keterangan / instruksi..." rows="3"></textarea></div>
-                <div class="form-group"><input type="text" id="pr-link" placeholder="Link Modul / Panduan (Google Drive)"></div>
-                <button class="btn btn-success" onclick="saveNewPraktikum('${category}')">Simpan Data</button>
-            `;
-            document.getElementById('admin-modal').style.display = 'flex';
-        }
-
-        function saveNewPraktikum(cat) {
-            dbData[cat].push({
-                id: Date.now(),
-                nama: document.getElementById('pr-nama').value,
-                skenario: document.getElementById('pr-skenario').value,
-                ket: document.getElementById('pr-ket').value,
-                link: document.getElementById('pr-link').value
-            });
-            saveData();
-            closeModal('admin-modal');
-        }
-
-        function openAddMateriModal() {
-            document.getElementById('admin-modal-title').innerText = "Tambah Materi Perkuliahan & Upload PC";
-            document.getElementById('admin-modal-body').innerHTML = `
-                <div class="form-group"><input type="text" id="m-kuliah" placeholder="Nama Kuliah"></div>
-                <div class="form-group"><input type="text" id="m-materi" placeholder="Nama Materi / Dosen Pengampu"></div>
-                <div class="form-group">
-                    <label>Pilih File dari PC (Opsional):</label>
-                    <input type="file" id="m-file" style="width: 100%;">
-                </div>
-                <div class="form-group"><input type="text" id="m-link" placeholder="Atau masukkan URL Link Eksternal"></div>
-                <button class="btn btn-success" onclick="saveNewMateriWithFile()">Simpan Materi</button>
-            `;
-            document.getElementById('admin-modal').style.display = 'flex';
-        }
-
-        function saveNewMateriWithFile() {
-            const kuliah = document.getElementById('m-kuliah').value;
-            const materi = document.getElementById('m-materi').value;
-            const linkInput = document.getElementById('m-link').value;
-            const fileInput = document.getElementById('m-file');
-
-            if(!kuliah || !materi) return alert('Nama kuliah dan materi wajib diisi!');
-
-            if(fileInput.files.length > 0) {
-                const file = fileInput.files[0];
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    dbData.materi.push({
-                        id: Date.now(),
-                        kuliah,
-                        materi,
-                        link: e.target.result
-                    });
-                    saveData();
-                    closeModal('admin-modal');
-                };
-                reader.readAsDataURL(file);
-            } else {
-                dbData.materi.push({
-                    id: Date.now(),
-                    kuliah,
-                    materi,
-                    link: linkInput || '#'
-                });
-                saveData();
-                closeModal('admin-modal');
             }
         }
 
