@@ -31,9 +31,10 @@
       "tgl": "Kamis, 24-Sep-26",
       "sesi": [
         { "jam": "07.00-07.50", "kegiatan": "Asistensi Anatomi RK 1,2" },
-        { "jam": "07.50-09.30", "kegiatan": "KULIAH 5-RK 1 Anatomi Ekstremitas Superior 1" },
+        { "jam": "07.50-09.30", "kegiatan": "KULIAH 5-RK 1 Anatomi Ekstremitas Superior 1 (Dr. Dhoni Akbar Ghozali, dr, M.Kes)" },
         { "jam": "09.50-11.30", "kegiatan": "SL 9" },
-        { "jam": "12.30-14.10", "kegiatan": "COURSE 6-RK 1" }
+        { "jam": "12.30-14.10", "kegiatan": "COURSE 6-RK 1" },
+        { "jam": "14.15-15.55", "kegiatan": "-" }
       ]
     },
     {
@@ -42,104 +43,106 @@
         { "jam": "07.00-07.50", "kegiatan": "Asistensi Fisio RK 1,2" },
         { "jam": "07.50-09.30", "kegiatan": "PANCASILA 6- RK 1" },
         { "jam": "09.50-11.30", "kegiatan": "AGAMA 6-RK 1" },
-        { "jam": "13.00-16.20", "kegiatan": "Histo Otot & Tulang (Endang / Tri Agusti)" }
+        { "jam": "13.00-14.40", "kegiatan": "KULIAH 6-RK 1 Histologi otot lurik, polos, jantung (Dr. Endang Listyaningsih Suparyanti, dr, M.Kes)" },
+        { "jam": "14.40-16.20", "kegiatan": "KULIAH 7 - RK 1 Histologi tulang dan tahap-tahap pertumbuhan tulang (Dr. Tri Agusti Sholikah, dr, M.Sc)" }
       ]
     },
     {
       "tgl": "Senin, 28-Sep-26",
       "sesi": [
-        { "jam": "07.50-09.30", "kegiatan": "TUTOR 1 (SL 10)" },
-        { "jam": "09.50-11.30", "kegiatan": "SL MANDIRI 2" },
-        { "jam": "12.30-14.10", "kegiatan": "KULIAH 8-RK 1 Anatomi Cranium & Truncus 2" },
-        { "jam": "14.15-15.55", "kegiatan": "-" }
+        { "jam": "7.00-07.50", "kegiatan": "Asistensi Histo RK 1,2" },
+        { "jam": "07.50-09.30", "kegiatan": "TUTOR 1" },
+        { "jam": "09.50-11.30", "kegiatan": "SL 10" },
+        { "jam": "12.30-14.10", "kegiatan": "KULIAH 8-RK 1 Anatomi Cranium dan Truncus 2 (Dr. Selfi Handayani, dr, M.Kes)" },
+        { "jam": "14.15-15.55", "kegiatan": "SL MANDIRI 2" }
       ]
     },
     {
       "tgl": "Selasa, 29-Sep-26",
       "sesi": [
-        { "jam": "07.50-09.30", "kegiatan": "KULIAH 9- RK 1 Histologi Kulit dan Adnexa" },
-        { "jam": "09.50-11.30", "kegiatan": "KULIAH 10-RK 1 Fisiologi Otot Rangka" },
-        { "jam": "12.30-14.10", "kegiatan": "PANCASILA 7- RK 1" },
-        { "jam": "14.15-15.55", "kegiatan": "AGAMA 7-RK 1" }
+        { "jam": "07.50-09.30", "kegiatan": "Histologi 1: Kulit" },
+        { "jam": "09.50-11.30", "kegiatan": "-" },
+        { "jam": "12.30-14.10", "kegiatan": "Anatomi 1: Cranium dan truncus" },
+        { "jam": "14.15-15.55", "kegiatan": "-" }
       ]
     },
     {
       "tgl": "Rabu, 30-Sep-26",
       "sesi": [
-        { "jam": "07.00-07.50", "kegiatan": "Asistensi Histo RK 1,2" },
-        { "jam": "07.50-09.30", "kegiatan": "KULIAH 11-RK 1 Anatomi Ekstremitas Sup 2" },
-        { "jam": "09.50-11.30", "kegiatan": "SL 11 / TUTOR 1" },
-        { "jam": "12.30-14.10", "kegiatan": "COURSE 7-RK 1" }
+        { "jam": "07.50-09.30", "kegiatan": "Fisiologi 1: Kontraksi Otot dan refleks" },
+        { "jam": "09.50-11.30", "kegiatan": "-" },
+        { "jam": "12.30-14.10", "kegiatan": "-" },
+        { "jam": "14.15-15.55", "kegiatan": "-" }
       ]
     },
     {
       "tgl": "Kamis, 01-Oct-26",
       "sesi": [
-        { "jam": "07.00-07.50", "kegiatan": "Asistensi Fisio RK 1,2" },
-        { "jam": "07.50-09.30", "kegiatan": "KULIAH 12-RK 1 Biokimia Jaringan Tulang" },
-        { "jam": "09.50-11.30", "kegiatan": "KULIAH 13-RK 1 Histologi Kartilago & Sendi" },
-        { "jam": "12.30-14.10", "kegiatan": "SL 12 / TUTOR 2" }
+        { "jam": "07.50-09.30", "kegiatan": "TUTOR 1" },
+        { "jam": "09.50-11.30", "kegiatan": "SL 11" },
+        { "jam": "12.30-14.10", "kegiatan": "-" },
+        { "jam": "14.15-15.55", "kegiatan": "-" }
       ]
     },
     {
       "tgl": "Jumat, 02-Oct-26",
       "sesi": [
-        { "jam": "07.00-07.50", "kegiatan": "Asistensi Histo RK 1,2" },
-        { "jam": "07.50-09.30", "kegiatan": "RESPONSI FISIOLOGI BLOK 1.2" },
-        { "jam": "13.00-14.40", "kegiatan": "KULIAH 14-RK 1 Anatomi Ekstremitas Inf 1" },
-        { "jam": "14.40-16.20", "kegiatan": "KULIAH 15-RK 1 Biokimia Remodelling Tulang" }
+        { "jam": "07.50-09.30", "kegiatan": "PANCASILA 7- RK 1" },
+        { "jam": "09.50-11.30", "kegiatan": "AGAMA ISLAM 7- RK 1" },
+        { "jam": "13.00-14.40", "kegiatan": "KULIAH 9- RK 1 Anatomi Ekstremitas Superior 2 (Dr. Dhoni Akbar Ghozali, dr, M.Kes)" },
+        { "jam": "14.40-16.20", "kegiatan": "kuliah 10-rk 1 Anatomi Ekstremitas Inferior 1 (Yunia Hastami, dr, M.Med.Ed)" }
       ]
     },
     {
       "tgl": "Senin, 05-Oct-26",
       "sesi": [
-        { "jam": "07.50-09.30", "kegiatan": "TUTOR 3 (SL 14)" },
-        { "jam": "09.50-11.30", "kegiatan": "-" },
-        { "jam": "12.30-14.10", "kegiatan": "KULIAH 16-RK 1 Anatomi Ekstremitas Inf 2" },
+        { "jam": "07.50-09.30", "kegiatan": "TUTOR 2" },
+        { "jam": "09.50-11.30", "kegiatan": "SL 12" },
+        { "jam": "12.30-14.10", "kegiatan": "-" },
         { "jam": "14.15-15.55", "kegiatan": "-" }
       ]
     },
     {
       "tgl": "Selasa, 06-Oct-26",
       "sesi": [
-        { "jam": "07.50-09.30", "kegiatan": "-" },
-        { "jam": "09.50-11.30", "kegiatan": "KULIAH 17-RK 1 Fisiologi Kontraksi Otot" },
-        { "jam": "12.30-14.10", "kegiatan": "PANCASILA 8- RK 1" },
+        { "jam": "07.50-09.30", "kegiatan": "Histologi 2: Otot" },
+        { "jam": "09.50-11.30", "kegiatan": "-" },
+        { "jam": "12.30-14.10", "kegiatan": "Anatomi 2: Extremitas Superior" },
         { "jam": "14.15-15.55", "kegiatan": "-" }
       ]
     },
     {
       "tgl": "Rabu, 07-Oct-26",
       "sesi": [
-        { "jam": "07.50-09.30", "kegiatan": "AGAMA ISLAM 8- RK 1" },
-        { "jam": "09.50-11.30", "kegiatan": "SL 15 / TUTOR 3" },
-        { "jam": "12.30-14.10", "kegiatan": "-" },
-        { "jam": "14.15-15.55", "kegiatan": "-" }
+        { "jam": "07.50-09.30", "kegiatan": "RESPONSI FISIO RK 6,7" },
+        { "jam": "09.50-11.30", "kegiatan": "-" },
+        { "jam": "12.30-14.10", "kegiatan": "KULIAH 11 - RK 1 Histologi kartilago dan sendi (Dr. Muthmainah, dr, M.Kes)" },
+        { "jam": "14.15-15.55", "kegiatan": "KULIAH 12 - RK 1 Biokimia: Proses remodelling tulang dan peran zat-zat biokimiawi pada beberapa contoh kelainan tulang (Jarot Subandono, dr, M.Kes)" }
       ]
     },
     {
       "tgl": "Kamis, 08-Oct-26",
       "sesi": [
-        { "jam": "07.50-09.30", "kegiatan": "SL MANDIRI 3" },
-        { "jam": "09.50-11.30", "kegiatan": "-" },
-        { "jam": "12.30-14.10", "kegiatan": "KULIAH 18-RK 1 Biokimia Mineral Tulang" },
-        { "jam": "14.15-15.55", "kegiatan": "KULIAH 19-RK 1 Biomekanika Muskuloskeletal" }
+        { "jam": "07.50-09.30", "kegiatan": "TUTOR 2" },
+        { "jam": "09.50-11.30", "kegiatan": "SL 13" },
+        { "jam": "12.30-14.10", "kegiatan": "KULIAH 13 - RK 1 Anatomi Ekstremitas Inferior 2 (Yunia Hastami, dr, M.Med.Ed)" },
+        { "jam": "14.15-15.55", "kegiatan": "KULIAH 14 - RK 1 Fisiologi Otot Polos, Otot Jantung - Dr. Yuliana Heri Suselo, dr., M.Sc" }
       ]
     },
     {
       "tgl": "Jumat, 09-Oct-26",
       "sesi": [
-        { "jam": "07.50-09.30", "kegiatan": "PANCASILA 9- RK 1" },
-        { "jam": "09.50-11.30", "kegiatan": "AGAMA ISLAM 9- RK 1" },
+        { "jam": "07.50-09.30", "kegiatan": "PANCASILA 8- RK 1" },
+        { "jam": "09.50-11.30", "kegiatan": "AGAMA ISLAM 8- RK 1" },
         { "jam": "13.00-14.40", "kegiatan": "COURSE 8-RK 1" },
-        { "jam": "14.40-16.20", "kegiatan": "-" }
+        { "jam": "14.40-16.20", "kegiatan": "COURSE 7-RK 1" }
       ]
     },
     {
       "tgl": "Senin, 12-Oct-26",
       "sesi": [
-        { "jam": "07.50-09.30", "kegiatan": "TUTOR 4 (SL 16)" },
-        { "jam": "09.50-11.30", "kegiatan": "-" },
+        { "jam": "07.50-09.30", "kegiatan": "TUTOR 3" },
+        { "jam": "09.50-11.30", "kegiatan": "SL 14" },
         { "jam": "12.30-14.10", "kegiatan": "-" },
         { "jam": "14.15-15.55", "kegiatan": "-" }
       ]
@@ -147,61 +150,61 @@
     {
       "tgl": "Selasa, 13-Oct-26",
       "sesi": [
-        { "jam": "07.50-09.30", "kegiatan": "KULIAH 20-RK 1 Patofisiologi Kelainan Tulang" },
-        { "jam": "09.50-11.30", "kegiatan": "KULIAH 21-RK 1 Farmakologi Muskuloskeletal" },
-        { "jam": "12.30-14.10", "kegiatan": "REMIDI FISIO BLOK 1.2 RK 1" },
+        { "jam": "07.50-09.30", "kegiatan": "Histologi 3: Kartilago dan Tulang" },
+        { "jam": "09.50-11.30", "kegiatan": "-" },
+        { "jam": "12.30-14.10", "kegiatan": "Anatomi 3: Extremitas Inferior" },
         { "jam": "14.15-15.55", "kegiatan": "-" }
       ]
     },
     {
       "tgl": "Rabu, 14-Oct-26",
       "sesi": [
-        { "jam": "07.50-09.30", "kegiatan": "SL 17 / TUTOR 4" },
-        { "jam": "09.50-11.30", "kegiatan": "PANCASILA 10- RK 1" },
-        { "jam": "12.30-14.10", "kegiatan": "AGAMA ISLAM 10- RK 1" },
-        { "jam": "14.15-15.55", "kegiatan": "-" }
+        { "jam": "07.50-09.30", "kegiatan": "REMIDI FISIO BLOK 1.2  RK  1 dan RK 2" },
+        { "jam": "09.50-11.30", "kegiatan": "-" },
+        { "jam": "12.30-14.10", "kegiatan": "kuliah 16-rk 1 Fisiologi Kontraksi Otot Rangka, METs, Neuromuscular Junction dan Refleks (Dr. Yuliana Heri Suselo, dr., M.Sc)" },
+        { "jam": "14.15-15.55", "kegiatan": "KULIAH 15 - RK 1 Biokimia: Mineral Tulang dan Cairan Sendi (Dr. Veronika Ika Budiastuti, dr, M.Pd)" }
       ]
     },
     {
       "tgl": "Kamis, 15-Oct-26",
       "sesi": [
-        { "jam": "07.00-07.50", "kegiatan": "Asistensi Anatomi RK 1,2" },
-        { "jam": "07.50-09.30", "kegiatan": "RESPONSI ANATOMI BLOK 1.2 LAB" },
-        { "jam": "12.30-14.10", "kegiatan": "-" },
+        { "jam": "07.50-09.30", "kegiatan": "TUTOR 3" },
+        { "jam": "09.50-11.30", "kegiatan": "SL 15" },
+        { "jam": "12.30-14.10", "kegiatan": "COURSE 9-RK 1" },
         { "jam": "14.15-15.55", "kegiatan": "-" }
       ]
     },
     {
       "tgl": "Jumat, 16-Oct-26",
       "sesi": [
-        { "jam": "07.00-07.50", "kegiatan": "Asistensi Histo RK 1,2" },
-        { "jam": "07.50-09.30", "kegiatan": "RESPONSI HISTOLOGI BLOK 1.2" },
-        { "jam": "12.30-14.10", "kegiatan": "-" },
-        { "jam": "14.40-16.20", "kegiatan": "-" }
+        { "jam": "07.50-09.30", "kegiatan": "PANCASILA 9- RK 1" },
+        { "jam": "09.50-11.30", "kegiatan": "AGAMA ISLAM 9 - RK 1" },
+        { "jam": "13.00-14.40", "kegiatan": "-" },
+        { "jam": "14.40-16.20", "kegiatan": "SL MANDIRI 3" }
       ]
     },
     {
       "tgl": "Senin, 19-Oct-26",
       "sesi": [
-        { "jam": "07.50-09.30", "kegiatan": "SL 18" },
-        { "jam": "09.50-11.30", "kegiatan": "-" },
-        { "jam": "12.30-14.10", "kegiatan": "SL MANDIRI 4" },
+        { "jam": "07.50-09.30", "kegiatan": "TUTOR 4" },
+        { "jam": "09.50-11.30", "kegiatan": "SL 16" },
+        { "jam": "12.30-14.10", "kegiatan": "-" },
         { "jam": "14.15-15.55", "kegiatan": "-" }
       ]
     },
     {
       "tgl": "Selasa, 20-Oct-26",
       "sesi": [
-        { "jam": "07.50-09.30", "kegiatan": "-" },
-        { "jam": "09.50-11.30", "kegiatan": "PANCASILA 11- RK 1" },
-        { "jam": "12.30-14.10", "kegiatan": "AGAMA ISLAM 11- RK 1" },
+        { "jam": "07.50-09.30", "kegiatan": "RESPONSI HISTO BLOK 1.2" },
+        { "jam": "09.50-11.30", "kegiatan": "-" },
+        { "jam": "12.30-14.10", "kegiatan": "-" },
         { "jam": "14.15-15.55", "kegiatan": "-" }
       ]
     },
     {
       "tgl": "Rabu, 21-Oct-26",
       "sesi": [
-        { "jam": "07.50-09.30", "kegiatan": "SL MANDIRI 5" },
+        { "jam": "07.50-09.30", "kegiatan": "RESPONSI ANATOMI BLOK 1.2 LAB" },
         { "jam": "09.50-11.30", "kegiatan": "-" },
         { "jam": "12.30-14.10", "kegiatan": "-" },
         { "jam": "14.15-15.55", "kegiatan": "-" }
@@ -210,16 +213,34 @@
     {
       "tgl": "Kamis, 22-Oct-26",
       "sesi": [
-        { "jam": "07.50-09.30", "kegiatan": "REMIDI HISTO BLOK 1.2 LAB" },
-        { "jam": "09.50-11.30", "kegiatan": "-" },
-        { "jam": "12.30-14.10", "kegiatan": "REMIDI ANATOMI BLOK 1.2 RK 1 dan RK 2" },
+        { "jam": "07.50-09.30", "kegiatan": "TUTOR 4" },
+        { "jam": "09.50-11.30", "kegiatan": "SL 17" },
+        { "jam": "12.30-14.10", "kegiatan": "COURSE 10 RK 1" },
+        { "jam": "14.15-15.55", "kegiatan": "-" }
+      ]
+    },
+    {
+      "tgl": "Jumat, 23-Oct-26",
+      "sesi": [
+        { "jam": "07.50-09.30", "kegiatan": "PANCAILA 10- RK 1" },
+        { "jam": "09.50-11.30", "kegiatan": "AGAMA 10- RK 1" },
+        { "jam": "13.00-14.40", "kegiatan": "-" },
+        { "jam": "14.40-16.20", "kegiatan": "-" }
+      ]
+    },
+    {
+      "tgl": "Senin, 26-Oct-26",
+      "sesi": [
+        { "jam": "07.50-09.30", "kegiatan": "-" },
+        { "jam": "09.50-11.30", "kegiatan": "SL 18" },
+        { "jam": "12.30-14.10", "kegiatan": "REMIDI HISTO BLOK 1.2 LAB" },
         { "jam": "14.15-15.55", "kegiatan": "-" }
       ]
     },
     {
       "tgl": "Selasa, 27-Oct-26",
       "sesi": [
-        { "jam": "07.50-09.30", "kegiatan": "REMIDI ANATOMI BLOK 1.2 RK 1 dan RK 2" },
+        { "jam": "07.50-09.30", "kegiatan": "REMIDI ANATOMI BLOK 1.2  RK 1 dan RK 2" },
         { "jam": "09.50-11.30", "kegiatan": "-" },
         { "jam": "12.30-14.10", "kegiatan": "COURSE 11-RK 1" },
         { "jam": "14.15-15.55", "kegiatan": "SL MANDIRI 4" }
@@ -248,7 +269,7 @@
       "sesi": [
         { "jam": "07.50-09.30", "kegiatan": "PANCASILA 11- RK 1" },
         { "jam": "09.50-11.30", "kegiatan": "AGAMA 11 - RK 1" },
-        { "jam": "12.30-14.10", "kegiatan": "-" },
+        { "jam": "13.00-14.40", "kegiatan": "-" },
         { "jam": "14.40-16.20", "kegiatan": "SL MANDIRI 6" }
       ]
     }
