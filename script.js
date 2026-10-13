@@ -16,10 +16,10 @@ const allowedUsers = {
 let currentUser = null;
 const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 Menit
 
-// KONFIGURASI JSONBIN.IO DENGAN BIN ID ANDA
+// KONFIGURASI JSONBIN.IO
 const JSONBIN_CONFIG = {
     binId: "6ace42f8ffd5d16053678ea5", 
-    apiKey: "MASUKKAN_API_KEY_ANDA_DISINI" // Contoh: $2a$10$...
+    apiKey: "$2a$10$nRmCBvMNjs28ZFtJ1j2RYuI/WLRngpcN9wAcM4r3J/beS4Uvi4.6"
 };
 
 let dbData = {
@@ -338,7 +338,7 @@ async function renderJadwal() {
 
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     function formatDateStr(dateObj) {
-        return `${String(dateObj.getDate()).padStart(2, '0')}-${months[dateObj.getMonth()]}-${String(dateObj.getFullYear()).slice(-2)}`;
+        return `${String(dateObj.getDate()).padStart(2, '0')}-${months[dateObj.getMonth()]-}-${String(dateObj.getFullYear()).slice(-2)}`;
     }
 
     const todayStr = formatDateStr(nowWIB);
