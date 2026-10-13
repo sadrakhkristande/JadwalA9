@@ -100,15 +100,15 @@ window.handleLogout = function() {
     location.reload();
 };
 
-window.switchTab = function(tabName) {
+window.switchTab = function(tabName, btnElement) {
     document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
     
     const targetTab = document.getElementById(`tab-${tabName}`);
     if(targetTab) targetTab.style.display = 'block';
     
-    if(event && event.currentTarget) {
-        event.currentTarget.classList.add('active');
+    if(btnElement) {
+        btnElement.classList.add('active');
     }
 };
 
@@ -137,7 +137,7 @@ function renderPengumuman() {
 
     dbData.pengumuman.forEach((p, idx) => {
         if(p.deadline && p.deadline < today && currentUser.role !== 'admin') return;
-        const waText = encodeURIComponent(`*PENGUMUMAN AKADEMIK BLOK 1.2*\n\n*${p.judul}*\n${p.isi}\n\nBerlaku s/d:${p.deadline}`);
+        const waText = encodeURIComponent(`*PENGUMUMAN AKADEMIK BLOK 1.2*\n\n*${p.judul}*\n${p.isi}\n\nBerlaku s/d: ${p.deadline}`);
         container.innerHTML += `
             <div style="background: #f8fafc; border-left: 4px solid var(--accent); padding: 15px; margin-bottom: 10px; border-radius: 4px; position: relative;">
                 <h4>${p.judul}</h4>
@@ -157,7 +157,7 @@ function renderReminder() {
     if(!list) return;
     list.innerHTML = '';
     dbData.reminder.forEach((r, idx) => {
-        list.innerHTML += `<li style="margin-bottom: 6px; font-size: 14px; display: flex; justify-content: space-between; align-items: center;"><span>${r}</span>${currentUser.role === 'admin' ? `<button onclick="deleteItem('reminder', ${idx})" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">[Hapus]</button>` : ''}</li>`;
+        list.innerHTML += `<li style="margin-bottom: 6px; font-size: 14px; display: flex; justify-content: space-between; align-items: center;"><span>${r}</span> ${currentUser.role === 'admin' ? `<button onclick="deleteItem('reminder', ${idx})" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">[Hapus]</button>` : ''}</li>`;
     });
 }
 
@@ -166,7 +166,7 @@ function renderJadwalUpdates() {
     if(!list) return;
     list.innerHTML = '';
     dbData.jadwalUpdates.forEach((u, idx) => {
-        list.innerHTML += `<li style="margin-bottom: 6px; font-size: 14px; display: flex; justify-content: space-between; align-items: center;"><span>📄 ${u}</span>${currentUser.role === 'admin' ? `<button onclick="deleteItem('jadwalUpdates', ${idx})" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">[Hapus]</button>` : ''}</li>`;
+        list.innerHTML += `<li style="margin-bottom: 6px; font-size: 14px; display: flex; justify-content: space-between; align-items: center;"><span>📄 ${u}</span> ${currentUser.role === 'admin' ? `<button onclick="deleteItem('jadwalUpdates', ${idx})" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">[Hapus]</button>` : ''}</li>`;
     });
 }
 
@@ -214,4 +214,132 @@ async function renderJadwal() {
             let s1 = j.sesi[0] ? `<small style="color:#64748b">${j.sesi[0].jam}</small><br><strong>${j.sesi[0].kegiatan}</strong>` : '-';
             let s2 = j.sesi[1] ? `<small style="color:#64748b">${j.sesi[1].jam}</small><br><strong>${j.sesi[1].kegiatan}</strong>` : '-';
             let s3 = j.sesi[2] ? `<small style="color:#64748b">${j.sesi[2].jam}</small><br><strong>${j.sesi[2].kegiatan}</strong>` : '-';
-            let s4 = j.sesi[3] ? `<small
+            let s4 = j.sesi[3] ? `<small style="color:#64748b">${j.sesi[3].jam}</small><br><strong>${j.sesi[3].kegiatan}</strong>` : '-';
+
+            tbody.innerHTML += `<tr class="${badgeClass}">
+                <td style="white-space: nowrap;">${j.tgl} <br>${badgeLabel}</td>
+                <td>${s1}</td>
+                <td>${s2}</td>
+                <td>${s3}</td>
+                <td>${s4}</td>
+            </tr>`;
+        });
+    } catch (error) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Gagal memuat jadwal.json. Pastikan file ada di GitHub.</td></tr>';
+    }
+}
+
+function renderTugas() {
+    const tbody = document.getElementById('tugas-table-body');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+    dbData.tugas.forEach((t, idx) => {
+        tbody.innerHTML += `<tr>
+            <td><strong>${t.nama}</strong></td>
+            <td>${t.deadline}</td>
+            <td>
+                <button class="btn" style="width: auto; padding: 5px 10px; font-size: 12px;" onclick="openInfoModal('${t.nama}', '${t.ket}', '${t.link}')">Keterangan & Link</button>
+                ${currentUser.role === 'admin' ? `<button class="btn btn-danger" style="width: auto; padding: 5px 10px; font-size: 12px; margin-left: 5px;" onclick="deleteItem('tugas', ${idx})">Hapus</button>` : ''}
+            </td>
+        </tr>`;
+    });
+}
+
+function renderPraktikum(category, elementId) {
+    const container = document.getElementById(elementId);
+    if(!container) return;
+    container.innerHTML = '';
+    dbData[category].forEach((item, idx) => {
+        container.innerHTML += `
+            <div style="background: #f8fafc; border: 1px solid var(--border); padding: 15px; border-radius: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h4 style="color: var(--primary);">${item.nama}</h4>
+                    <p style="font-size: 13px; color: #64748b; margin-top: 3px;">Modul: ${item.skenario}</p>
+                </div>
+                <div>
+                    <button class="btn" style="width: auto; padding: 6px 12px; font-size: 12px;" onclick="openInfoModal('${item.nama}', '${item.ket}', '${item.link}')">Lihat Keterangan & Modul</button>
+                    ${currentUser.role === 'admin' ? `<button class="btn btn-danger" style="width: auto; padding: 6px 10px; font-size: 12px; margin-left: 5px;" onclick="deleteItem('${category}',${idx})">Hapus</button>` : ''}
+                </div>
+            </div>
+        `;
+    });
+}
+
+function renderMateri() {
+    const tbody = document.getElementById('materi-table-body');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+    dbData.materi.forEach((m, idx) => {
+        tbody.innerHTML += `<tr>
+            <td><strong>${m.kuliah}</strong></td>
+            <td>${m.materi}</td>
+            <td>
+                <a href="${m.link}" target="_blank" style="color: var(--accent); font-weight: 600; text-decoration: none;">Akses File ↗</a>
+                ${currentUser.role === 'admin' ? `<button class="btn btn-danger" style="width: auto; padding: 3px 6px; font-size: 11px; margin-left: 10px;" onclick="deleteItem('materi', ${idx})">Hapus</button>` : ''}
+            </td>
+        </tr>`;
+    });
+}
+
+window.openInfoModal = function(title, text, link) {
+    document.getElementById('modal-title').innerText = title;
+    document.getElementById('modal-body').innerText = text || "Tidak ada keterangan tambahan.";
+    const linkBox = document.getElementById('modal-link-container');
+    if(link) {
+        linkBox.innerHTML = `<a href="${link}" target="_blank" class="btn" style="display:block; text-align:center; text-decoration:none;">Buka Tautan / File ↗</a>`;
+    } else {
+        linkBox.innerHTML = '<span style="color:#64748b; font-size:13px;">Tidak ada tautan.</span>';
+    }
+    document.getElementById('info-modal').style.display = 'flex';
+};
+
+window.addPengumuman = function() {
+    const judul = document.getElementById('p-judul').value;
+    const isi = document.getElementById('p-isi').value;
+    const deadline = document.getElementById('p-deadline').value;
+
+    if(!judul || !isi || !deadline) return alert('Semua kolom wajib diisi!');
+    dbData.pengumuman.push({ id: Date.now(), judul, isi, deadline });
+    saveData();
+    document.getElementById('p-judul').value = '';
+    document.getElementById('p-isi').value = '';
+    document.getElementById('p-deadline').value = '';
+};
+
+window.addReminder = function() {
+    const val = document.getElementById('rem-text').value;
+    if(!val) return;
+    dbData.reminder.push(val);
+    saveData();
+    document.getElementById('rem-text').value = '';
+};
+
+window.addJadwalUpdateWithFile = function() {
+    const title = document.getElementById('up-title').value;
+    const fileInput = document.getElementById('up-file');
+    
+    if(!title && fileInput.files.length === 0) return alert('Masukkan keterangan atau pilih file!');
+    
+    if(fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            dbData.jadwalUpdates.push(`${title} (<a href="${e.target.result}" download="${file.name}">Unduh File: ${file.name}</a>)`);
+            saveData();
+            document.getElementById('up-title').value = '';
+            fileInput.value = '';
+        };
+        reader.readAsDataURL(file);
+    } else {
+        dbData.jadwalUpdates.push(title);
+        saveData();
+        document.getElementById('up-title').value = '';
+    }
+};
+
+window.deleteItem = function(category, index) {
+    if(confirm('Yakin ingin menghapus item ini dari sistem?')) {
+        dbData[category].splice(index, 1);
+        saveData();
+    }
+};
