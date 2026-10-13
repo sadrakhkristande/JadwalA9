@@ -14,8 +14,7 @@ const allowedUsers = {
 };
 
 let currentUser = null;
-const INACTIVITY_LIMIT = 30 * 60 * 1000; // Batas waktu tidak ada pergerakan: 30 Menit (dalam milidetik)
-let inactivityTimer = null;
+const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 Menit
 
 let dbData = JSON.parse(localStorage.getItem('portal_blok12_db')) || {
     pengumuman: [
@@ -52,19 +51,17 @@ window.addEventListener('DOMContentLoaded', () => {
     applyTheme(dbData.theme || 'light');
     checkMaintenanceStatus();
     
-    // Cek apakah ada sesi aktif di sessionStorage saat halaman di-reload
+    // Cek sesi yang tersimpan saat reload
     const savedUser = sessionStorage.getItem('portal_current_user');
     const lastActive = sessionStorage.getItem('portal_last_active');
     const now = Date.now();
 
     if (savedUser && lastActive) {
-        // Cek apakah melewati batas waktu tidak ada pergerakan (Inactivity Timeout)
         if (now - parseInt(lastActive) < INACTIVITY_LIMIT) {
             currentUser = JSON.parse(savedUser);
             initApp();
             setupInactivityTracker();
         } else {
-            // Jika sudah terlalu lama tidak ada pergerakan, hapus sesi
             sessionStorage.removeItem('portal_current_user');
             sessionStorage.removeItem('portal_last_active');
         }
@@ -133,14 +130,23 @@ setInterval(() => {
 
 window.toggleLoginFields = function() {
     const role = document.getElementById('login-role').value;
-    document.getElementById('guest-fields').style.display = role === 'guest' ? 'block' : 'none';
-    document.getElementById('admin-fields').style.display = role === 'admin' ? 'block' : 'none';
+    const guestFields = document.getElementById('guest-fields');
+    const adminFields = document.getElementById('admin-fields');
+    
+    if (guestFields && adminFields) {
+        guestFields.style.display = role === 'guest' ? 'block' : 'none';
+        adminFields.style.display = role === 'admin' ? 'block' : 'none';
+    }
 };
 
 window.handleLogin = function() {
-    const role = document.getElementById('login-role').value;
+    const roleEl = document.getElementById('login-role');
+    if (!roleEl) return;
+    
+    const role = roleEl.value;
     if (role === 'admin') {
-        const code = document.getElementById('login-admin-code').value;
+        const codeInput = document.getElementById('login-admin-code');
+        const code = codeInput ? codeInput.value.trim() : '';
         if (code === 'A9ACOR') {
             currentUser = { role: 'admin', name: 'Admin Utama (A9ACOR)' };
             saveUserSession();
@@ -154,7 +160,9 @@ window.handleLogin = function() {
             alert('Portal sedang dalam pemeliharaan (Maintenance). Guest/Mahasiswa belum dapat masuk.');
             return;
         }
-        const nim = document.getElementById('login-nim-input').value.trim();
+        const nimInput = document.getElementById('login-nim-input');
+        const nim = nimInput ? nimInput.value.trim() : '';
+        
         if (nim === "12345" || allowedUsers[nim]) {
             currentUser = { role: 'guest', name: allowedUsers[nim] || "Guest " + nim, nim: nim };
             saveUserSession();
@@ -171,7 +179,6 @@ function saveUserSession() {
     sessionStorage.setItem('portal_last_active', Date.now().toString());
 }
 
-// Pelacak Aktivitas Pergerakan (Mouse, Ketikan, Klik, Scroll)
 function setupInactivityTracker() {
     const updateActivity = () => {
         if(currentUser) {
@@ -184,7 +191,6 @@ function setupInactivityTracker() {
     window.addEventListener('click', updateActivity);
     window.addEventListener('scroll', updateActivity);
 
-    // Interval berkala untuk mengecek apakah sudah melebihi batas tidak ada pergerakan
     setInterval(() => {
         const lastActive = sessionStorage.getItem('portal_last_active');
         if(currentUser && lastActive) {
@@ -193,13 +199,19 @@ function setupInactivityTracker() {
                 handleLogout();
             }
         }
-    }, 60000); // Cek tiap 1 menit
+    }, 60000);
 }
 
 function initApp() {
-    document.getElementById('login-page').style.display = 'none';
-    document.getElementById('main-app').style.display = 'block';
-    document.getElementById('user-info').innerText = `${currentUser.name} — (${currentUser.role.toUpperCase()})`;
+    const loginPage = document.getElementById('login-page');
+    const mainApp = document.getElementById('main-app');
+    const userInfo = document.getElementById('user-info');
+
+    if (loginPage) loginPage.style.display = 'none';
+    if (mainApp) mainApp.style.display = 'block';
+    if (userInfo && currentUser) {
+        userInfo.innerText = `${currentUser.name} — (${currentUser.role.toUpperCase()})`;
+    }
 
     if (currentUser.role === 'admin') {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'inline-block');
@@ -727,7 +739,7 @@ window.addJadwalUpdateWithFile = function() {
         const file = fileInput.files[0];
         const reader = new FileReader();
         reader.onload = function(e) {
-            dbData.jadwalUpdates.push(`${title} (<a href="${e.target.result}" download="${file.name}">Unduh File: ${file.name}</a>)`;
+            dbData.jadwalUpdates.push(`${title} (<a href="${e.target.result}" download="${file.name}">Unduh File: ${file.name}</a>)`);
             saveData();
             document.getElementById('up-title').value = '';
             fileInput.value = '';
