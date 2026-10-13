@@ -164,11 +164,11 @@ function renderJadwalUpdates() {
     });
 }
 
-// Filter jadwal Hari Ini & Besok
+// Filter Jadwal Hari Ini & Besok (Khusus Kelas A)
 async function renderJadwal() {
     const tbody = document.getElementById('jadwal-table-body');
     if(!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Memuat agenda jadwal...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Memuat agenda jadwal...</td></tr>';
     
     try {
         const response = await fetch('jadwal.json');
@@ -183,7 +183,7 @@ async function renderJadwal() {
         });
 
         if(filteredJadwal.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#64748b;">Tidak ada jadwal untuk hari ini dan besok.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#64748b;">Tidak ada jadwal untuk hari ini dan besok.</td></tr>';
             return;
         }
 
@@ -196,11 +196,10 @@ async function renderJadwal() {
                 <td>${j.tgl} ${badgeLabel}</td>
                 <td>${j.jam}</td>
                 <td>${j.kelasA}</td>
-                <td>${j.kelasB}</td>
             </tr>`;
         });
     } catch (error) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Gagal memuat jadwal.json. Pastikan file ada di GitHub.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:red;">Gagal memuat jadwal.json. Pastikan file ada di GitHub.</td></tr>';
     }
 }
 
