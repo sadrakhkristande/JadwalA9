@@ -3,16 +3,16 @@
    ========================================================================== */
 
 :root {
-    --primary: #064e3b;             /* Hijau Emerald Gelap Elegan */
-    --accent: #047857;              /* Hijau Emerald Akses Utama */
-    --accent-hover: #065f46;        /* Hijau Emerald Hover */
-    --bg-main: #f4f7f5;             /* Latar Belakang Tint Hijau Sangat Halus */
+    --primary: #064e3b;
+    --accent: #047857;
+    --accent-hover: #065f46;
+    --bg-main: #f4f7f5;
     --bg-card: #ffffff;
-    --bg-light: #e6f4ea;            /* Sage Soft untuk Highlight */
+    --bg-light: #e6f4ea;
     --text: #0f172a;
     --text-muted: #475569;
     --border: #cbd5e1;
-    --gold: #d97706;                /* Aksen Emas untuk Elegan */
+    --gold: #d97706;
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
     --shadow-md: 0 4px 6px -1px rgba(6, 78, 59, 0.08), 0 2px 4px -1px rgba(6, 78, 59, 0.04);
     --shadow-lg: 0 10px 15px -3px rgba(6, 78, 59, 0.12);
@@ -23,8 +23,8 @@ body.theme-dark {
     --primary: #10b981;
     --accent: #059669;
     --accent-hover: #10b981;
-    --bg-main: #061e14;             /* Dark Greenish Charcoal */
-    --bg-card: #0b2d21;             /* Dark Emerald Card */
+    --bg-main: #061e14;
+    --bg-card: #0b2d21;
     --bg-light: #134e3a;
     --text: #f0fdf4;
     --text-muted: #93c5fd;
@@ -49,25 +49,25 @@ body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* HALAMAN LOGIN */
+/* HALAMAN LOGIN RESPONSIP TANPA SCROLL DI HP */
 #login-page {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
-    padding: 20px;
+    min-height: calc(100vh - 45px); /* Menyesuaikan ruang banner atas agar tidak terpotong */
+    padding: 15px;
     background: linear-gradient(135deg, #022c22 0%, #064e3b 50%, #047857 100%);
 }
 
 #login-page .card {
     width: 100%;
-    max-width: 420px;
+    max-width: 380px;
     border-radius: 16px;
     box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);
     border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 24px 20px !important;
 }
 
-/* HEADER */
 header {
     background-color: var(--bg-card);
     border-bottom: 2px solid var(--accent);
@@ -81,7 +81,6 @@ header {
     box-shadow: var(--shadow-sm);
 }
 
-/* NAVIGASI MENU TAB BERJAJAR */
 nav {
     display: flex;
     gap: 8px;
@@ -120,7 +119,6 @@ nav::-webkit-scrollbar {
     box-shadow: 0 2px 8px rgba(4, 120, 87, 0.3);
 }
 
-/* SAKLAR DARK MODE TOGGLE */
 .switch {
     position: relative;
     display: inline-block;
@@ -163,7 +161,6 @@ input:checked + .slider:before {
     transform: translateX(22px);
 }
 
-/* MAIN LAYOUT & CARDS */
 main {
     max-width: 1200px;
     margin: 24px auto;
@@ -237,7 +234,6 @@ main {
     text-decoration: none;
 }
 
-/* EFEK HIGHLIGHT PENGUMUMAN TERBARU */
 .pengumuman-card.is-latest {
     border-left: 5px solid var(--gold) !important;
     background: linear-gradient(135deg, var(--bg-card) 0%, rgba(217, 119, 6, 0.08) 100%) !important;
@@ -264,7 +260,6 @@ main {
     100% { transform: scale(1); opacity: 1; }
 }
 
-/* TABLES & RESPONSIVE MOBILE */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -286,7 +281,24 @@ th {
     font-size: 12px;
 }
 
+/* KHUSUS PENYESUAIAN TAMBILAN DI HP (LAYAR KECIL) */
 @media (max-width: 768px) {
+    #login-page {
+        min-height: calc(100vh - 40px);
+        padding: 10px;
+        align-items: center;
+    }
+
+    #login-page .card {
+        padding: 18px 16px !important;
+        margin: 0 auto;
+    }
+
+    #login-page h2 {
+        font-size: 20px !important;
+        margin-bottom: 12px !important;
+    }
+
     header {
         flex-direction: column;
         align-items: flex-start;
