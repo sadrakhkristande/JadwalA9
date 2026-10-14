@@ -35,7 +35,6 @@
                 </select>
             </div>
 
-            <!-- Bagian Placeholder NIM Diubah Menjadi Contoh 211... -->
             <div id="guest-fields" style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 5px; font-weight: 600;">Masukkan Nomor Identitas:</label>
                 <input type="text" id="login-nim-input" class="input-field" placeholder="Contoh: 21105032610227">
@@ -333,20 +332,19 @@
         <div class="card" style="width:100%; max-width:550px; max-height:90vh; overflow-y:auto;">
             <h3 style="color:var(--accent); margin-bottom:15px;">⚙️ Panel Pengaturan Web (Kewenangan Admin)</h3>
             
-            <div style="background:var(--bg-light); padding:12px; border-radius:8px; margin-bottom:15px;">
-                <h4 style="font-size:14px; margin-bottom:8px; color:var(--text);">1. Mode Pemeliharaan (Maintenance)</h4>
-                <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">Aktifkan jika web sedang dalam perbaikan. Mahasiswa tidak akan bisa login.</p>
+            <div style="background:var(--bg-light); padding:12px; border-radius:8px; margin-bottom:15px; border: 1px solid var(--border);">
+                <h4 style="font-size:14px; margin-bottom:6px; color:var(--text);">1. Status Mode Pemeliharaan (Maintenance)</h4>
+                <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">Jika diaktifkan, mahasiswa tidak dapat masuk dan banner peringatan akan muncul.</p>
                 <button id="modal-maintenance-btn" class="btn btn-warning" onclick="toggleMaintenanceMode()">Aktifkan Maintenance</button>
             </div>
 
-            <div style="background:var(--bg-light); padding:12px; border-radius:8px; margin-bottom:15px;">
-                <h4 style="font-size:14px; margin-bottom:8px; color:var(--text);">2. Pengumuman Global Header</h4>
-                <p style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">Tampilkan teks pengumuman penting di bagian paling atas portal.</p>
+            <div style="background:var(--bg-light); padding:12px; border-radius:8px; margin-bottom:15px; border: 1px solid var(--border);">
+                <h4 style="font-size:14px; margin-bottom:6px; color:var(--text);">2. Pengumuman Global Header</h4>
                 <input type="text" id="cfg-global-msg" class="input-field" placeholder="Contoh: Ujian Tengah Semester dimulai Minggu Depan!">
             </div>
 
-            <div style="background:var(--bg-light); padding:12px; border-radius:8px; margin-bottom:15px;">
-                <h4 style="font-size:14px; margin-bottom:8px; color:var(--text);">3. Kode Rahasia Admin Baru</h4>
+            <div style="background:var(--bg-light); padding:12px; border-radius:8px; margin-bottom:15px; border: 1px solid var(--border);">
+                <h4 style="font-size:14px; margin-bottom:6px; color:var(--text);">3. Kode Rahasia Admin Baru</h4>
                 <input type="password" id="cfg-admin-code" class="input-field" placeholder="Default: A9ACOR">
             </div>
 
