@@ -16,14 +16,12 @@ const allowedUsers = {
 let currentUser = null;
 const INACTIVITY_LIMIT = 30 * 60 * 1000;
 
-// KONFIGURASI SUPABASE
 const SUPABASE_URL = "https://vqzklxbfrvmvcoeykias.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_-NTQ0VL2xQmIYJ_ieREXkg_WUcU3L0t";
 
-// URL WEB APP GOOGLE APPS SCRIPT ANDA
+// URL WEB APP TERBARU (VERSI /2)
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxQVzmE_L4NXfsN0ZsSyOej2uWPUUKy_U5VShI9s-QEJJdYFvy2IJnDVa5tatKJk-ss/exec";
 
-// Inisialisasi Klien Supabase
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let dbData = {
@@ -86,7 +84,6 @@ async function fetchDatabaseFromCloud() {
         if (error) throw error;
         if (data && data.value) {
             dbData = Object.assign({}, dbData, data.value);
-            console.log("Database Supabase berhasil dimuat!");
         }
     } catch (err) {
         console.error("Gagal memuat database dari Supabase:", err);
@@ -103,18 +100,16 @@ async function saveData() {
             .eq('key', 'data');
 
         if (error) throw error;
-        console.log("Perubahan berhasil disimpan ke Supabase!");
     } catch (err) {
         console.error("Error Sync Cloud Supabase:", err);
         alert("Gagal menyimpan ke server online.");
     }
 }
 
-// Fungsi Otomatis Upload ke Google Drive via Apps Script
 async function uploadToGoogleDrive(fileInput) {
     if (!fileInput || fileInput.files.length === 0) return '#';
     const file = fileInput.files[0];
-    alert("Sedang mengunggah file ke Google Drive Anda, mohon tunggu sebentar...");
+    alert("Sedang mengunggah file ke Google Drive Anda...");
     
     return new Promise((resolve) => {
         const reader = new FileReader();
@@ -175,7 +170,7 @@ window.toggleMaintenanceMode = async function() {
     dbData.maintenance = !dbData.maintenance;
     await saveData();
     checkMaintenanceStatus();
-    alert(dbData.maintenance ? "Maintenance diaktifkan secara global." : "Maintenance dinonaktifkan secara global.");
+    alert(dbData.maintenance ? "Maintenance diaktifkan." : "Maintenance dinonaktifkan.");
 };
 
 setInterval(() => {
@@ -209,13 +204,13 @@ window.handleLogin = function() {
             saveUserSession(); initApp(); setupInactivityTracker();
         } else { alert('Kode Admin Salah!'); }
     } else {
-        if (dbData.maintenance) { alert('Portal sedang pemeliharaan.'); return; }
+        if (dbData.maintenance) { alert('Portal sedang Maintenance.'); return; }
         const nimInput = document.getElementById('login-nim-input');
         const nim = nimInput ? nimInput.value.trim() : '';
         if (nim === "12345" || allowedUsers[nim]) {
             currentUser = { role: 'guest', name: allowedUsers[nim] || "Guest " + nim, nim: nim };
             saveUserSession(); initApp(); setupInactivityTracker();
-        } else { alert('NIM atau Kode Guest tidak valid!'); }
+        } else { alert('NIM tidak valid!'); }
     }
 };
 
