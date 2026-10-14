@@ -23,10 +23,10 @@ const SUPABASE_URL = "https://vqzklxbfrvmvcoeykias.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_-NTQ0VL2xQmIYJ_ieREXkg_WUcU3L0t";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// State Data Terpisah (Multi-JSON)
 let dbData = {
     pengumuman: [],
     reminder: [],
-    jadwalUpdates: [],
     tugas: [],
     laboratorium: [],
     skills_lab: [],
@@ -38,9 +38,13 @@ let dbData = {
 };
 
 // ==========================================================================
-// INISIALISASI APLIKASI
+// INISIALISASI APLIKASI & MIGRASI OTOMATIS
 // ==========================================================================
 window.addEventListener('DOMContentLoaded', async () => {
+    // 1. Jalankan Migrasi Otomatis jika Data Lama Ditemukan
+    await autoMigrateOldData();
+    
+    // 2. Load Data Multi-JSON
     await fetchDatabaseFromCloud();
     applyTheme(dbData.theme || 'light');
     checkMaintenanceStatus();
@@ -75,41 +79,103 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-async function fetchDatabaseFromCloud() {
+// FUNGSI MIGRASI OTOMATIS (MEMINDAHKAN DATA LAMA DENGAN SELAMAT)
+async function autoMigrateOldData() {
     try {
-        const { data, error } = await supabaseClient
+        const { data: oldDataRow, error } = await supabaseClient
             .from('portal_db')
             .select('value')
             .eq('key', 'data')
             .single();
 
-        if (error) throw error;
-        if (data && data.value) {
-            dbData = Object.assign({}, dbData, data.value);
+        if (!error && oldDataRow && oldDataRow.value) {
+            const oldObj = oldDataRow.value;
+            console.log("Menemukan data monolith lama, mengonversi ke Multi-JSON...");
+
+            const keysToMigrate = ['pengumuman', 'reminder', 'tugas', 'laboratorium', 'skills_lab', 'tutorial', 'materi'];
+            for (const key of keysToMigrate) {
+                if (oldObj[key] && Array.isArray(oldObj[key]) && oldObj[key].length > 0) {
+                    await supabaseClient
+                        .from('portal_db')
+                        .update({ value: oldObj[key] })
+                        .eq('key', key);
+                }
+            }
+
+            // Migrasi Konfigurasi Tema & Maintenance
+            await supabaseClient
+                .from('portal_db')
+                .update({ 
+                    value: { 
+                        maintenance: oldObj.maintenance || false, 
+                        theme: oldObj.theme || 'light' 
+                    } 
+                })
+                .eq('key', 'config');
+
+            // Kosongkan baris 'data' lama agar migrasi tidak berulang
+            await supabaseClient
+                .from('portal_db')
+                .update({ value: null })
+                .eq('key', 'data');
+
+            alert("✅ Migrasi data otomatis berhasil! Semua berkas dan postingan lama Anda telah dipindahkan secara aman.");
+        }
+    } catch (e) {
+        console.log("Migrasi tidak diperlukan atau struktur data sudah diperbarui.");
+    }
+}
+
+// FETCH DATA MULTI-JSON
+async function fetchDatabaseFromCloud() {
+    try {
+        const keys = ['pengumuman', 'reminder', 'tugas', 'laboratorium', 'skills_lab', 'tutorial', 'materi', 'config'];
+        
+        for (const k of keys) {
+            const { data, error } = await supabaseClient
+                .from('portal_db')
+                .select('value')
+                .eq('key', k)
+                .single();
+
+            if (!error && data && data.value) {
+                if (k === 'config') {
+                    dbData.maintenance = data.value.maintenance || false;
+                    dbData.theme = data.value.theme || 'light';
+                } else {
+                    dbData[k] = data.value || [];
+                }
+            }
         }
     } catch (err) {
-        console.error("Gagal memuat database dari Supabase:", err);
+        console.error("Gagal memuat sebagian data dari Supabase:", err);
     }
     checkMaintenanceStatus();
     renderAll();
 }
 
-async function saveData() {
+// SIMPAN SPESIFIK PER KATEGORI (RINGAN & NGEBUT)
+async function saveCategoryData(categoryKey) {
     renderAll();
     try {
+        let payload = dbData[categoryKey];
+        if (categoryKey === 'config') {
+            payload = { maintenance: dbData.maintenance, theme: dbData.theme };
+        }
+
         const { error } = await supabaseClient
             .from('portal_db')
-            .update({ value: dbData })
-            .eq('key', 'data');
+            .update({ value: payload })
+            .eq('key', categoryKey);
 
         if (error) throw error;
     } catch (err) {
-        console.error("Error Sync Cloud Supabase:", err);
-        alert("Gagal menyimpan ke server online.");
+        console.error(`Gagal menyimpan ${categoryKey} ke Supabase:`, err);
+        alert("Gagal menyinkronkan perubahan ke server online.");
     }
 }
 
-// Helper membaca file dari PC ke Base64
+// HELPER PEMBATASAN BAZAAR FILE (MAKSIMAL 1 MB)
 function getFileAsBase64(fileInputId) {
     return new Promise((resolve) => {
         const fileInput = document.getElementById(fileInputId);
@@ -118,28 +184,32 @@ function getFileAsBase64(fileInputId) {
             return;
         }
         const file = fileInput.files[0];
+        
+        const maxSize = 1 * 1024 * 1024; // 1 MB limit
+        if (file.size > maxSize) {
+            alert(`⚠️ Ukuran file "${file.name}" adalah ${(file.size / (1024*1024)).toFixed(2)} MB.\nUntuk menjaga portal tetap cepat dan bebas Not Responding, ukuran unggah file PC dibatasi maksimal 1 MB.\n\nSaran: Unggah file besar ke Google Drive lalu masukkan URL-nya di kolom link.`);
+            fileInput.value = '';
+            resolve(null);
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = function(e) {
-            resolve({
-                name: file.name,
-                url: e.target.result
-            });
+            resolve({ name: file.name, url: e.target.result });
         };
         reader.onerror = function() { resolve(null); };
         reader.readAsDataURL(file);
     });
 }
 
-// Helper Otomatiskan Pembuatan Pengumuman
+// OTOMATISKAN PENGUMUMAN DENGAN TEMPLATE PER KATEGORI
 async function triggerAutoAnnouncement(judul, isi, deadlineDays = 7) {
     if (!dbData.pengumuman) dbData.pengumuman = [];
     
-    // Hitung tanggal deadline otomatis (default 7 hari ke depan)
     const d = new Date();
     d.setDate(d.getDate() + deadlineDays);
     const deadlineStr = d.toISOString().split('T')[0];
 
-    // Tambahkan pengumuman ke urutan paling atas agar jadi TERBARU
     dbData.pengumuman.unshift({
         id: Date.now(),
         judul: judul,
@@ -151,14 +221,14 @@ async function triggerAutoAnnouncement(judul, isi, deadlineDays = 7) {
 // ==========================================================================
 // MANAJEMEN TEMA & MAINTENANCE
 // ==========================================================================
-window.toggleThemeSwitch = function() {
+window.toggleThemeSwitch = async function() {
     const checkbox = document.getElementById('theme-toggle-checkbox');
-    const newTheme = checkbox && checkbox.checked ? 'dark' : 'light';
-    applyTheme(newTheme);
+    dbData.theme = checkbox && checkbox.checked ? 'dark' : 'light';
+    applyTheme(dbData.theme);
+    await saveCategoryData('config');
 };
 
 function applyTheme(themeName) {
-    dbData.theme = themeName;
     const checkbox = document.getElementById('theme-toggle-checkbox');
     if(checkbox) checkbox.checked = (themeName === 'dark');
 
@@ -175,22 +245,16 @@ function checkMaintenanceStatus() {
     
     if(dbData.maintenance) {
         if(banner) banner.style.display = 'block';
-        if(toggleBtn) { 
-            toggleBtn.innerText = "Nonaktifkan Maintenance"; 
-            toggleBtn.className = "btn btn-success"; 
-        }
+        if(toggleBtn) { toggleBtn.innerText = "Nonaktifkan Maintenance"; toggleBtn.className = "btn btn-success"; }
     } else {
         if(banner) banner.style.display = 'none';
-        if(toggleBtn) { 
-            toggleBtn.innerText = "Aktifkan Maintenance"; 
-            toggleBtn.className = "btn btn-warning"; 
-        }
+        if(toggleBtn) { toggleBtn.innerText = "Aktifkan Maintenance"; toggleBtn.className = "btn btn-warning"; }
     }
 }
 
 window.toggleMaintenanceMode = async function() {
     dbData.maintenance = !dbData.maintenance;
-    await saveData();
+    await saveCategoryData('config');
     checkMaintenanceStatus();
     alert(dbData.maintenance ? "⚠️ Mode Maintenance DIAKTIFKAN!" : "✅ Mode Maintenance DINONAKTIFKAN!");
 };
@@ -297,7 +361,7 @@ window.switchTab = function(tabName, btnElement) {
 window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; };
 
 // ==========================================================================
-// RENDER & AKSI INPUT DENGAN TEMPLATE PENGUMUMAN OTOMATIS
+// RENDER & INPUT DATA
 // ==========================================================================
 function renderAll() {
     renderPengumuman(); renderReminder(); renderJadwalUpdates(); renderJadwal();
@@ -305,7 +369,7 @@ function renderAll() {
     renderPraktikum('skills_lab', 'skills-list'); renderPraktikum('tutorial', 'tutorial-list'); renderMateri();
 }
 
-// 1. TAMBAH PENGUMUMAN MANUAL ADMIN
+// 1. PENGUMUMAN MANUAL
 window.addPengumuman = async function() {
     const judul = document.getElementById('p-judul').value;
     const isi = document.getElementById('p-isi').value;
@@ -314,15 +378,14 @@ window.addPengumuman = async function() {
     if (!dbData.pengumuman) dbData.pengumuman = [];
     
     dbData.pengumuman.unshift({ id: Date.now(), judul, isi, deadline });
-    await saveData();
+    await saveCategoryData('pengumuman');
 
     document.getElementById('p-judul').value = ''; 
     document.getElementById('p-isi').value = ''; 
     document.getElementById('p-deadline').value = '';
-    alert('Pengumuman berhasil ditambahkan!');
+    alert('Pengumuman ditambahkan!');
 };
 
-// 2. RENDER PENGUMUMAN DENGAN HIGHLIGHT WARNA TERBARU
 function renderPengumuman() {
     const container = document.getElementById('pengumuman-list');
     if(!container) return; container.innerHTML = '';
@@ -336,7 +399,7 @@ function renderPengumuman() {
     }
 
     validList.forEach((p, idx) => {
-        const isLatest = (idx === 0); // Pengumuman paling atas dianggap TERBARU
+        const isLatest = (idx === 0);
         const waText = encodeURIComponent(`*PENGUMUMAN AKADEMIK A9*\n\n*${p.judul}*\n${p.isi}\n\nBerlaku s/d: ${p.deadline}`);
         const isAdmin = currentUser && currentUser.role === 'admin';
         
@@ -354,7 +417,7 @@ function renderPengumuman() {
     });
 }
 
-// 3. TAMBAH TUGAS (TEMPLATE PENGUMUMAN AUTOMATIC)
+// 2. TUGAS BARU
 window.addTugasItem = async function() {
     const nama = document.getElementById('t-nama').value;
     const deadline = document.getElementById('t-deadline').value;
@@ -370,22 +433,22 @@ window.addTugasItem = async function() {
 
     dbData.tugas.push({ id: Date.now(), nama, deadline, ket, link: finalLink });
     
-    // TEMPLATE PENGUMUMAN TUGAS BARU
     const judulPengumuman = `📋 TUGAS BARU: ${nama}`;
-    const isiPengumuman = `Telah ditambahkan penugasan baru untuk mahasiswa:\n📌 *Tugas:* ${nama}\n⏰ *Deadline:* ${deadline}\n📝 *Instruksi:* ${ket || 'Silakan cek detail pada menu Tugas.'}`;
+    const isiPengumuman = `Telah ditambahkan penugasan baru:\n📌 *Tugas:* ${nama}\n⏰ *Deadline:* ${deadline}\n📝 ${ket || 'Silakan cek menu Tugas.'}`;
     await triggerAutoAnnouncement(judulPengumuman, isiPengumuman);
 
-    await saveData();
+    await saveCategoryData('tugas');
+    await saveCategoryData('pengumuman');
     
     document.getElementById('t-nama').value = ''; 
     document.getElementById('t-deadline').value = ''; 
     document.getElementById('t-ket').value = ''; 
     document.getElementById('t-file-pc').value = '';
     document.getElementById('t-link-manual').value = '';
-    alert('Tugas disimpan & Pengumuman dipublikasikan!');
+    alert('Tugas disimpan & dipublikasikan!');
 };
 
-// 4. TAMBAH PRAKTIKUM / LAB / SKILLS LAB / TUTORIAL (TEMPLATE AUTOMATIC)
+// 3. PRAKTIKUM / LAB / SKILLS LAB / TUTORIAL
 window.handlePraktikumUpload = async function(category, idNama, idSkenario, idKet, idFilePc, idLink) {
     const nama = document.getElementById(idNama).value;
     const skenario = document.getElementById(idSkenario).value;
@@ -401,26 +464,26 @@ window.handlePraktikumUpload = async function(category, idNama, idSkenario, idKe
 
     dbData[category].push({ id: Date.now(), nama, skenario, ket, link: finalLink });
     
-    // TEMPLATE PENGUMUMAN KHUSUS PER SUB-MENU
     let prefixJudul = "🔬 LAB";
     if(category === "skills_lab") prefixJudul = "🩺 SKILLS LAB";
     if(category === "tutorial") prefixJudul = "💬 TUTORIAL";
 
     const judulPengumuman = `${prefixJudul}: ${nama}`;
-    const isiPengumuman = `Modul/Materi baru telah diunggah:\n📌 *Kegiatan:* ${nama}\n📖 *Modul/Skenario:* ${skenario || '-'}\nCatatan: ${ket || 'Silakan diakses pada tab menu terkait.'}`;
+    const isiPengumuman = `Modul/Materi baru telah diunggah:\n📌 *Kegiatan:* ${nama}\n📖 *Modul:* ${skenario || '-'}`;
     await triggerAutoAnnouncement(judulPengumuman, isiPengumuman);
 
-    await saveData();
+    await saveCategoryData(category);
+    await saveCategoryData('pengumuman');
     
     document.getElementById(idNama).value = ''; 
     document.getElementById(idSkenario).value = ''; 
     document.getElementById(idKet).value = ''; 
     document.getElementById(idFilePc).value = '';
     document.getElementById(idLink).value = '';
-    alert('Berhasil disimpan & Pengumuman dipublikasikan!');
+    alert('Berhasil disimpan & dipublikasikan!');
 };
 
-// 5. TAMBAH MATERI KULIAH (TEMPLATE AUTOMATIC)
+// 4. MATERI KULIAH
 window.handleMateriUpload = async function() {
     const kuliah = document.getElementById('m-kuliah').value;
     const materi = document.getElementById('m-materi').value;
@@ -435,21 +498,21 @@ window.handleMateriUpload = async function() {
 
     dbData.materi.push({ id: Date.now(), kuliah, materi, link: finalLink });
     
-    // TEMPLATE PENGUMUMAN MATERI KULIAH
-    const judulPengumuman = `📚 MATERI KULIAH BARU: ${kuliah}`;
-    const isiPengumuman = `Berkas materi perkuliahan baru telah diunggah ke Bank Materi:\n📖 *Mata Kuliah:* ${kuliah}\n✍️ *Topik Materi:* ${materi}\nSilakan unduh atau pelajari berkas di tab Materi.`;
+    const judulPengumuman = `📚 MATERI KULIAH: ${kuliah}`;
+    const isiPengumuman = `Materi baru telah diunggah:\n📖 *Kuliah:* ${kuliah}\n✍️ *Topik:* ${materi}`;
     await triggerAutoAnnouncement(judulPengumuman, isiPengumuman);
 
-    await saveData();
+    await saveCategoryData('materi');
+    await saveCategoryData('pengumuman');
     
     document.getElementById('m-kuliah').value = ''; 
     document.getElementById('m-materi').value = ''; 
     document.getElementById('m-file-pc').value = '';
     document.getElementById('m-link-manual').value = '';
-    alert('Materi disimpan & Pengumuman dipublikasikan!');
+    alert('Materi disimpan & dipublikasikan!');
 };
 
-// RENDER LAIN-LAIN
+// RENDER REMINDER, JADWAL & MATERI
 function renderReminder() {
     const list = document.getElementById('reminder-list');
     if(!list) return; list.innerHTML = '';
@@ -539,13 +602,13 @@ window.saveJadwalItem = async function() {
     };
     if(idx >= 0) dbData.jadwalCustom[idx] = newEntry;
     else dbData.jadwalCustom.push(newEntry);
-    await saveData(); closeModal('jadwal-modal'); alert('Jadwal tersimpan!');
+    closeModal('jadwal-modal'); alert('Jadwal tersimpan lokal!');
 };
 
 window.deleteJadwalItem = async function(index) {
     if(confirm('Hapus jadwal ini?')) {
         dbData.jadwalCustom.splice(index, 1);
-        await saveData(); alert('Jadwal dihapus!');
+        alert('Jadwal dihapus!');
     }
 };
 
@@ -565,7 +628,8 @@ window.saveEditedMateri = async function() {
     dbData.materi[idx].materi = document.getElementById('edit-m-materi').value;
     const newLink = document.getElementById('edit-m-link').value.trim();
     if(newLink) { dbData.materi[idx].link = newLink; }
-    await saveData();
+    
+    await saveCategoryData('materi');
     closeModal('materi-modal');
     alert('Materi berhasil diperbarui!');
 };
@@ -615,7 +679,7 @@ window.addReminder = async function() {
     if(!val) return;
     if (!dbData.reminder) dbData.reminder = [];
     dbData.reminder.push(val);
-    await saveData();
+    await saveCategoryData('reminder');
     document.getElementById('rem-text').value = '';
 };
 
@@ -624,14 +688,13 @@ window.addJadwalUpdateWithFile = async function() {
     if(!title) return;
     if (!dbData.jadwalUpdates) dbData.jadwalUpdates = [];
     dbData.jadwalUpdates.push(title);
-    await saveData();
     document.getElementById('up-title').value = '';
 };
 
 window.deleteItem = async function(category, index) {
     if(confirm('Yakin ingin menghapus item ini?')) {
         dbData[category].splice(index, 1);
-        await saveData();
+        await saveCategoryData(category);
         alert('Berhasil dihapus!');
     }
 };
