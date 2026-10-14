@@ -218,14 +218,16 @@ function initApp() {
     if (mainApp) mainApp.style.display = 'block';
     if (userInfo && currentUser) userInfo.innerText = `${currentUser.name} — (${currentUser.role.toUpperCase()})`;
     
-    // Tampilkan elemen khusus admin jika login sebagai admin
+    // Mengatur visibilitas elemen form admin secara otomatis
     if (currentUser && currentUser.role === 'admin') {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'inline-block');
-        document.querySelectorAll('.admin-only.card-form').forEach(el => el.style.display = 'block');
+        document.querySelectorAll('.admin-form-box').forEach(el => el.style.display = 'block');
     } else {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.admin-form-box').forEach(el => el.style.display = 'none');
     }
-    checkMaintenanceStatus(); renderAll();
+    checkMaintenanceStatus(); 
+    renderAll();
 }
 
 window.handleLogout = function() {
