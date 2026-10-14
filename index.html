@@ -67,6 +67,7 @@
                     </label>
                 </div>
 
+                <!-- TOMBOL MAINTENANCE (ADMIN ONLY) -->
                 <button id="maintenance-toggle-btn" class="btn btn-warning admin-only" style="display: none; padding: 6px 12px; font-size: 12px;" onclick="toggleMaintenanceMode()">Aktifkan Maintenance</button>
                 <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick="handleLogout()">Keluar</button>
             </div>
@@ -90,14 +91,17 @@
                     <div>
                         <div class="card">
                             <h3 style="margin-bottom: 15px; color: var(--accent);">📢 Pengumuman Akademik</h3>
+                            
+                            <!-- FORM TAMBAH PENGUMUMAN (ADMIN ONLY) -->
                             <div id="form-pengumuman" class="admin-form-box" style="display: none; background: var(--bg-light); padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px dashed var(--accent);">
-                                <h4 style="margin-bottom: 8px; color: var(--accent);">➕ Tambah Pengumuman Baru</h4>
+                                <h4 style="margin-bottom: 8px; color: var(--accent);">➕ Tambah Pengumuman Manual</h4>
                                 <input type="text" id="p-judul" class="input-field" placeholder="Judul Pengumuman" style="margin-bottom:8px;">
                                 <textarea id="p-isi" class="input-field" placeholder="Isi pengumuman..." style="margin-bottom:8px; height: 80px;"></textarea>
                                 <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Aktif Sampai Tanggal:</label>
                                 <input type="date" id="p-deadline" class="input-field" style="margin-bottom:10px;">
                                 <button class="btn" onclick="addPengumuman()">Simpan Pengumuman</button>
                             </div>
+
                             <div id="pengumuman-list">Memuat pengumuman...</div>
                         </div>
                     </div>
@@ -160,7 +164,7 @@
                         <input type="date" id="t-deadline" class="input-field" style="margin-bottom:8px;">
                         <textarea id="t-ket" class="input-field" placeholder="Keterangan instruksi tugas..." style="margin-bottom:8px; height: 70px;"></textarea>
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Pilih File dari PC (Opsional):</label>
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih File dari PC (Opsional):</label>
                         <input type="file" id="t-file-pc" class="input-field" style="margin-bottom:8px; padding: 6px;">
 
                         <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Masukkan Link URL (Google Drive / Lainnya):</label>
