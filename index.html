@@ -67,7 +67,6 @@
                     </label>
                 </div>
 
-                <!-- TOMBOL MAINTENANCE KHUSUS ADMIN -->
                 <button id="maintenance-toggle-btn" class="btn btn-warning admin-only" style="display: none; padding: 6px 12px; font-size: 12px;" onclick="toggleMaintenanceMode()">Aktifkan Maintenance</button>
                 <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick="handleLogout()">Keluar</button>
             </div>
@@ -91,9 +90,8 @@
                     <div>
                         <div class="card">
                             <h3 style="margin-bottom: 15px; color: var(--accent);">📢 Pengumuman Akademik</h3>
-                            <!-- FORM TAMBAH PENGUMUMAN (ADMIN ONLY) -->
                             <div id="form-pengumuman" class="admin-form-box" style="display: none; background: var(--bg-light); padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px dashed var(--accent);">
-                                <h4 style="margin-bottom: 8px; color: var(--accent);">➕ Tambah Pengumuman Baru (Admin)</h4>
+                                <h4 style="margin-bottom: 8px; color: var(--accent);">➕ Tambah Pengumuman Baru</h4>
                                 <input type="text" id="p-judul" class="input-field" placeholder="Judul Pengumuman" style="margin-bottom:8px;">
                                 <textarea id="p-isi" class="input-field" placeholder="Isi pengumuman..." style="margin-bottom:8px; height: 80px;"></textarea>
                                 <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Aktif Sampai Tanggal:</label>
@@ -156,14 +154,17 @@
                 <div class="card">
                     <h3 style="margin-bottom: 15px; color: var(--accent);">📋 Daftar Tugas & Lembar Kerja</h3>
                     <div id="form-tugas" class="admin-form-box" style="display: none; background: var(--bg-light); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px dashed var(--accent);">
-                        <h4 style="margin-bottom: 8px; color: var(--accent);">➕ Tambah Tugas Baru (Admin)</h4>
+                        <h4 style="margin-bottom: 8px; color: var(--accent);">➕ Tambah Tugas Baru</h4>
                         <input type="text" id="t-nama" class="input-field" placeholder="Nama Tugas" style="margin-bottom:8px;">
                         <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Deadline:</label>
                         <input type="date" id="t-deadline" class="input-field" style="margin-bottom:8px;">
                         <textarea id="t-ket" class="input-field" placeholder="Keterangan instruksi tugas..." style="margin-bottom:8px; height: 70px;"></textarea>
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Link Berkas (Google Drive / URL):</label>
-                        <input type="text" id="t-link-manual" class="input-field" placeholder="https://drive.google.com/..." style="margin-bottom:12px;">
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Pilih File dari PC (Opsional):</label>
+                        <input type="file" id="t-file-pc" class="input-field" style="margin-bottom:8px; padding: 6px;">
+
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Masukkan Link URL (Google Drive / Lainnya):</label>
+                        <input type="text" id="t-link-manual" class="input-field" placeholder="https://..." style="margin-bottom:12px;">
                         
                         <button class="btn" onclick="addTugasItem()">Simpan Tugas</button>
                     </div>
@@ -172,7 +173,7 @@
                             <tr>
                                 <th>Nama Tugas</th>
                                 <th>Deadline</th>
-                                <th>Aksi / Link</th>
+                                <th>Aksi / Berkas</th>
                             </tr>
                         </thead>
                         <tbody id="tugas-table-body"></tbody>
@@ -185,15 +186,18 @@
                 <div class="card">
                     <h3 style="margin-bottom: 15px; color: var(--accent);">🔬 Praktikum Laboratorium</h3>
                     <div id="form-lab" class="admin-form-box" style="display: none; background: var(--bg-light); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px dashed var(--accent);">
-                        <h4 style="margin-bottom: 8px; color: var(--accent);">➕ Tambah Kegiatan Lab (Admin)</h4>
+                        <h4 style="margin-bottom: 8px; color: var(--accent);">➕ Tambah Kegiatan Lab</h4>
                         <input type="text" id="lab-nama" class="input-field" placeholder="Nama Kegiatan" style="margin-bottom:8px;">
                         <input type="text" id="lab-skenario" class="input-field" placeholder="Modul / Skenario" style="margin-bottom:8px;">
                         <textarea id="lab-ket" class="input-field" placeholder="Keterangan..." style="margin-bottom:8px; height: 70px;"></textarea>
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Link Berkas / Modul:</label>
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih File dari PC:</label>
+                        <input type="file" id="lab-file-pc" class="input-field" style="margin-bottom:8px; padding: 6px;">
+
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Link URL:</label>
                         <input type="text" id="lab-link-manual" class="input-field" placeholder="https://..." style="margin-bottom:12px;">
                         
-                        <button class="btn" onclick="handlePraktikumUpload('laboratorium', 'lab-nama', 'lab-skenario', 'lab-ket', 'lab-link-manual')">Simpan Lab</button>
+                        <button class="btn" onclick="handlePraktikumUpload('laboratorium', 'lab-nama', 'lab-skenario', 'lab-ket', 'lab-file-pc', 'lab-link-manual')">Simpan Lab</button>
                     </div>
                     <div id="lab-list"></div>
                 </div>
@@ -204,15 +208,18 @@
                 <div class="card">
                     <h3 style="margin-bottom: 15px; color: var(--accent);">🩺 Panduan Skills Lab</h3>
                     <div id="form-skills" class="admin-form-box" style="display: none; background: var(--bg-light); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px dashed var(--accent);">
-                        <h4 style="margin-bottom: 8px; color: var(--accent);">➕ Tambah Skills Lab (Admin)</h4>
+                        <h4 style="margin-bottom: 8px; color: var(--accent);">➕ Tambah Skills Lab</h4>
                         <input type="text" id="skills-nama" class="input-field" placeholder="Nama Keterampilan" style="margin-bottom:8px;">
                         <input type="text" id="skills-skenario" class="input-field" placeholder="Modul" style="margin-bottom:8px;">
                         <textarea id="skills-ket" class="input-field" placeholder="Keterangan..." style="margin-bottom:8px; height: 70px;"></textarea>
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Link Berkas:</label>
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih File dari PC:</label>
+                        <input type="file" id="skills-file-pc" class="input-field" style="margin-bottom:8px; padding: 6px;">
+
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Link URL:</label>
                         <input type="text" id="skills-link-manual" class="input-field" placeholder="https://..." style="margin-bottom:12px;">
                         
-                        <button class="btn" onclick="handlePraktikumUpload('skills_lab', 'skills-nama', 'skills-skenario', 'skills-ket', 'skills-link-manual')">Simpan Skills Lab</button>
+                        <button class="btn" onclick="handlePraktikumUpload('skills_lab', 'skills-nama', 'skills-skenario', 'skills-ket', 'skills-file-pc', 'skills-link-manual')">Simpan Skills Lab</button>
                     </div>
                     <div id="skills-list"></div>
                 </div>
@@ -223,15 +230,18 @@
                 <div class="card">
                     <h3 style="margin-bottom: 15px; color: var(--accent);">💬 Diskusi & Skenario Tutorial</h3>
                     <div id="form-tutorial" class="admin-form-box" style="display: none; background: var(--bg-light); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px dashed var(--accent);">
-                        <h4 style="margin-bottom: 8px; color: var(--accent);">➕ Tambah Tutorial (Admin)</h4>
+                        <h4 style="margin-bottom: 8px; color: var(--accent);">➕ Tambah Tutorial</h4>
                         <input type="text" id="tut-nama" class="input-field" placeholder="Topik Tutorial" style="margin-bottom:8px;">
                         <input type="text" id="tut-skenario" class="input-field" placeholder="Skenario / Kasus" style="margin-bottom:8px;">
                         <textarea id="tut-ket" class="input-field" placeholder="Catatan diskusi..." style="margin-bottom:8px; height: 70px;"></textarea>
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Link Berkas:</label>
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih File dari PC:</label>
+                        <input type="file" id="tut-file-pc" class="input-field" style="margin-bottom:8px; padding: 6px;">
+
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Link URL:</label>
                         <input type="text" id="tut-link-manual" class="input-field" placeholder="https://..." style="margin-bottom:12px;">
                         
-                        <button class="btn" onclick="handlePraktikumUpload('tutorial', 'tut-nama', 'tut-skenario', 'tut-ket', 'tut-link-manual')">Simpan Tutorial</button>
+                        <button class="btn" onclick="handlePraktikumUpload('tutorial', 'tut-nama', 'tut-skenario', 'tut-ket', 'tut-file-pc', 'tut-link-manual')">Simpan Tutorial</button>
                     </div>
                     <div id="tutorial-list"></div>
                 </div>
@@ -242,11 +252,14 @@
                 <div class="card">
                     <h3 style="margin-bottom: 15px; color: var(--accent);">📚 Bank Materi Kuliah</h3>
                     <div id="form-materi" class="admin-form-box" style="display: none; background: var(--bg-light); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px dashed var(--accent);">
-                        <h4 style="margin-bottom: 8px; color: var(--accent);">➕ Tambah Materi Kuliah (Admin)</h4>
+                        <h4 style="margin-bottom: 8px; color: var(--accent);">➕ Tambah Materi Kuliah</h4>
                         <input type="text" id="m-kuliah" class="input-field" placeholder="Nama Mata Kuliah" style="margin-bottom:8px;">
                         <input type="text" id="m-materi" class="input-field" placeholder="Topik / Judul Materi" style="margin-bottom:8px;">
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Link Berkas Materi (Google Drive / URL):</label>
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih File dari PC:</label>
+                        <input type="file" id="m-file-pc" class="input-field" style="margin-bottom:8px; padding: 6px;">
+
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Link URL:</label>
                         <input type="text" id="m-link-manual" class="input-field" placeholder="https://..." style="margin-bottom:12px;">
                         
                         <button class="btn" onclick="handleMateriUpload()">Simpan Materi</button>
@@ -256,7 +269,7 @@
                             <tr>
                                 <th>Mata Kuliah</th>
                                 <th>Topik Materi</th>
-                                <th>Akses Link</th>
+                                <th>Akses Berkas</th>
                             </tr>
                         </thead>
                         <tbody id="materi-table-body"></tbody>
@@ -309,7 +322,7 @@
             <input type="text" id="edit-m-kuliah" class="input-field" style="margin-bottom:10px;">
             <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">Topik / Judul Materi:</label>
             <input type="text" id="edit-m-materi" class="input-field" style="margin-bottom:10px;">
-            <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">Link Berkas (Drive / URL):</label>
+            <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">Link Berkas Baru (Opsional):</label>
             <input type="text" id="edit-m-link" class="input-field" style="margin-bottom:15px;">
             <div style="display:flex; gap:10px;">
                 <button class="btn" onclick="saveEditedMateri()" style="flex:1;">Simpan Perubahan</button>
