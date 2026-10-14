@@ -38,13 +38,10 @@ let dbData = {
 };
 
 // ==========================================================================
-// INISIALISASI APLIKASI & MIGRASI OTOMATIS
+// INISIALISASI APLIKASI
 // ==========================================================================
 window.addEventListener('DOMContentLoaded', async () => {
-    // 1. Jalankan Migrasi Otomatis jika Data Lama Ditemukan
-    await autoMigrateOldData();
-    
-    // 2. Load Data Multi-JSON
+    // Memuat Data Multi-JSON secara langsung
     await fetchDatabaseFromCloud();
     applyTheme(dbData.theme || 'light');
     checkMaintenanceStatus();
@@ -79,53 +76,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// FUNGSI MIGRASI OTOMATIS (MEMINDAHKAN DATA LAMA DENGAN SELAMAT)
-async function autoMigrateOldData() {
-    try {
-        const { data: oldDataRow, error } = await supabaseClient
-            .from('portal_db')
-            .select('value')
-            .eq('key', 'data')
-            .single();
-
-        if (!error && oldDataRow && oldDataRow.value) {
-            const oldObj = oldDataRow.value;
-            console.log("Menemukan data monolith lama, mengonversi ke Multi-JSON...");
-
-            const keysToMigrate = ['pengumuman', 'reminder', 'tugas', 'laboratorium', 'skills_lab', 'tutorial', 'materi'];
-            for (const key of keysToMigrate) {
-                if (oldObj[key] && Array.isArray(oldObj[key]) && oldObj[key].length > 0) {
-                    await supabaseClient
-                        .from('portal_db')
-                        .update({ value: oldObj[key] })
-                        .eq('key', key);
-                }
-            }
-
-            // Migrasi Konfigurasi Tema & Maintenance
-            await supabaseClient
-                .from('portal_db')
-                .update({ 
-                    value: { 
-                        maintenance: oldObj.maintenance || false, 
-                        theme: oldObj.theme || 'light' 
-                    } 
-                })
-                .eq('key', 'config');
-
-            // Kosongkan baris 'data' lama agar migrasi tidak berulang
-            await supabaseClient
-                .from('portal_db')
-                .update({ value: null })
-                .eq('key', 'data');
-
-            alert("✅ Migrasi data otomatis berhasil! Semua berkas dan postingan lama Anda telah dipindahkan secara aman.");
-        }
-    } catch (e) {
-        console.log("Migrasi tidak diperlukan atau struktur data sudah diperbarui.");
-    }
-}
-
 // FETCH DATA MULTI-JSON
 async function fetchDatabaseFromCloud() {
     try {
@@ -154,7 +104,7 @@ async function fetchDatabaseFromCloud() {
     renderAll();
 }
 
-// SIMPAN SPESIFIK PER KATEGORI (RINGAN & NGEBUT)
+// SIMPAN SPESIFIK PER KATEGORI (SANGAT RINGAN & CEPAT)
 async function saveCategoryData(categoryKey) {
     renderAll();
     try {
@@ -175,7 +125,7 @@ async function saveCategoryData(categoryKey) {
     }
 }
 
-// HELPER PEMBATASAN BAZAAR FILE (MAKSIMAL 1 MB)
+// HELPER PEMBATASAN UKURAN FILE (MAKSIMAL 1 MB)
 function getFileAsBase64(fileInputId) {
     return new Promise((resolve) => {
         const fileInput = document.getElementById(fileInputId);
@@ -185,7 +135,7 @@ function getFileAsBase64(fileInputId) {
         }
         const file = fileInput.files[0];
         
-        const maxSize = 1 * 1024 * 1024; // 1 MB limit
+        const maxSize = 1 * 1024 * 1024; // Limit 1 MB
         if (file.size > maxSize) {
             alert(`⚠️ Ukuran file "${file.name}" adalah ${(file.size / (1024*1024)).toFixed(2)} MB.\nUntuk menjaga portal tetap cepat dan bebas Not Responding, ukuran unggah file PC dibatasi maksimal 1 MB.\n\nSaran: Unggah file besar ke Google Drive lalu masukkan URL-nya di kolom link.`);
             fileInput.value = '';
