@@ -16,8 +16,12 @@ const allowedUsers = {
 let currentUser = null;
 const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 Menit
 
-// KONFIGURASI GOOGLE SHEETS WEB APP
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw6yarJFk2v4O2j-Re2xuN4g7sFipcSNLFZi-HwYmb6sEupOn86-LItju6rneTFYVvY/exec";
+// KONFIGURASI SUPABASE
+const SUPABASE_URL = "https://vqzklxbfrvmvcoeykias.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxemtseGJmcnZtdmNvZXlraWFzIjsicm9sZSI6ImFub24iLCJpYXQiOjE3UGlJODAyMTcwNzQ5OTIwMX0.VWEtF51RMeTXverKjaI6cL4m8R2utzwecYglo6XWkBs";
+
+// Inisialisasi Klien Supabase
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let dbData = {
     pengumuman: [],
@@ -44,18 +48,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     
     if (nimInput) {
         nimInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                handleLogin();
-            }
+            if (e.key === 'Enter') { e.preventDefault(); handleLogin(); }
         });
     }
     if (adminInput) {
         adminInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                handleLogin();
-            }
+            if (e.key === 'Enter') { e.preventDefault(); handleLogin(); }
         });
     }
 
@@ -77,20 +75,19 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 async function fetchDatabaseFromCloud() {
     try {
-        const res = await fetch(SCRIPT_URL);
-        if(res.ok) {
-            const json = await res.json();
-            if (json && typeof json === 'object') {
-                dbData = Object.assign({}, dbData, json);
-                if (json.settings) {
-                    dbData.maintenance = json.settings.maintenance;
-                    dbData.theme = json.settings.theme;
-                }
-                console.log("Database Google Sheets (Terpisah) berhasil dimuat!");
-            }
+        const { data, error } = await supabaseClient
+            .from('portal_db')
+            .select('value')
+            .eq('key', 'data')
+            .single();
+
+        if (error) throw error;
+        if (data && data.value) {
+            dbData = Object.assign({}, dbData, data.value);
+            console.log("Database Supabase berhasil dimuat!");
         }
     } catch (err) {
-        console.error("Gagal memuat database:", err);
+        console.error("Gagal memuat database dari Supabase:", err);
     }
     renderAll();
 }
@@ -98,17 +95,15 @@ async function fetchDatabaseFromCloud() {
 async function saveData() {
     renderAll();
     try {
-        await fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(dbData)
-        });
-        console.log("Perubahan berhasil dikirim ke Google Sheets!");
+        const { error } = await supabaseClient
+            .from('portal_db')
+            .update({ value: dbData })
+            .eq('key', 'data');
+
+        if (error) throw error;
+        console.log("Perubahan berhasil disimpan ke Supabase!");
     } catch (err) {
-        console.error("Error Sync Cloud:", err);
+        console.error("Error Sync Cloud Supabase:", err);
         alert("Gagal menyimpan ke server online.");
     }
 }
