@@ -14,11 +14,14 @@ const allowedUsers = {
 };
 
 let currentUser = null;
-const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 Menit
+const INACTIVITY_LIMIT = 30 * 60 * 1000;
 
-// KONFIGURASI SUPABASE (TERBARU)
+// KONFIGURASI SUPABASE
 const SUPABASE_URL = "https://vqzklxbfrvmvcoeykias.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_-NTQ0VL2xQmIYJ_ieREXkg_WUcU3L0t";
+
+// URL WEB APP GOOGLE APPS SCRIPT ANDA
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxQVzmE_L4NXfsN0ZsSyOej2uWPUUKy_U5VShI9s-QEJJdYFvy2IJnDVa5tatKJk-ss/exec";
 
 // Inisialisasi Klien Supabase
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -42,7 +45,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     applyTheme(dbData.theme || 'light');
     checkMaintenanceStatus();
     
-    // Fitur Enter otomatis login pada input login
     const nimInput = document.getElementById('login-nim-input');
     const adminInput = document.getElementById('login-admin-code');
     
@@ -108,6 +110,37 @@ async function saveData() {
     }
 }
 
+// Fungsi Otomatis Upload ke Google Drive via Apps Script
+async function uploadToGoogleDrive(fileInput) {
+    if (!fileInput || fileInput.files.length === 0) return '#';
+    const file = fileInput.files[0];
+    alert("Sedang mengunggah file ke Google Drive Anda, mohon tunggu sebentar...");
+    
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            const base64Data = e.target.result.split(',')[1];
+            const payload = { fileName: file.name, mimeType: file.type, fileData: base64Data };
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+                const result = await response.json();
+                if(result.status === 'success') {
+                    alert("File Berhasil Masuk ke Google Drive!");
+                    resolve(result.url);
+                } else {
+                    alert("Gagal upload ke Drive: " + result.message);
+                    resolve('#');
+                }
+            } catch(err) {
+                console.error(err);
+                alert("Kesalahan saat mengunggah file.");
+                resolve('#');
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
 window.toggleThemeSwitch = function() {
     const checkbox = document.getElementById('theme-toggle-checkbox');
     const newTheme = checkbox && checkbox.checked ? 'dark' : 'light';
@@ -131,16 +164,10 @@ function checkMaintenanceStatus() {
     const toggleBtn = document.getElementById('maintenance-toggle-btn');
     if(dbData.maintenance) {
         if(banner) banner.style.display = 'block';
-        if(toggleBtn) {
-            toggleBtn.innerText = "Nonaktifkan Maintenance Mode";
-            toggleBtn.className = "btn btn-success";
-        }
+        if(toggleBtn) { toggleBtn.innerText = "Nonaktifkan Maintenance"; toggleBtn.className = "btn btn-success"; }
     } else {
         if(banner) banner.style.display = 'none';
-        if(toggleBtn) {
-            toggleBtn.innerText = "Aktifkan Maintenance Mode";
-            toggleBtn.className = "btn btn-warning";
-        }
+        if(toggleBtn) { toggleBtn.innerText = "Aktifkan Maintenance"; toggleBtn.className = "btn btn-warning"; }
     }
 }
 
@@ -148,7 +175,7 @@ window.toggleMaintenanceMode = async function() {
     dbData.maintenance = !dbData.maintenance;
     await saveData();
     checkMaintenanceStatus();
-    alert(dbData.maintenance ? "Maintenance Mode diaktifkan secara global." : "Maintenance Mode dinonaktifkan secara global.");
+    alert(dbData.maintenance ? "Maintenance diaktifkan secara global." : "Maintenance dinonaktifkan secara global.");
 };
 
 setInterval(() => {
@@ -164,7 +191,6 @@ window.toggleLoginFields = function() {
     const role = roleEl.value;
     const guestFields = document.getElementById('guest-fields');
     const adminFields = document.getElementById('admin-fields');
-    
     if (guestFields && adminFields) {
         guestFields.style.display = role === 'guest' ? 'block' : 'none';
         adminFields.style.display = role === 'admin' ? 'block' : 'none';
@@ -174,35 +200,22 @@ window.toggleLoginFields = function() {
 window.handleLogin = function() {
     const roleEl = document.getElementById('login-role');
     if (!roleEl) return;
-    
     const role = roleEl.value;
     if (role === 'admin') {
         const codeInput = document.getElementById('login-admin-code');
         const code = codeInput ? codeInput.value.trim() : '';
         if (code === 'A9ACOR') {
             currentUser = { role: 'admin', name: 'Admin Utama (A9ACOR)' };
-            saveUserSession();
-            initApp();
-            setupInactivityTracker();
-        } else {
-            alert('Kode Admin Salah!');
-        }
+            saveUserSession(); initApp(); setupInactivityTracker();
+        } else { alert('Kode Admin Salah!'); }
     } else {
-        if (dbData.maintenance) {
-            alert('Portal sedang dalam pemeliharaan (Maintenance). Guest/Mahasiswa belum dapat masuk.');
-            return;
-        }
+        if (dbData.maintenance) { alert('Portal sedang pemeliharaan.'); return; }
         const nimInput = document.getElementById('login-nim-input');
         const nim = nimInput ? nimInput.value.trim() : '';
-        
         if (nim === "12345" || allowedUsers[nim]) {
             currentUser = { role: 'guest', name: allowedUsers[nim] || "Guest " + nim, nim: nim };
-            saveUserSession();
-            initApp();
-            setupInactivityTracker();
-        } else {
-            alert('NIM atau Kode Guest tidak valid!');
-        }
+            saveUserSession(); initApp(); setupInactivityTracker();
+        } else { alert('NIM atau Kode Guest tidak valid!'); }
     }
 };
 
@@ -212,21 +225,15 @@ function saveUserSession() {
 }
 
 function setupInactivityTracker() {
-    const updateActivity = () => {
-        if(currentUser) sessionStorage.setItem('portal_last_active', Date.now().toString());
-    };
+    const updateActivity = () => { if(currentUser) sessionStorage.setItem('portal_last_active', Date.now().toString()); };
     window.addEventListener('mousemove', updateActivity);
     window.addEventListener('keydown', updateActivity);
     window.addEventListener('click', updateActivity);
     window.addEventListener('scroll', updateActivity);
-
     setInterval(() => {
         const lastActive = sessionStorage.getItem('portal_last_active');
-        if(currentUser && lastActive) {
-            if(Date.now() - parseInt(lastActive) > INACTIVITY_LIMIT) {
-                alert('Sesi Anda telah berakhir karena tidak ada aktivitas selama 30 menit.');
-                handleLogout();
-            }
+        if(currentUser && lastActive && (Date.now() - parseInt(lastActive) > INACTIVITY_LIMIT)) {
+            alert('Sesi berakhir karena tidak ada aktivitas.'); handleLogout();
         }
     }, 60000);
 }
@@ -235,21 +242,16 @@ function initApp() {
     const loginPage = document.getElementById('login-page');
     const mainApp = document.getElementById('main-app');
     const userInfo = document.getElementById('user-info');
-
     if (loginPage) loginPage.style.display = 'none';
     if (mainApp) mainApp.style.display = 'block';
-    if (userInfo && currentUser) {
-        userInfo.innerText = `${currentUser.name} — (${currentUser.role.toUpperCase()})`;
-    }
-
+    if (userInfo && currentUser) userInfo.innerText = `${currentUser.name} — (${currentUser.role.toUpperCase()})`;
     if (currentUser && currentUser.role === 'admin') {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'inline-block');
         document.querySelectorAll('.admin-only.card').forEach(el => el.style.display = 'block');
     } else {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
     }
-    checkMaintenanceStatus();
-    renderAll();
+    checkMaintenanceStatus(); renderAll();
 }
 
 window.handleLogout = function() {
@@ -261,163 +263,103 @@ window.handleLogout = function() {
 window.switchTab = function(tabName, btnElement) {
     document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-    
     const targetTab = document.getElementById(`tab-${tabName}`);
     if(targetTab) targetTab.style.display = 'block';
     if(btnElement) btnElement.classList.add('active');
 };
 
-window.closeModal = function(id) {
-    const modal = document.getElementById(id);
-    if(modal) modal.style.display = 'none';
-};
+window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; };
 
 function renderAll() {
-    renderPengumuman();
-    renderReminder();
-    renderJadwalUpdates();
-    renderJadwal();
-    renderTugas();
-    renderPraktikum('laboratorium', 'lab-list');
-    renderPraktikum('skills_lab', 'skills-list');
-    renderPraktikum('tutorial', 'tutorial-list');
-    renderMateri();
+    renderPengumuman(); renderReminder(); renderJadwalUpdates(); renderJadwal();
+    renderTugas(); renderPraktikum('laboratorium', 'lab-list');
+    renderPraktikum('skills_lab', 'skills-list'); renderPraktikum('tutorial', 'tutorial-list'); renderMateri();
 }
 
 function renderPengumuman() {
     const container = document.getElementById('pengumuman-list');
-    if(!container) return;
-    container.innerHTML = '';
+    if(!container) return; container.innerHTML = '';
     const today = new Date().toISOString().split('T')[0];
-
     if (!dbData.pengumuman) dbData.pengumuman = [];
     dbData.pengumuman.forEach((p, idx) => {
         if(p.deadline && p.deadline < today && currentUser && currentUser.role !== 'admin') return;
-        const waText = encodeURIComponent(`*PENGUMUMAN AKADEMIK BLOK 1.2*\n\n*${p.judul}*\n${p.isi}\n\nBerlaku s/d: ${p.deadline}`);
+        const waText = encodeURIComponent(`*PENGUMUMAN*\n\n*${p.judul}*\n${p.isi}\n\nBerlaku s/d: ${p.deadline}`);
         const isAdmin = currentUser && currentUser.role === 'admin';
         container.innerHTML += `
             <div style="background: var(--bg-light); border-left: 4px solid var(--accent); padding: 15px; margin-bottom: 10px; border-radius: 4px; position: relative;">
                 <h4 style="color:var(--text);">${p.judul}</h4>
                 <p style="margin-top: 5px; font-size: 14px; color:var(--text);">${p.isi}</p>
                 <small style="color: var(--text-muted); display: block; margin-top: 8px;">Aktif sampai: ${p.deadline}</small>
-                <div style="margin-top: 10px;">
-                    <a href="https://wa.me/?text=${waText}" target="_blank" class="badge badge-wa">📲 Kirim ke WhatsApp</a>
-                </div>
+                <div style="margin-top: 10px;"><a href="https://wa.me/?text=${waText}" target="_blank" class="badge badge-wa">📲 Kirim ke WhatsApp</a></div>
                 ${isAdmin ? `<button class="btn btn-danger" style="width: auto; padding: 2px 8px; font-size: 11px; position: absolute; top: 10px; right: 10px;" onclick="deleteItem('pengumuman', ${idx})">Hapus</button>` : ''}
-            </div>
-        `;
+            </div>`;
     });
 }
 
 function renderReminder() {
     const list = document.getElementById('reminder-list');
-    if(!list) return;
-    list.innerHTML = '';
+    if(!list) return; list.innerHTML = '';
     if (!dbData.reminder) dbData.reminder = [];
     const isAdmin = currentUser && currentUser.role === 'admin';
     dbData.reminder.forEach((r, idx) => {
-        list.innerHTML += `<li style="margin-bottom: 6px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; color:var(--text);"><span>${r}</span> ${isAdmin ? `<button onclick="deleteItem('reminder', ${idx})" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">[Hapus]</button>` : ''}</li>`;
+        list.innerHTML += `<li style="margin-bottom: 6px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; color:var(--text);"><span>${r}</span> ${isAdmin ? `<button onclick="deleteItem('reminder', ${idx})" style="color:red; border:none; background:none; cursor:pointer;">[Hapus]</button>` : ''}</li>`;
     });
 }
 
 function renderJadwalUpdates() {
     const list = document.getElementById('jadwal-update-list');
-    if(!list) return;
-    list.innerHTML = '';
+    if(!list) return; list.innerHTML = '';
     if (!dbData.jadwalUpdates) dbData.jadwalUpdates = [];
     const isAdmin = currentUser && currentUser.role === 'admin';
     dbData.jadwalUpdates.forEach((u, idx) => {
-        list.innerHTML += `<li style="margin-bottom: 6px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; color:var(--text);"><span>📄 ${u}</span> ${isAdmin ? `<button onclick="deleteItem('jadwalUpdates', ${idx})" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">[Hapus]</button>` : ''}</li>`;
+        list.innerHTML += `<li style="margin-bottom: 6px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; color:var(--text);"><span>📄 ${u}</span> ${isAdmin ? `<button onclick="deleteItem('jadwalUpdates', ${idx})" style="color:red; border:none; background:none; cursor:pointer;">[Hapus]</button>` : ''}</li>`;
     });
 }
 
 async function renderJadwal() {
     const tbody = document.getElementById('jadwal-table-body');
-    if(!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Memuat agenda jadwal...</td></tr>';
-    
-    let jadwalList = [];
-    if(dbData.jadwalCustom && dbData.jadwalCustom.length > 0) {
-        jadwalList = dbData.jadwalCustom;
-    } else {
-        try {
-            const response = await fetch('jadwal.json');
-            const data = await response.json();
-            jadwalList = data.jadwal || [];
-        } catch (error) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Gagal memuat jadwal.</td></tr>';
-            return;
-        }
+    if(!tbody) return; tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Memuat jadwal...</td></tr>';
+    let jadwalList = dbData.jadwalCustom && dbData.jadwalCustom.length > 0 ? dbData.jadwalCustom : [];
+    if(jadwalList.length === 0) {
+        try { const res = await fetch('jadwal.json'); const data = await res.json(); jadwalList = data.jadwal || []; } catch (e) { jadwalList = []; }
     }
-
     tbody.innerHTML = '';
     const nowWIB = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
-    const tomorrowWIB = new Date(nowWIB);
-    tomorrowWIB.setDate(nowWIB.getDate() + 1);
-
+    const tomorrowWIB = new Date(nowWIB); tomorrowWIB.setDate(nowWIB.getDate() + 1);
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    function formatDateStr(dateObj) {
-        return `${String(dateObj.getDate()).padStart(2, '0')}-${months[dateObj.getMonth()]}-${String(dateObj.getFullYear()).slice(-2)}`;
-    }
-
-    const todayStr = formatDateStr(nowWIB);
-    const tomorrowStr = formatDateStr(tomorrowWIB);
-
-    const filteredJadwal = jadwalList.filter(j => j && j.tgl && (j.tgl.includes(todayStr) || j.tgl.includes(tomorrowStr)));
-
-    if(filteredJadwal.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Tidak ada jadwal untuk hari ini dan besok.</td></tr>`;
-        return;
-    }
-
+    function formatDateStr(d) { return `${String(d.getDate()).padStart(2, '0')}-${months[d.getMonth()]}-${String(d.getFullYear()).slice(-2)}`; }
+    const todayStr = formatDateStr(nowWIB), tomorrowStr = formatDateStr(tomorrowWIB);
+    const filtered = jadwalList.filter(j => j && j.tgl && (j.tgl.includes(todayStr) || j.tgl.includes(tomorrowStr)));
+    if(filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Tidak ada jadwal hari ini & besok.</td></tr>`; return; }
     const isAdmin = currentUser && currentUser.role === 'admin';
-    filteredJadwal.forEach((j) => {
-        const actualIndex = jadwalList.findIndex(item => item.tgl === j.tgl);
+    filtered.forEach((j) => {
+        const actualIdx = jadwalList.findIndex(item => item.tgl === j.tgl);
         const isToday = j.tgl.includes(todayStr);
-        let badgeClass = isToday ? 'highlight-today' : 'highlight-tomorrow';
         let badgeLabel = isToday ? '<span class="badge" style="background:#eab308; color:white;">Hari Ini</span>' : '<span class="badge" style="background:#3b82f6; color:white;">Besok</span>';
-
-        let s1 = j.sesi && j.sesi[0] ? `<small style="color:var(--text-muted)">${j.sesi[0].jam}</small><br><strong>${j.sesi[0].kegiatan}</strong>` : '-';
-        let s2 = j.sesi && j.sesi[1] ? `<small style="color:var(--text-muted)">${j.sesi[1].jam}</small><br><strong>${j.sesi[1].kegiatan}</strong>` : '-';
-        let s3 = j.sesi && j.sesi[2] ? `<small style="color:var(--text-muted)">${j.sesi[2].jam}</small><br><strong>${j.sesi[2].kegiatan}</strong>` : '-';
-        let s4 = j.sesi && j.sesi[3] ? `<small style="color:var(--text-muted)">${j.sesi[3].jam}</small><br><strong>${j.sesi[3].kegiatan}</strong>` : '-';
-
-        let actionBtn = isAdmin ? `
-            <button class="btn" style="width: auto; padding: 3px 6px; font-size: 11px; margin-bottom: 4px;" onclick="editJadwalItem(${actualIndex})">Edit</button>
-            <button class="btn btn-danger" style="width: auto; padding: 3px 6px; font-size: 11px;" onclick="deleteJadwalItem(${actualIndex})">Hapus</button>
-        ` : '';
-
-        tbody.innerHTML += `<tr class="${badgeClass}">
-            <td style="white-space: nowrap;">${j.tgl} <br>${badgeLabel}</td>
-            <td>${s1}</td><td>${s2}</td><td>${s3}</td><td>${s4}</td>
-            ${isAdmin ? `<td>${actionBtn}</td>` : ''}
-        </tr>`;
+        let s1 = j.sesi?.[0] ? `<small>${j.sesi[0].jam}</small><br><strong>${j.sesi[0].kegiatan}</strong>` : '-';
+        let s2 = j.sesi?.[1] ? `<small>${j.sesi[1].jam}</small><br><strong>${j.sesi[1].kegiatan}</strong>` : '-';
+        let s3 = j.sesi?.[2] ? `<small>${j.sesi[2].jam}</small><br><strong>${j.sesi[2].kegiatan}</strong>` : '-';
+        let s4 = j.sesi?.[3] ? `<small>${j.sesi[3].jam}</small><br><strong>${j.sesi[3].kegiatan}</strong>` : '-';
+        let actBtn = isAdmin ? `<button class="btn" style="padding:2px 6px; font-size:11px;" onclick="deleteJadwalItem(${actualIdx})">Hapus</button>` : '';
+        tbody.innerHTML += `<tr><td>${j.tgl}<br>${badgeLabel}</td><td>${s1}</td><td>${s2}</td><td>${s3}</td><td>${s4}</td>${isAdmin ? `<td>${actBtn}</td>` : ''}</tr>`;
     });
 }
 
 window.openJadwalModal = async function(index = -1) {
     if(!dbData.jadwalCustom) {
-        try {
-            const res = await fetch('jadwal.json');
-            const data = await res.json();
-            dbData.jadwalCustom = data.jadwal;
-        } catch (e) { dbData.jadwalCustom = []; }
+        try { const res = await fetch('jadwal.json'); const data = await res.json(); dbData.jadwalCustom = data.jadwal; } catch (e) { dbData.jadwalCustom = []; }
     }
     document.getElementById('edit-jadwal-index').value = index;
     if(index >= 0) {
-        document.getElementById('jadwal-modal-title').innerText = "Edit Jadwal Kuliah";
+        document.getElementById('jadwal-modal-title').innerText = "Edit Jadwal";
         let item = dbData.jadwalCustom[index];
         document.getElementById('j-tgl').value = item.tgl || '';
-        document.getElementById('j-jam1').value = item.sesi && item.sesi[0] ? item.sesi[0].jam : '';
-        document.getElementById('j-keg1').value = item.sesi && item.sesi[0] ? item.sesi[0].kegiatan : '';
-        document.getElementById('j-jam2').value = item.sesi && item.sesi[1] ? item.sesi[1].jam : '';
-        document.getElementById('j-keg2').value = item.sesi && item.sesi[1] ? item.sesi[1].kegiatan : '';
-        document.getElementById('j-jam3').value = item.sesi && item.sesi[2] ? item.sesi[2].jam : '';
-        document.getElementById('j-keg3').value = item.sesi && item.sesi[2] ? item.sesi[2].kegiatan : '';
-        document.getElementById('j-jam4').value = item.sesi && item.sesi[3] ? item.sesi[3].jam : '';
-        document.getElementById('j-keg4').value = item.sesi && item.sesi[3] ? item.sesi[3].kegiatan : '';
+        document.getElementById('j-jam1').value = item.sesi?.[0]?.jam || ''; document.getElementById('j-keg1').value = item.sesi?.[0]?.kegiatan || '';
+        document.getElementById('j-jam2').value = item.sesi?.[1]?.jam || ''; document.getElementById('j-keg2').value = item.sesi?.[1]?.kegiatan || '';
+        document.getElementById('j-jam3').value = item.sesi?.[2]?.jam || ''; document.getElementById('j-keg3').value = item.sesi?.[2]?.kegiatan || '';
+        document.getElementById('j-jam4').value = item.sesi?.[3]?.jam || ''; document.getElementById('j-keg4').value = item.sesi?.[3]?.kegiatan || '';
     } else {
-        document.getElementById('jadwal-modal-title').innerText = "Tambah Jadwal Kuliah Baru";
+        document.getElementById('jadwal-modal-title').innerText = "Tambah Jadwal Baru";
         document.getElementById('j-tgl').value = '';
         document.getElementById('j-jam1').value = '07.50-09.30'; document.getElementById('j-keg1').value = '';
         document.getElementById('j-jam2').value = '09.50-11.30'; document.getElementById('j-keg2').value = '';
@@ -430,9 +372,7 @@ window.openJadwalModal = async function(index = -1) {
 window.saveJadwalItem = async function() {
     const idx = parseInt(document.getElementById('edit-jadwal-index').value);
     if(!dbData.jadwalCustom) {
-        const res = await fetch('jadwal.json');
-        const data = await res.json();
-        dbData.jadwalCustom = data.jadwal;
+        const res = await fetch('jadwal.json'); const data = await res.json(); dbData.jadwalCustom = data.jadwal;
     }
     const newEntry = {
         tgl: document.getElementById('j-tgl').value,
@@ -445,18 +385,13 @@ window.saveJadwalItem = async function() {
     };
     if(idx >= 0) dbData.jadwalCustom[idx] = newEntry;
     else dbData.jadwalCustom.push(newEntry);
-    
-    await saveData();
-    closeModal('jadwal-modal');
-    alert('Jadwal berhasil disimpan secara global!');
+    await saveData(); closeModal('jadwal-modal'); alert('Jadwal tersimpan!');
 };
 
-window.editJadwalItem = function(index) { openJadwalModal(index); };
 window.deleteJadwalItem = async function(index) {
-    if(confirm('Yakin ingin menghapus jadwal ini?')) {
+    if(confirm('Hapus jadwal ini?')) {
         dbData.jadwalCustom.splice(index, 1);
-        await saveData();
-        alert('Jadwal dihapus!');
+        await saveData(); alert('Jadwal dihapus!');
     }
 };
 
@@ -465,171 +400,74 @@ window.addTugasItem = async function() {
     const deadline = document.getElementById('t-deadline').value;
     const ket = document.getElementById('t-ket').value;
     const fileInput = document.getElementById('t-file');
-    const linkInput = document.getElementById('t-link').value;
-
     if(!nama || !deadline) return alert('Nama dan Deadline wajib diisi!');
     if (!dbData.tugas) dbData.tugas = [];
-
+    
+    let fileUrl = '#';
     if(fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            dbData.tugas.push({ id: Date.now(), nama, deadline, ket, link: e.target.result, fileName: file.name });
-            await saveData();
-            document.getElementById('t-nama').value = ''; document.getElementById('t-deadline').value = ''; document.getElementById('t-ket').value = ''; document.getElementById('t-link').value = ''; fileInput.value = '';
-            alert('Tugas & file tersimpan global!');
-        };
-        reader.readAsDataURL(file);
-    } else {
-        dbData.tugas.push({ id: Date.now(), nama, deadline, ket, link: linkInput || '#' });
-        await saveData();
-        document.getElementById('t-nama').value = ''; document.getElementById('t-deadline').value = ''; document.getElementById('t-ket').value = ''; document.getElementById('t-link').value = '';
-        alert('Tugas tersimpan global!');
+        fileUrl = await uploadToGoogleDrive(fileInput);
     }
+    dbData.tugas.push({ id: Date.now(), nama, deadline, ket, link: fileUrl });
+    await saveData();
+    document.getElementById('t-nama').value = ''; document.getElementById('t-deadline').value = ''; document.getElementById('t-ket').value = ''; fileInput.value = '';
+    alert('Tugas berhasil disimpan!');
 };
 
-window.handlePraktikumUpload = async function(category, idNama, idSkenario, idKet, idFile, idLink) {
+window.handlePraktikumUpload = async function(category, idNama, idSkenario, idKet, idFile) {
     const nama = document.getElementById(idNama).value;
     const skenario = document.getElementById(idSkenario).value;
     const ket = document.getElementById(idKet).value;
     const fileInput = document.getElementById(idFile);
-    const linkInput = document.getElementById(idLink).value;
-
-    if(!nama) return alert('Nama kegiatan wajib diisi!');
+    if(!nama) return alert('Nama wajib diisi!');
     if (!dbData[category]) dbData[category] = [];
-
+    
+    let fileUrl = '#';
     if(fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            dbData[category].push({ id: Date.now(), nama, skenario, ket, link: e.target.result, fileName: file.name });
-            await saveData();
-            document.getElementById(idNama).value = ''; document.getElementById(idSkenario).value = ''; document.getElementById(idKet).value = ''; document.getElementById(idLink).value = ''; fileInput.value = '';
-            alert('Berhasil disimpan secara global!');
-        };
-        reader.readAsDataURL(file);
-    } else {
-        dbData[category].push({ id: Date.now(), nama, skenario, ket, link: linkInput || '#' });
-        await saveData();
-        document.getElementById(idNama).value = ''; document.getElementById(idSkenario).value = ''; document.getElementById(idKet).value = ''; document.getElementById(idLink).value = '';
-        alert('Berhasil disimpan secara global!');
+        fileUrl = await uploadToGoogleDrive(fileInput);
     }
+    dbData[category].push({ id: Date.now(), nama, skenario, ket, link: fileUrl });
+    await saveData();
+    document.getElementById(idNama).value = ''; document.getElementById(idSkenario).value = ''; document.getElementById(idKet).value = ''; fileInput.value = '';
+    alert('Berhasil disimpan!');
 };
 
 window.handleMateriUpload = async function() {
     const kuliah = document.getElementById('m-kuliah').value;
     const materi = document.getElementById('m-materi').value;
     const fileInput = document.getElementById('m-file');
-    const linkInput = document.getElementById('m-link').value;
-
     if(!kuliah || !materi) return alert('Nama kuliah dan materi wajib diisi!');
     if (!dbData.materi) dbData.materi = [];
-
+    
+    let fileUrl = '#';
     if(fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            dbData.materi.push({ id: Date.now(), kuliah, materi, link: e.target.result, fileName: file.name });
-            await saveData();
-            document.getElementById('m-kuliah').value = ''; document.getElementById('m-materi').value = ''; document.getElementById('m-link').value = ''; fileInput.value = '';
-            alert('Materi diunggah secara global!');
-        };
-        reader.readAsDataURL(file);
-    } else {
-        dbData.materi.push({ id: Date.now(), kuliah, materi, link: linkInput || '#' });
-        await saveData();
-        document.getElementById('m-kuliah').value = ''; document.getElementById('m-materi').value = ''; document.getElementById('m-link').value = '';
-        alert('Materi ditambahkan secara global!');
+        fileUrl = await uploadToGoogleDrive(fileInput);
     }
-};
-
-window.openGenericEditModal = function(category, index) {
-    document.getElementById('edit-cat').value = category;
-    document.getElementById('edit-idx').value = index;
-    const item = dbData[category][index];
-    document.getElementById('edit-link').value = item.link !== '#' ? item.link : '';
-    document.getElementById('edit-val3').value = item.ket || '';
-    if(category === 'materi') {
-        document.getElementById('generic-modal-title').innerText = "Edit Materi";
-        document.getElementById('label-field1').innerText = "Nama Kuliah";
-        document.getElementById('label-field2').innerText = "Topik Materi";
-        document.getElementById('edit-val1').value = item.kuliah;
-        document.getElementById('edit-val2').value = item.materi;
-    } else if(category === 'tugas') {
-        document.getElementById('generic-modal-title').innerText = "Edit Tugas";
-        document.getElementById('label-field1').innerText = "Nama Tugas";
-        document.getElementById('label-field2').innerText = "Deadline";
-        document.getElementById('edit-val1').value = item.nama;
-        document.getElementById('edit-val2').value = item.deadline;
-    } else {
-        document.getElementById('generic-modal-title').innerText = "Edit Kegiatan";
-        document.getElementById('label-field1').innerText = "Nama Kegiatan";
-        document.getElementById('label-field2').innerText = "Modul";
-        document.getElementById('edit-val1').value = item.nama;
-        document.getElementById('edit-val2').value = item.skenario;
-    }
-    document.getElementById('generic-edit-modal').style.display = 'flex';
-};
-
-window.saveGenericEdit = async function() {
-    const category = document.getElementById('edit-cat').value;
-    const index = parseInt(document.getElementById('edit-idx').value);
-    const item = dbData[category][index];
-    const v1 = document.getElementById('edit-val1').value;
-    const v2 = document.getElementById('edit-val2').value;
-    const v3 = document.getElementById('edit-val3').value;
-    const linkInput = document.getElementById('edit-link').value;
-    const fileInput = document.getElementById('edit-file');
-
-    if(category === 'materi') { item.kuliah = v1; item.materi = v2; }
-    else if(category === 'tugas') { item.nama = v1; item.deadline = v2; item.ket = v3; }
-    else { item.nama = v1; item.skenario = v2; item.ket = v3; }
-
-    if(linkInput) { item.link = linkInput; delete item.fileName; }
-
-    if(fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            item.link = e.target.result; item.fileName = file.name;
-            await saveData(); closeModal('generic-edit-modal');
-            alert('Perubahan tersimpan global!');
-        };
-        reader.readAsDataURL(file);
-    } else {
-        await saveData(); closeModal('generic-edit-modal');
-        alert('Perubahan tersimpan global!');
-    }
+    dbData.materi.push({ id: Date.now(), kuliah, materi, link: fileUrl });
+    await saveData();
+    document.getElementById('m-kuliah').value = ''; document.getElementById('m-materi').value = ''; fileInput.value = '';
+    alert('Materi berhasil diunggah!');
 };
 
 function renderTugas() {
     const tbody = document.getElementById('tugas-table-body');
-    if(!tbody) return;
-    tbody.innerHTML = '';
+    if(!tbody) return; tbody.innerHTML = '';
     if (!dbData.tugas) dbData.tugas = [];
     const isAdmin = currentUser && currentUser.role === 'admin';
     dbData.tugas.forEach((t, idx) => {
-        let linkBtn = t.fileName ? `<a href="${t.link}" download="${t.fileName}" class="btn" style="width: auto; padding: 5px 10px; font-size: 12px; text-decoration:none; display:inline-block; margin-right:5px;">📥 Unduh (${t.fileName})</a>` : `<button class="btn" style="width: auto; padding: 5px 10px; font-size: 12px; margin-right:5px;" onclick="openInfoModal('${t.nama}', '${t.ket}', '${t.link}')">Keterangan</button>`;
-        let adminBtns = isAdmin ? `
-            <button class="btn" style="width: auto; padding: 3px 6px; font-size: 11px;" onclick="openGenericEditModal('tugas', ${idx})">Edit</button>
-            <button class="btn btn-danger" style="width: auto; padding: 3px 6px; font-size: 11px;" onclick="deleteItem('tugas', ${idx})">Hapus</button>
-        ` : '';
+        let linkBtn = t.link && t.link !== '#' ? `<a href="${t.link}" target="_blank" class="btn" style="padding: 5px 10px; font-size: 12px; text-decoration:none;">🔗 Buka File Drive ↗</a>` : `<span style="color:var(--text-muted);">Tanpa file</span>`;
+        let adminBtns = isAdmin ? `<button class="btn btn-danger" style="padding: 3px 6px; font-size: 11px; margin-left:5px;" onclick="deleteItem('tugas', ${idx})">Hapus</button>` : '';
         tbody.innerHTML += `<tr><td><strong>${t.nama}</strong></td><td>${t.deadline}</td><td>${linkBtn} ${adminBtns}</td></tr>`;
     });
 }
 
 function renderPraktikum(category, elementId) {
     const container = document.getElementById(elementId);
-    if(!container) return;
-    container.innerHTML = '';
+    if(!container) return; container.innerHTML = '';
     if (!dbData[category]) dbData[category] = [];
     const isAdmin = currentUser && currentUser.role === 'admin';
     dbData[category].forEach((item, idx) => {
-        let actionLink = item.fileName ? `<a href="${item.link}" download="${item.fileName}" class="btn" style="width: auto; padding: 6px 12px; font-size: 12px; text-decoration:none;">📥 Unduh (${item.fileName})</a>` : `<button class="btn" style="width: auto; padding: 6px 12px; font-size: 12px;" onclick="openInfoModal('${item.nama}', '${item.ket}', '${item.link}')">Lihat</button>`;
-        let adminBtns = isAdmin ? `
-            <button class="btn" style="width: auto; padding: 4px 8px; font-size: 11px;" onclick="openGenericEditModal('${category}', ${idx})">Edit</button>
-            <button class="btn btn-danger" style="width: auto; padding: 4px 8px; font-size: 11px;" onclick="deleteItem('${category}', ${idx})">Hapus</button>
-        ` : '';
+        let actionLink = item.link && item.link !== '#' ? `<a href="${item.link}" target="_blank" class="btn" style="padding: 6px 12px; font-size: 12px; text-decoration:none;">🔗 Akses File ↗</a>` : `<span style="color:var(--text-muted);">Tanpa file</span>`;
+        let adminBtns = isAdmin ? `<button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px; margin-left:5px;" onclick="deleteItem('${category}', ${idx})">Hapus</button>` : '';
         container.innerHTML += `
             <div style="background: var(--bg-light); border: 1px solid var(--border); padding: 15px; border-radius: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                 <div><h4 style="color: var(--text);">${item.nama}</h4><p style="font-size: 13px; color: var(--text-muted);">Modul: ${item.skenario}</p></div>
@@ -640,31 +478,15 @@ function renderPraktikum(category, elementId) {
 
 function renderMateri() {
     const tbody = document.getElementById('materi-table-body');
-    if(!tbody) return;
-    tbody.innerHTML = '';
+    if(!tbody) return; tbody.innerHTML = '';
     if (!dbData.materi) dbData.materi = [];
     const isAdmin = currentUser && currentUser.role === 'admin';
     dbData.materi.forEach((m, idx) => {
-        let aksesHtml = m.fileName ? `<a href="${m.link}" download="${m.fileName}" style="color: var(--accent); font-weight: 600; text-decoration: none;">📥 Unduh (${m.fileName})</a>` : `<a href="${m.link}" target="_blank" style="color: var(--accent); font-weight: 600; text-decoration: none;">Akses ↗</a>`;
-        let adminBtns = isAdmin ? `
-            <button class="btn" style="width: auto; padding: 3px 6px; font-size: 11px;" onclick="openGenericEditModal('materi', ${idx})">Edit</button>
-            <button class="btn btn-danger" style="width: auto; padding: 3px 6px; font-size: 11px;" onclick="deleteItem('materi', ${idx})">Hapus</button>
-        ` : '';
+        let aksesHtml = m.link && m.link !== '#' ? `<a href="${m.link}" target="_blank" style="color: var(--accent); font-weight: 600; text-decoration: none;">🔗 Buka File Drive ↗</a>` : `<span style="color:var(--text-muted);">Tanpa file</span>`;
+        let adminBtns = isAdmin ? `<button class="btn btn-danger" style="padding: 3px 6px; font-size: 11px; margin-left: 5px;" onclick="deleteItem('materi', ${idx})">Hapus</button>` : '';
         tbody.innerHTML += `<tr><td><strong>${m.kuliah}</strong></td><td>${m.materi}</td><td>${aksesHtml} ${adminBtns}</td></tr>`;
     });
 }
-
-window.openInfoModal = function(title, text, link) {
-    document.getElementById('modal-title').innerText = title;
-    document.getElementById('modal-body').innerText = text || "Tidak ada keterangan.";
-    const linkBox = document.getElementById('modal-link-container');
-    if(link && link !== '#') {
-        linkBox.innerHTML = `<a href="${link}" target="_blank" class="btn" style="display:block; text-align:center; text-decoration:none;">Buka Tautan ↗</a>`;
-    } else {
-        linkBox.innerHTML = '<span style="color:var(--text-muted); font-size:13px;">Tidak ada tautan.</span>';
-    }
-    document.getElementById('info-modal').style.display = 'flex';
-};
 
 window.addPengumuman = async function() {
     const judul = document.getElementById('p-judul').value;
@@ -675,7 +497,7 @@ window.addPengumuman = async function() {
     dbData.pengumuman.push({ id: Date.now(), judul, isi, deadline });
     await saveData();
     document.getElementById('p-judul').value = ''; document.getElementById('p-isi').value = ''; document.getElementById('p-deadline').value = '';
-    alert('Pengumuman ditambahkan global!');
+    alert('Pengumuman ditambahkan!');
 };
 
 window.addReminder = async function() {
@@ -689,23 +511,11 @@ window.addReminder = async function() {
 
 window.addJadwalUpdateWithFile = async function() {
     const title = document.getElementById('up-title').value;
-    const fileInput = document.getElementById('up-file');
-    if(!title && fileInput.files.length === 0) return alert('Isi keterangan atau pilih file!');
+    if(!title) return;
     if (!dbData.jadwalUpdates) dbData.jadwalUpdates = [];
-    if(fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            dbData.jadwalUpdates.push(`${title} (<a href="${e.target.result}" download="${file.name}">Unduh: ${file.name}</a>)`);
-            await saveData();
-            document.getElementById('up-title').value = ''; fileInput.value = '';
-        };
-        reader.readAsDataURL(file);
-    } else {
-        dbData.jadwalUpdates.push(title);
-        await saveData();
-        document.getElementById('up-title').value = '';
-    }
+    dbData.jadwalUpdates.push(title);
+    await saveData();
+    document.getElementById('up-title').value = '';
 };
 
 window.deleteItem = async function(category, index) {
