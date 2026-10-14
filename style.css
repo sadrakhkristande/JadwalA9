@@ -153,19 +153,48 @@ tr.highlight-tomorrow {
     display: inline-block;
 }
 
-/* Responsif untuk Tampilan HP */
+/* Responsif & Perbaikan Tampilan di HP */
 @media (max-width: 768px) {
+    body {
+        overflow-x: hidden;
+    }
+
     main {
         padding: 15px !important;
     }
+
     header {
         flex-direction: column;
         gap: 10px;
         text-align: center;
         padding: 15px !important;
     }
+
     #login-page {
         margin-top: 40px !important;
         padding: 15px;
+    }
+    
+    /* Membuat semua tabel bisa digeser ke samping dengan mulus tanpa merusak layar */
+    table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+        width: 100%;
+    }
+
+    .card {
+        padding: 15px !important;
+        margin-bottom: 15px !important;
+    }
+
+    nav {
+        padding: 8px 10px !important;
+        gap: 5px !important;
+    }
+    
+    .nav-btn {
+        padding: 8px 12px !important;
+        font-size: 13px !important;
     }
 }
