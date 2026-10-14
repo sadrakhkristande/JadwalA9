@@ -25,13 +25,13 @@
             <div style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 5px; font-weight: 600;">Pilih Peran (Role):</label>
                 <select id="login-role" class="input-field" onchange="toggleLoginFields()">
-                    <option value="guest">Mahasiswa / Guest</option>
+                    <option value="guest">Mahasiswa</option>
                     <option value="admin">Administrator</option>
                 </select>
             </div>
 
             <div id="guest-fields" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; font-weight: 600;">Masukkan NIM (atau Kode 12345):</label>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">Masukkan NIM:</label>
                 <input type="text" id="login-nim-input" class="input-field" placeholder="Contoh: 21105032610227">
                 <small style="color: var(--text-muted); display: block; margin-top: 5px;">Tekan Enter untuk langsung masuk.</small>
             </div>
@@ -154,8 +154,11 @@
                         <input type="date" id="t-deadline" class="input-field" style="margin-bottom:8px;">
                         <textarea id="t-ket" class="input-field" placeholder="Keterangan instruksi tugas..." style="margin-bottom:8px; height: 70px;"></textarea>
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih Berkas / File (Otomatis masuk Google Drive):</label>
-                        <input type="file" id="t-file" class="input-field" style="margin-bottom:12px; padding:6px;">
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih File (Maks 20 MB):</label>
+                        <input type="file" id="t-file" class="input-field" style="margin-bottom:8px; padding:6px;">
+                        
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Masukkan Link Eksternal (Opsional jika tanpa file):</label>
+                        <input type="text" id="t-link-manual" class="input-field" placeholder="https://..." style="margin-bottom:12px;">
                         
                         <button class="btn" onclick="addTugasItem()">Simpan Tugas</button>
                     </div>
@@ -182,10 +185,13 @@
                         <input type="text" id="lab-skenario" class="input-field" placeholder="Modul / Skenario" style="margin-bottom:8px;">
                         <textarea id="lab-ket" class="input-field" placeholder="Keterangan..." style="margin-bottom:8px; height: 70px;"></textarea>
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih Berkas / File:</label>
-                        <input type="file" id="lab-file" class="input-field" style="margin-bottom:12px; padding:6px;">
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih Berkas / File (Maks 20 MB):</label>
+                        <input type="file" id="lab-file" class="input-field" style="margin-bottom:8px; padding:6px;">
                         
-                        <button class="btn" onclick="handlePraktikumUpload('laboratorium', 'lab-nama', 'lab-skenario', 'lab-ket', 'lab-file')">Simpan Lab</button>
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Masukkan Link Eksternal:</label>
+                        <input type="text" id="lab-link-manual" class="input-field" placeholder="https://..." style="margin-bottom:12px;">
+                        
+                        <button class="btn" onclick="handlePraktikumUpload('laboratorium', 'lab-nama', 'lab-skenario', 'lab-ket', 'lab-file', 'lab-link-manual')">Simpan Lab</button>
                     </div>
                     <div id="lab-list"></div>
                 </div>
@@ -201,10 +207,13 @@
                         <input type="text" id="skills-skenario" class="input-field" placeholder="Modul" style="margin-bottom:8px;">
                         <textarea id="skills-ket" class="input-field" placeholder="Keterangan..." style="margin-bottom:8px; height: 70px;"></textarea>
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih Berkas / File:</label>
-                        <input type="file" id="skills-file" class="input-field" style="margin-bottom:12px; padding:6px;">
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih Berkas / File (Maks 20 MB):</label>
+                        <input type="file" id="skills-file" class="input-field" style="margin-bottom:8px; padding:6px;">
                         
-                        <button class="btn" onclick="handlePraktikumUpload('skills_lab', 'skills-nama', 'skills-skenario', 'skills-ket', 'skills-file')">Simpan Skills Lab</button>
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Masukkan Link Eksternal:</label>
+                        <input type="text" id="skills-link-manual" class="input-field" placeholder="https://..." style="margin-bottom:12px;">
+                        
+                        <button class="btn" onclick="handlePraktikumUpload('skills_lab', 'skills-nama', 'skills-skenario', 'skills-ket', 'skills-file', 'skills-link-manual')">Simpan Skills Lab</button>
                     </div>
                     <div id="skills-list"></div>
                 </div>
@@ -220,10 +229,13 @@
                         <input type="text" id="tut-skenario" class="input-field" placeholder="Skenario / Kasus" style="margin-bottom:8px;">
                         <textarea id="tut-ket" class="input-field" placeholder="Catatan diskusi..." style="margin-bottom:8px; height: 70px;"></textarea>
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih Berkas / File:</label>
-                        <input type="file" id="tut-file" class="input-field" style="margin-bottom:12px; padding:6px;">
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih Berkas / File (Maks 20 MB):</label>
+                        <input type="file" id="tut-file" class="input-field" style="margin-bottom:8px; padding:6px;">
                         
-                        <button class="btn" onclick="handlePraktikumUpload('tutorial', 'tut-nama', 'tut-skenario', 'tut-ket', 'tut-file')">Simpan Tutorial</button>
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Masukkan Link Eksternal:</label>
+                        <input type="text" id="tut-link-manual" class="input-field" placeholder="https://..." style="margin-bottom:12px;">
+                        
+                        <button class="btn" onclick="handlePraktikumUpload('tutorial', 'tut-nama', 'tut-skenario', 'tut-ket', 'tut-file', 'tut-link-manual')">Simpan Tutorial</button>
                     </div>
                     <div id="tutorial-list"></div>
                 </div>
@@ -238,8 +250,11 @@
                         <input type="text" id="m-kuliah" class="input-field" placeholder="Nama Mata Kuliah" style="margin-bottom:8px;">
                         <input type="text" id="m-materi" class="input-field" placeholder="Topik / Judul Materi" style="margin-bottom:8px;">
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih Berkas / File:</label>
-                        <input type="file" id="m-file" class="input-field" style="margin-bottom:12px; padding:6px;">
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih Berkas / File (Maks 20 MB):</label>
+                        <input type="file" id="m-file" class="input-field" style="margin-bottom:8px; padding:6px;">
+                        
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Masukkan Link Eksternal:</label>
+                        <input type="text" id="m-link-manual" class="input-field" placeholder="https://..." style="margin-bottom:12px;">
                         
                         <button class="btn" onclick="handleMateriUpload()">Unggah Materi</button>
                     </div>
@@ -288,6 +303,24 @@
             <div style="display:flex; gap:10px;">
                 <button class="btn" onclick="saveJadwalItem()" style="flex:1;">Simpan Jadwal</button>
                 <button class="btn btn-danger" onclick="closeModal('jadwal-modal')" style="flex:1;">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDIT MATERI KULIAH -->
+    <div id="materi-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:9999; padding: 15px;">
+        <div class="card" style="width:100%; max-width:500px;">
+            <h3 style="color:var(--accent); margin-bottom:15px;">Edit Materi Kuliah</h3>
+            <input type="hidden" id="edit-materi-index" value="-1">
+            <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">Nama Mata Kuliah:</label>
+            <input type="text" id="edit-m-kuliah" class="input-field" style="margin-bottom:10px;">
+            <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">Topik / Judul Materi:</label>
+            <input type="text" id="edit-m-materi" class="input-field" style="margin-bottom:10px;">
+            <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">Link Berkas (Drive / URL):</label>
+            <input type="text" id="edit-m-link" class="input-field" style="margin-bottom:15px;">
+            <div style="display:flex; gap:10px;">
+                <button class="btn" onclick="saveEditedMateri()" style="flex:1;">Simpan Perubahan</button>
+                <button class="btn btn-danger" onclick="closeModal('materi-modal')" style="flex:1;">Batal</button>
             </div>
         </div>
     </div>
