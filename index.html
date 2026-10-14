@@ -13,7 +13,7 @@
 <body>
 
     <!-- BANNER MAINTENANCE -->
-    <div id="maintenance-banner" style="display: none; background: #ef4444; color: white; text-align: center; padding: 10px; font-weight: bold; position: sticky; top: 0; z-index: 9999;">
+    <div id="maintenance-banner" style="display: none; background: #ef4444; color: white; text-align: center; padding: 12px; font-weight: bold; position: sticky; top: 0; z-index: 9999; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
         ⚠️ PORTAL SEDANG DALAM PEMELIHARAAN (MAINTENANCE) ⚠️
     </div>
 
@@ -154,11 +154,8 @@
                         <input type="date" id="t-deadline" class="input-field" style="margin-bottom:8px;">
                         <textarea id="t-ket" class="input-field" placeholder="Keterangan instruksi tugas..." style="margin-bottom:8px; height: 70px;"></textarea>
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih File (Maks 20 MB):</label>
-                        <input type="file" id="t-file" class="input-field" style="margin-bottom:8px; padding:6px;">
-                        
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Masukkan Link Eksternal (Opsional jika tanpa file):</label>
-                        <input type="text" id="t-link-manual" class="input-field" placeholder="https://..." style="margin-bottom:12px;">
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Link Berkas (Google Drive / URL opsional):</label>
+                        <input type="text" id="t-link-manual" class="input-field" placeholder="https://drive.google.com/..." style="margin-bottom:12px;">
                         
                         <button class="btn" onclick="addTugasItem()">Simpan Tugas</button>
                     </div>
@@ -167,7 +164,7 @@
                             <tr>
                                 <th>Nama Tugas</th>
                                 <th>Deadline</th>
-                                <th>Aksi / Berkas</th>
+                                <th>Aksi / Link</th>
                             </tr>
                         </thead>
                         <tbody id="tugas-table-body"></tbody>
@@ -185,13 +182,10 @@
                         <input type="text" id="lab-skenario" class="input-field" placeholder="Modul / Skenario" style="margin-bottom:8px;">
                         <textarea id="lab-ket" class="input-field" placeholder="Keterangan..." style="margin-bottom:8px; height: 70px;"></textarea>
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih Berkas / File (Maks 20 MB):</label>
-                        <input type="file" id="lab-file" class="input-field" style="margin-bottom:8px; padding:6px;">
-                        
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Masukkan Link Eksternal:</label>
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Link Berkas / Modul (Opsional):</label>
                         <input type="text" id="lab-link-manual" class="input-field" placeholder="https://..." style="margin-bottom:12px;">
                         
-                        <button class="btn" onclick="handlePraktikumUpload('laboratorium', 'lab-nama', 'lab-skenario', 'lab-ket', 'lab-file', 'lab-link-manual')">Simpan Lab</button>
+                        <button class="btn" onclick="handlePraktikumUpload('laboratorium', 'lab-nama', 'lab-skenario', 'lab-ket', 'lab-link-manual')">Simpan Lab</button>
                     </div>
                     <div id="lab-list"></div>
                 </div>
@@ -207,13 +201,10 @@
                         <input type="text" id="skills-skenario" class="input-field" placeholder="Modul" style="margin-bottom:8px;">
                         <textarea id="skills-ket" class="input-field" placeholder="Keterangan..." style="margin-bottom:8px; height: 70px;"></textarea>
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih Berkas / File (Maks 20 MB):</label>
-                        <input type="file" id="skills-file" class="input-field" style="margin-bottom:8px; padding:6px;">
-                        
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Masukkan Link Eksternal:</label>
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Link Berkas (Opsional):</label>
                         <input type="text" id="skills-link-manual" class="input-field" placeholder="https://..." style="margin-bottom:12px;">
                         
-                        <button class="btn" onclick="handlePraktikumUpload('skills_lab', 'skills-nama', 'skills-skenario', 'skills-ket', 'skills-file', 'skills-link-manual')">Simpan Skills Lab</button>
+                        <button class="btn" onclick="handlePraktikumUpload('skills_lab', 'skills-nama', 'skills-skenario', 'skills-ket', 'skills-link-manual')">Simpan Skills Lab</button>
                     </div>
                     <div id="skills-list"></div>
                 </div>
@@ -229,13 +220,10 @@
                         <input type="text" id="tut-skenario" class="input-field" placeholder="Skenario / Kasus" style="margin-bottom:8px;">
                         <textarea id="tut-ket" class="input-field" placeholder="Catatan diskusi..." style="margin-bottom:8px; height: 70px;"></textarea>
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih Berkas / File (Maks 20 MB):</label>
-                        <input type="file" id="tut-file" class="input-field" style="margin-bottom:8px; padding:6px;">
-                        
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Masukkan Link Eksternal:</label>
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Link Berkas (Opsional):</label>
                         <input type="text" id="tut-link-manual" class="input-field" placeholder="https://..." style="margin-bottom:12px;">
                         
-                        <button class="btn" onclick="handlePraktikumUpload('tutorial', 'tut-nama', 'tut-skenario', 'tut-ket', 'tut-file', 'tut-link-manual')">Simpan Tutorial</button>
+                        <button class="btn" onclick="handlePraktikumUpload('tutorial', 'tut-nama', 'tut-skenario', 'tut-ket', 'tut-link-manual')">Simpan Tutorial</button>
                     </div>
                     <div id="tutorial-list"></div>
                 </div>
@@ -246,24 +234,21 @@
                 <div class="card">
                     <h3 style="margin-bottom: 15px; color: var(--accent);">📚 Bank Materi Kuliah</h3>
                     <div class="admin-only" style="display: none; background: var(--bg-light); padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-                        <h4 style="margin-bottom: 8px;">Unggah Materi Kuliah</h4>
+                        <h4 style="margin-bottom: 8px;">Tambah Materi Kuliah</h4>
                         <input type="text" id="m-kuliah" class="input-field" placeholder="Nama Mata Kuliah" style="margin-bottom:8px;">
                         <input type="text" id="m-materi" class="input-field" placeholder="Topik / Judul Materi" style="margin-bottom:8px;">
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih Berkas / File (Maks 20 MB):</label>
-                        <input type="file" id="m-file" class="input-field" style="margin-bottom:8px; padding:6px;">
-                        
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Masukkan Link Eksternal:</label>
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Link Berkas Materi (Google Drive / URL):</label>
                         <input type="text" id="m-link-manual" class="input-field" placeholder="https://..." style="margin-bottom:12px;">
                         
-                        <button class="btn" onclick="handleMateriUpload()">Unggah Materi</button>
+                        <button class="btn" onclick="handleMateriUpload()">Simpan Materi</button>
                     </div>
                     <table>
                         <thead>
                             <tr>
                                 <th>Mata Kuliah</th>
                                 <th>Topik Materi</th>
-                                <th>Akses Berkas</th>
+                                <th>Akses Link</th>
                             </tr>
                         </thead>
                         <tbody id="materi-table-body"></tbody>
