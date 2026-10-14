@@ -109,11 +109,27 @@ async function saveData() {
 async function uploadToGoogleDrive(fileInput) {
     if (!fileInput || fileInput.files.length === 0) return '#';
     const file = fileInput.files[0];
-    alert("Sedang mengunggah file ke Google Drive Anda...");
+    
+    // Batasan ukuran file maksimal 5 MB agar tidak macet / timeout
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+        alert("Ukuran file terlalu besar! Batas maksimal adalah 5 MB.\nSilakan kompres file terlebih dahulu.");
+        return '#';
+    }
+
+    alert("Sedang mengunggah file ke Google Drive (Maks 5 MB)...");
     
     return new Promise((resolve) => {
         const reader = new FileReader();
+        
+        // Pengaman timer 20 detik agar tidak stuck selamanya jika jaringan/skrip bermasalah
+        const timer = setTimeout(() => {
+            alert("Waktu unggah habis (Timeout). Koneksi lambat atau skrip Google Drive bermasalah.");
+            resolve('#');
+        }, 20000);
+
         reader.onload = async function(e) {
+            clearTimeout(timer);
             const base64Data = e.target.result.split(',')[1];
             const payload = { fileName: file.name, mimeType: file.type, fileData: base64Data };
             try {
