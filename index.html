@@ -72,22 +72,15 @@
             </div>
         </header>
 
-        <!-- NAVIGASI & SUB-MENU DROPDOWN -->
+        <!-- NAVIGASI MENU BERJAJAR -->
         <nav>
             <button class="btn nav-btn active" onclick="switchTab('home', this)">🏠 Beranda</button>
-            <button class="btn nav-btn" onclick="switchTab('jadwal', this)">📅 Jadwal Kuliah</button>
-            
-            <!-- DROPDOWN MENU AKADEMIK -->
-            <div class="dropdown">
-                <button class="btn nav-btn dropdown-toggle" onclick="toggleDropdown(event)">📂 Menu Akademik ▾</button>
-                <div id="academic-dropdown-content" class="dropdown-content">
-                    <a href="#" onclick="switchTabAndCloseDropdown('tugas', this)">📋 Daftar Tugas</a>
-                    <a href="#" onclick="switchTabAndCloseDropdown('lab', this)">🔬 Laboratorium</a>
-                    <a href="#" onclick="switchTabAndCloseDropdown('skills', this)">🩺 Skills Lab</a>
-                    <a href="#" onclick="switchTabAndCloseDropdown('tutorial', this)">💬 Tutorial</a>
-                    <a href="#" onclick="switchTabAndCloseDropdown('materi', this)">📚 Materi Kuliah</a>
-                </div>
-            </div>
+            <button class="btn nav-btn" onclick="switchTab('jadwal', this)">📅 Jadwal</button>
+            <button class="btn nav-btn" onclick="switchTab('tugas', this)">📋 Tugas</button>
+            <button class="btn nav-btn" onclick="switchTab('lab', this)">🔬 Lab</button>
+            <button class="btn nav-btn" onclick="switchTab('skills', this)">🩺 Skills Lab</button>
+            <button class="btn nav-btn" onclick="switchTab('tutorial', this)">💬 Tutorial</button>
+            <button class="btn nav-btn" onclick="switchTab('materi', this)">📚 Materi</button>
         </nav>
 
         <main>
