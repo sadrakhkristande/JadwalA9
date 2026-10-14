@@ -1,236 +1,299 @@
+/* ==========================================================================
+   DESAIN PORTAL AKADEMIK ELEGAN & RESPONSIF (MOBILE-FIRST CARD TABLE)
+   ========================================================================== */
+
 :root {
-    --bg-main: #f0f2f5;
+    --primary: #1e1b4b;        /* Deep Indigo */
+    --accent: #4338ca;         /* Royal Indigo Accent */
+    --accent-hover: #3730a3;
+    --bg-main: #f8fafc;        /* Clean Slate Gray */
     --bg-card: #ffffff;
-    --bg-light: #f8fafc;
-    --text: #1e293b;
+    --bg-light: #f1f5f9;
+    --text: #0f172a;
     --text-muted: #64748b;
-    --border: #cbd5e1;
-    --accent: #2563eb;
-    --accent-hover: #1d4ed8;
+    --border: #e2e8f0;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -1px rgba(0,0,0,0.04);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08);
+    --radius: 12px;
 }
 
+/* THEME DARK (MODE GELAP ELEGAN) */
 body.theme-dark {
+    --primary: #6366f1;
+    --accent: #818cf8;
+    --accent-hover: #6366f1;
     --bg-main: #0f172a;
     --bg-card: #1e293b;
     --bg-light: #334155;
     --text: #f8fafc;
     --text-muted: #94a3b8;
-    --border: #475569;
-    --accent: #3b82f6;
-    --accent-hover: #60a5fa;
+    --border: #334155;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
 }
 
+/* RESET & BASE */
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
     background-color: var(--bg-main);
     color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+    line-height: 1.5;
+    padding-bottom: 40px;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Halaman Login Responsif di Tengah */
+/* HALAMAN LOGIN */
 #login-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+}
+
+#login-page .card {
     width: 100%;
     max-width: 420px;
-    margin: auto;
-    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
 }
 
-.card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-}
-
-.input-field {
-    background: var(--bg-light);
-    color: var(--text);
-    border: 1px solid var(--border);
-    font-size: 14px;
-    border-radius: 6px;
-    padding: 10px;
-    width: 100%;
-    transition: all 0.2s ease;
-}
-
-.input-field:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-}
-
-.btn {
-    background-color: var(--accent);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    padding: 10px 16px;
-    font-weight: 600;
-    font-size: 14px;
-    transition: background-color 0.2s ease;
-}
-
-.btn:hover {
-    background-color: var(--accent-hover);
-}
-
-.btn-danger { background-color: #ef4444; }
-.btn-danger:hover { background-color: #dc2626; }
-.btn-success { background-color: #10b981; }
-.btn-warning { background-color: #f59e0b; }
-
-/* Header & Navigasi Fleksibel */
+/* HEADER ELEGAN */
 header {
-    background: var(--bg-card);
-    padding: 15px 30px;
+    background-color: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid var(--border);
-    flex-wrap: wrap;
-    gap: 15px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: var(--shadow-sm);
 }
 
+/* NAVIGASI TAB */
 nav {
-    background: var(--bg-card);
-    padding: 10px 20px;
     display: flex;
     gap: 8px;
+    padding: 12px 24px;
+    background-color: var(--bg-card);
     border-bottom: 1px solid var(--border);
     overflow-x: auto;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Hide scrollbar Firefox */
+}
+
+nav::-webkit-scrollbar {
+    display: none; /* Hide scrollbar Chrome/Safari */
 }
 
 .nav-btn {
     background: transparent;
-    color: var(--text);
+    color: var(--text-muted);
     border: none;
     padding: 8px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 500;
+    font-weight: 600;
     font-size: 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+    cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.nav-btn.active, .nav-btn:hover {
+.nav-btn:hover {
+    background-color: var(--bg-light);
+    color: var(--accent);
+}
+
+.nav-btn.active {
     background-color: var(--accent);
     color: white;
+    box-shadow: var(--shadow-sm);
 }
 
+/* KONTEN UTAMA & KARTU */
 main {
-    padding: 30px;
     max-width: 1200px;
-    margin: 0 auto;
-    width: 100%;
-    flex: 1;
+    margin: 24px auto;
+    padding: 0 16px;
 }
 
-/* Grid Layout Otomatis untuk PC & HP */
+.card {
+    background-color: var(--bg-card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-md);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
 .dashboard-grid {
     display: grid;
     grid-template-columns: 2fr 1fr;
     gap: 20px;
 }
 
-/* Tabel Responsif dengan Scroll Horizontal otomatis */
-.table-responsive {
+/* INPUT & BUTTONS */
+.input-field {
     width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    margin-bottom: 15px;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background-color: var(--bg-main);
     color: var(--text);
     font-size: 14px;
-    min-width: 600px; /* Mencegah tabel tertekan terlalu kecil di HP */
+    outline: none;
+    transition: border-color 0.2s ease;
 }
 
-th, td {
-    padding: 12px 15px;
-    border: 1px solid var(--border);
-    text-align: left;
+.input-field:focus {
+    border-color: var(--accent);
 }
 
-th {
-    background-color: var(--bg-light);
+.btn {
+    background-color: var(--accent);
+    color: white;
+    border: none;
+    padding: 10px 18px;
     font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
-tr.highlight-today {
-    background-color: rgba(234, 179, 8, 0.12);
+.btn:hover {
+    background-color: var(--accent-hover);
 }
 
-tr.highlight-tomorrow {
-    background-color: rgba(59, 130, 246, 0.12);
+.btn:active {
+    transform: scale(0.98);
 }
+
+.btn-danger { background-color: #ef4444; }
+.btn-danger:hover { background-color: #dc2626; }
+
+.btn-warning { background-color: #f59e0b; color: white; }
+.btn-warning:hover { background-color: #d97706; }
+
+.btn-success { background-color: #10b981; }
+.btn-success:hover { background-color: #059669; }
 
 .badge {
+    display: inline-block;
     padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: bold;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
 }
 
 .badge-wa {
     background-color: #25d366;
     color: white;
     text-decoration: none;
-    display: inline-block;
 }
 
-/* Penyesuaian Otomatis untuk Tampilan HP / Tablet (Responsive Media Query) */
-@media (max-width: 900px) {
-    .dashboard-grid {
-        grid-template-columns: 1fr; /* Berubah jadi 1 kolom ke bawah di layar sedang/kecil */
-    }
+/* TABEL UTAMA (DESKTOP) */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
 }
+
+th, td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+}
+
+th {
+    background-color: var(--bg-light);
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
+   OPTIMASI KHUSUS HP / MOBILE (TABEL MENJADI KARTU - NO HORIZONTAL SCROLL)
+   ========================================================================== */
 
 @media (max-width: 768px) {
-    body {
-        overflow-x: hidden;
+    header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 14px 16px;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
     }
 
     main {
-        padding: 15px !important;
-    }
-
-    header {
-        flex-direction: column;
-        text-align: center;
-        padding: 15px !important;
-    }
-
-    #login-page {
-        margin-top: 20px !important;
-        padding: 15px;
+        padding: 0 12px;
+        margin: 16px auto;
     }
 
     .card {
-        padding: 15px !important;
+        padding: 16px;
     }
 
-    nav {
-        padding: 8px 10px !important;
+    /* MENGUBAH TABEL MENJADI TAMPILAN KARTU RAPI DI HP */
+    table, thead, tbody, th, td, tr {
+        display: block;
     }
-    
-    .nav-btn {
-        padding: 6px 12px !important;
-        font-size: 13px !important;
+
+    thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+
+    tr {
+        background-color: var(--bg-light);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        margin-bottom: 12px;
+        padding: 12px;
+    }
+
+    td {
+        border: none;
+        border-bottom: 1px solid var(--border);
+        position: relative;
+        padding: 8px 0;
+        text-align: left;
+    }
+
+    td:last-child {
+        border-bottom: none;
+    }
+
+    /* KARTU JADWAL & MATERI DI HP FIT DALAM LAYAR */
+    #jadwal-table-body tr, #tugas-table-body tr, #materi-table-body tr {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    td small {
+        display: inline-block;
+        margin-bottom: 2px;
     }
 }
