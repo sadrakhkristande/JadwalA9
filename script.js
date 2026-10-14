@@ -23,17 +23,20 @@ const SUPABASE_URL = "https://vqzklxbfrvmvcoeykias.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_-NTQ0VL2xQmIYJ_ieREXkg_WUcU3L0t";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// State Data Terpisah (Multi-JSON)
+// State Data Terpisah Multi-JSON
 let dbData = {
     pengumuman: [],
     reminder: [],
+    jadwalUpdates: [],
     tugas: [],
     laboratorium: [],
     skills_lab: [],
     tutorial: [],
     materi: [],
-    jadwalCustom: null,
+    jadwalCustom: [],
     maintenance: false,
+    globalAnnouncement: '',
+    adminCode: 'A9ACOR',
     theme: 'light'
 };
 
@@ -41,10 +44,10 @@ let dbData = {
 // INISIALISASI APLIKASI
 // ==========================================================================
 window.addEventListener('DOMContentLoaded', async () => {
-    // Memuat Data Multi-JSON secara langsung
     await fetchDatabaseFromCloud();
     applyTheme(dbData.theme || 'light');
     checkMaintenanceStatus();
+    checkGlobalAnnouncement();
     
     const nimInput = document.getElementById('login-nim-input');
     const adminInput = document.getElementById('login-admin-code');
@@ -76,10 +79,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// FETCH DATA MULTI-JSON
+// FETCH DATA MULTI-JSON SUPABASE
 async function fetchDatabaseFromCloud() {
     try {
-        const keys = ['pengumuman', 'reminder', 'tugas', 'laboratorium', 'skills_lab', 'tutorial', 'materi', 'config'];
+        const keys = ['pengumuman', 'reminder', 'tugas', 'laboratorium', 'skills_lab', 'tutorial', 'materi', 'jadwal', 'config'];
         
         for (const k of keys) {
             const { data, error } = await supabaseClient
@@ -92,25 +95,37 @@ async function fetchDatabaseFromCloud() {
                 if (k === 'config') {
                     dbData.maintenance = data.value.maintenance || false;
                     dbData.theme = data.value.theme || 'light';
+                    dbData.globalAnnouncement = data.value.globalAnnouncement || '';
+                    dbData.adminCode = data.value.adminCode || 'A9ACOR';
+                } else if (k === 'jadwal') {
+                    dbData.jadwalCustom = data.value || [];
                 } else {
                     dbData[k] = data.value || [];
                 }
             }
         }
     } catch (err) {
-        console.error("Gagal memuat sebagian data dari Supabase:", err);
+        console.error("Gagal memuat data dari Supabase:", err);
     }
     checkMaintenanceStatus();
+    checkGlobalAnnouncement();
     renderAll();
 }
 
-// SIMPAN SPESIFIK PER KATEGORI (SANGAT RINGAN & CEPAT)
+// SIMPAN TERSAMBUNG KE KEY SUPABASE KATEGORI SPESIFIK
 async function saveCategoryData(categoryKey) {
     renderAll();
     try {
         let payload = dbData[categoryKey];
         if (categoryKey === 'config') {
-            payload = { maintenance: dbData.maintenance, theme: dbData.theme };
+            payload = { 
+                maintenance: dbData.maintenance, 
+                theme: dbData.theme,
+                globalAnnouncement: dbData.globalAnnouncement,
+                adminCode: dbData.adminCode
+            };
+        } else if (categoryKey === 'jadwal') {
+            payload = dbData.jadwalCustom;
         }
 
         const { error } = await supabaseClient
@@ -125,7 +140,7 @@ async function saveCategoryData(categoryKey) {
     }
 }
 
-// HELPER PEMBATASAN UKURAN FILE (MAKSIMAL 1 MB)
+// HELPER FILE BASE64 (MAX 1 MB)
 function getFileAsBase64(fileInputId) {
     return new Promise((resolve) => {
         const fileInput = document.getElementById(fileInputId);
@@ -137,7 +152,7 @@ function getFileAsBase64(fileInputId) {
         
         const maxSize = 1 * 1024 * 1024; // Limit 1 MB
         if (file.size > maxSize) {
-            alert(`⚠️ Ukuran file "${file.name}" adalah ${(file.size / (1024*1024)).toFixed(2)} MB.\nUntuk menjaga portal tetap cepat dan bebas Not Responding, ukuran unggah file PC dibatasi maksimal 1 MB.\n\nSaran: Unggah file besar ke Google Drive lalu masukkan URL-nya di kolom link.`);
+            alert(`⚠️ Ukuran file "${file.name}" adalah ${(file.size / (1024*1024)).toFixed(2)} MB.\nUnggah file dari PC dibatasi maksimal 1 MB agar portal tetap cepat.\n\nSaran: Unggah file besar ke Google Drive lalu salin URL link-nya.`);
             fileInput.value = '';
             resolve(null);
             return;
@@ -152,7 +167,7 @@ function getFileAsBase64(fileInputId) {
     });
 }
 
-// OTOMATISKAN PENGUMUMAN DENGAN TEMPLATE PER KATEGORI
+// AUTOMATIC ANNOUNCEMENT TEMPLATE GENERATOR
 async function triggerAutoAnnouncement(judul, isi, deadlineDays = 7) {
     if (!dbData.pengumuman) dbData.pengumuman = [];
     
@@ -169,7 +184,7 @@ async function triggerAutoAnnouncement(judul, isi, deadlineDays = 7) {
 }
 
 // ==========================================================================
-// MANAJEMEN TEMA & MAINTENANCE
+// PENGATURAN TEMA, MAINTENANCE & ADMIN PANEL
 // ==========================================================================
 window.toggleThemeSwitch = async function() {
     const checkbox = document.getElementById('theme-toggle-checkbox');
@@ -191,14 +206,25 @@ function applyTheme(themeName) {
 
 function checkMaintenanceStatus() {
     const banner = document.getElementById('maintenance-banner');
-    const toggleBtn = document.getElementById('maintenance-toggle-btn');
+    const modalBtn = document.getElementById('modal-maintenance-btn');
     
     if(dbData.maintenance) {
         if(banner) banner.style.display = 'block';
-        if(toggleBtn) { toggleBtn.innerText = "Nonaktifkan Maintenance"; toggleBtn.className = "btn btn-success"; }
+        if(modalBtn) { modalBtn.innerText = "Nonaktifkan Maintenance"; modalBtn.className = "btn btn-success"; }
     } else {
         if(banner) banner.style.display = 'none';
-        if(toggleBtn) { toggleBtn.innerText = "Aktifkan Maintenance"; toggleBtn.className = "btn btn-warning"; }
+        if(modalBtn) { modalBtn.innerText = "Aktifkan Maintenance"; modalBtn.className = "btn btn-warning"; }
+    }
+}
+
+function checkGlobalAnnouncement() {
+    const banner = document.getElementById('global-announcement-banner');
+    const textEl = document.getElementById('global-announcement-text');
+    if(dbData.globalAnnouncement && dbData.globalAnnouncement.trim() !== '') {
+        if(textEl) textEl.innerText = `📢 INFO PORTAL: ${dbData.globalAnnouncement}`;
+        if(banner) banner.style.display = 'block';
+    } else {
+        if(banner) banner.style.display = 'none';
     }
 }
 
@@ -207,6 +233,24 @@ window.toggleMaintenanceMode = async function() {
     await saveCategoryData('config');
     checkMaintenanceStatus();
     alert(dbData.maintenance ? "⚠️ Mode Maintenance DIAKTIFKAN!" : "✅ Mode Maintenance DINONAKTIFKAN!");
+};
+
+window.openAdminSettingsModal = function() {
+    document.getElementById('cfg-global-msg').value = dbData.globalAnnouncement || '';
+    document.getElementById('cfg-admin-code').value = dbData.adminCode || 'A9ACOR';
+    checkMaintenanceStatus();
+    document.getElementById('admin-settings-modal').style.display = 'flex';
+};
+
+window.saveAdminSettings = async function() {
+    dbData.globalAnnouncement = document.getElementById('cfg-global-msg').value.trim();
+    const newCode = document.getElementById('cfg-admin-code').value.trim();
+    if(newCode) dbData.adminCode = newCode;
+
+    await saveCategoryData('config');
+    checkGlobalAnnouncement();
+    closeModal('admin-settings-modal');
+    alert('✅ Pengaturan web berhasil disimpan!');
 };
 
 setInterval(() => {
@@ -238,8 +282,9 @@ window.handleLogin = function() {
     if (role === 'admin') {
         const codeInput = document.getElementById('login-admin-code');
         const code = codeInput ? codeInput.value.trim() : '';
-        if (code === 'A9ACOR') {
-            currentUser = { role: 'admin', name: 'Admin Utama (A9ACOR)' };
+        const validCode = dbData.adminCode || 'A9ACOR';
+        if (code === validCode) {
+            currentUser = { role: 'admin', name: 'Admin Utama' };
             saveUserSession(); initApp(); setupInactivityTracker();
         } else { alert('Kode Admin Salah!'); }
     } else {
@@ -291,6 +336,7 @@ function initApp() {
         document.querySelectorAll('.admin-form-box').forEach(el => el.style.display = 'none');
     }
     checkMaintenanceStatus(); 
+    checkGlobalAnnouncement();
     renderAll();
 }
 
@@ -311,7 +357,111 @@ window.switchTab = function(tabName, btnElement) {
 window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; };
 
 // ==========================================================================
-// RENDER & INPUT DATA
+// KELOLA JADWAL (SYNC CLOUD SUPABASE)
+// ==========================================================================
+async function renderJadwal() {
+    const tbody = document.getElementById('jadwal-table-body');
+    if(!tbody) return; tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Memuat jadwal...</td></tr>';
+    
+    let jadwalList = dbData.jadwalCustom || [];
+    
+    // Jika data jadwal di Supabase masih kosong, muat default dari file jadwal.json lokal
+    if(jadwalList.length === 0) {
+        try { 
+            const res = await fetch('jadwal.json'); 
+            const data = await res.json(); 
+            jadwalList = data.jadwal || []; 
+            dbData.jadwalCustom = jadwalList;
+        } catch (e) { jadwalList = []; }
+    }
+    
+    tbody.innerHTML = '';
+    if(jadwalList.length === 0) { 
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Belum ada agenda jadwal kuliah tersimpan.</td></tr>`; 
+        return; 
+    }
+
+    const isAdmin = currentUser && currentUser.role === 'admin';
+
+    jadwalList.forEach((j, idx) => {
+        let s1 = j.sesi?.[0] ? `<small style="color:var(--text-muted);">${j.sesi[0].jam}</small><br><strong>${j.sesi[0].kegiatan}</strong>` : '-';
+        let s2 = j.sesi?.[1] ? `<small style="color:var(--text-muted);">${j.sesi[1].jam}</small><br><strong>${j.sesi[1].kegiatan}</strong>` : '-';
+        let s3 = j.sesi?.[2] ? `<small style="color:var(--text-muted);">${j.sesi[2].jam}</small><br><strong>${j.sesi[2].kegiatan}</strong>` : '-';
+        let s4 = j.sesi?.[3] ? `<small style="color:var(--text-muted);">${j.sesi[3].jam}</small><br><strong>${j.sesi[3].kegiatan}</strong>` : '-';
+        
+        let actBtns = isAdmin ? `
+            <button class="btn" style="padding:3px 8px; font-size:11px; background:#eab308;" onclick="openJadwalModal(${idx})">Edit</button>
+            <button class="btn btn-danger" style="padding:3px 8px; font-size:11px; margin-left:4px;" onclick="deleteJadwalItem(${idx})">Hapus</button>
+        ` : '';
+
+        tbody.innerHTML += `
+            <tr>
+                <td><strong>${j.tgl || '-'}</strong></td>
+                <td>${s1}</td>
+                <td>${s2}</td>
+                <td>${s3}</td>
+                <td>${s4}</td>
+                ${isAdmin ? `<td>${actBtns}</td>` : ''}
+            </tr>`;
+    });
+}
+
+window.openJadwalModal = function(index = -1) {
+    document.getElementById('edit-jadwal-index').value = index;
+    if(index >= 0 && dbData.jadwalCustom[index]) {
+        document.getElementById('jadwal-modal-title').innerText = "Edit Agenda Jadwal";
+        let item = dbData.jadwalCustom[index];
+        document.getElementById('j-tgl').value = item.tgl || '';
+        document.getElementById('j-jam1').value = item.sesi?.[0]?.jam || ''; document.getElementById('j-keg1').value = item.sesi?.[0]?.kegiatan || '';
+        document.getElementById('j-jam2').value = item.sesi?.[1]?.jam || ''; document.getElementById('j-keg2').value = item.sesi?.[1]?.kegiatan || '';
+        document.getElementById('j-jam3').value = item.sesi?.[2]?.jam || ''; document.getElementById('j-keg3').value = item.sesi?.[2]?.kegiatan || '';
+        document.getElementById('j-jam4').value = item.sesi?.[3]?.jam || ''; document.getElementById('j-keg4').value = item.sesi?.[3]?.kegiatan || '';
+    } else {
+        document.getElementById('jadwal-modal-title').innerText = "Tambah Agenda Jadwal Baru";
+        document.getElementById('j-tgl').value = '';
+        document.getElementById('j-jam1').value = '07.50-09.30'; document.getElementById('j-keg1').value = '';
+        document.getElementById('j-jam2').value = '09.50-11.30'; document.getElementById('j-keg2').value = '';
+        document.getElementById('j-jam3').value = '12.30-14.10'; document.getElementById('j-keg3').value = '';
+        document.getElementById('j-jam4').value = '14.15-15.55'; document.getElementById('j-keg4').value = '';
+    }
+    document.getElementById('jadwal-modal').style.display = 'flex';
+};
+
+window.saveJadwalItem = async function() {
+    const idx = parseInt(document.getElementById('edit-jadwal-index').value);
+    const tgl = document.getElementById('j-tgl').value.trim();
+    if(!tgl) return alert("Tanggal agenda wajib diisi!");
+
+    if(!dbData.jadwalCustom) dbData.jadwalCustom = [];
+
+    const newEntry = {
+        tgl: tgl,
+        sesi: [
+            { jam: document.getElementById('j-jam1').value || '-', kegiatan: document.getElementById('j-keg1').value || '-' },
+            { jam: document.getElementById('j-jam2').value || '-', kegiatan: document.getElementById('j-keg2').value || '-' },
+            { jam: document.getElementById('j-jam3').value || '-', kegiatan: document.getElementById('j-keg3').value || '-' },
+            { jam: document.getElementById('j-jam4').value || '-', kegiatan: document.getElementById('j-keg4').value || '-' }
+        ]
+    };
+
+    if(idx >= 0) dbData.jadwalCustom[idx] = newEntry;
+    else dbData.jadwalCustom.push(newEntry);
+
+    await saveCategoryData('jadwal');
+    closeModal('jadwal-modal'); 
+    alert('✅ Agenda jadwal berhasil tersimpan ke cloud Supabase!');
+};
+
+window.deleteJadwalItem = async function(index) {
+    if(confirm('Apakah Anda yakin ingin menghapus agenda jadwal ini?')) {
+        dbData.jadwalCustom.splice(index, 1);
+        await saveCategoryData('jadwal');
+        alert('✅ Agenda jadwal berhasil dihapus!');
+    }
+};
+
+// ==========================================================================
+// RENDER & INPUT DATA KATEGORI LAIN
 // ==========================================================================
 function renderAll() {
     renderPengumuman(); renderReminder(); renderJadwalUpdates(); renderJadwal();
@@ -319,7 +469,7 @@ function renderAll() {
     renderPraktikum('skills_lab', 'skills-list'); renderPraktikum('tutorial', 'tutorial-list'); renderMateri();
 }
 
-// 1. PENGUMUMAN MANUAL
+// PENGUMUMAN MANUAL
 window.addPengumuman = async function() {
     const judul = document.getElementById('p-judul').value;
     const isi = document.getElementById('p-isi').value;
@@ -367,7 +517,7 @@ function renderPengumuman() {
     });
 }
 
-// 2. TUGAS BARU
+// TUGAS BARU
 window.addTugasItem = async function() {
     const nama = document.getElementById('t-nama').value;
     const deadline = document.getElementById('t-deadline').value;
@@ -398,7 +548,7 @@ window.addTugasItem = async function() {
     alert('Tugas disimpan & dipublikasikan!');
 };
 
-// 3. PRAKTIKUM / LAB / SKILLS LAB / TUTORIAL
+// PRAKTIKUM / LAB / SKILLS LAB / TUTORIAL
 window.handlePraktikumUpload = async function(category, idNama, idSkenario, idKet, idFilePc, idLink) {
     const nama = document.getElementById(idNama).value;
     const skenario = document.getElementById(idSkenario).value;
@@ -433,7 +583,7 @@ window.handlePraktikumUpload = async function(category, idNama, idSkenario, idKe
     alert('Berhasil disimpan & dipublikasikan!');
 };
 
-// 4. MATERI KULIAH
+// MATERI KULIAH
 window.handleMateriUpload = async function() {
     const kuliah = document.getElementById('m-kuliah').value;
     const materi = document.getElementById('m-materi').value;
@@ -462,106 +612,6 @@ window.handleMateriUpload = async function() {
     alert('Materi disimpan & dipublikasikan!');
 };
 
-// RENDER REMINDER, JADWAL & MATERI
-function renderReminder() {
-    const list = document.getElementById('reminder-list');
-    if(!list) return; list.innerHTML = '';
-    if (!dbData.reminder) dbData.reminder = [];
-    const isAdmin = currentUser && currentUser.role === 'admin';
-    dbData.reminder.forEach((r, idx) => {
-        list.innerHTML += `<li style="margin-bottom: 6px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; color:var(--text);"><span>${r}</span> ${isAdmin ? `<button onclick="deleteItem('reminder', ${idx})" style="color:red; border:none; background:none; cursor:pointer;">[Hapus]</button>` : ''}</li>`;
-    });
-}
-
-function renderJadwalUpdates() {
-    const list = document.getElementById('jadwal-update-list');
-    if(!list) return; list.innerHTML = '';
-    if (!dbData.jadwalUpdates) dbData.jadwalUpdates = [];
-    const isAdmin = currentUser && currentUser.role === 'admin';
-    dbData.jadwalUpdates.forEach((u, idx) => {
-        list.innerHTML += `<li style="margin-bottom: 6px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; color:var(--text);"><span>📄 ${u}</span> ${isAdmin ? `<button onclick="deleteItem('jadwalUpdates', ${idx})" style="color:red; border:none; background:none; cursor:pointer;">[Hapus]</button>` : ''}</li>`;
-    });
-}
-
-async function renderJadwal() {
-    const tbody = document.getElementById('jadwal-table-body');
-    if(!tbody) return; tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Memuat jadwal...</td></tr>';
-    let jadwalList = dbData.jadwalCustom && dbData.jadwalCustom.length > 0 ? dbData.jadwalCustom : [];
-    if(jadwalList.length === 0) {
-        try { const res = await fetch('jadwal.json'); const data = await res.json(); jadwalList = data.jadwal || []; } catch (e) { jadwalList = []; }
-    }
-    tbody.innerHTML = '';
-    const nowWIB = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
-    const tomorrowWIB = new Date(nowWIB); tomorrowWIB.setDate(nowWIB.getDate() + 1);
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    function formatDateStr(d) { return `${String(d.getDate()).padStart(2, '0')}-${months[d.getMonth()]}-${String(d.getFullYear()).slice(-2)}`; }
-    const todayStr = formatDateStr(nowWIB), tomorrowStr = formatDateStr(tomorrowWIB);
-    const filtered = jadwalList.filter(j => j && j.tgl && (j.tgl.includes(todayStr) || j.tgl.includes(tomorrowStr)));
-    if(filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Tidak ada jadwal hari ini & besok.</td></tr>`; return; }
-    const isAdmin = currentUser && currentUser.role === 'admin';
-    filtered.forEach((j) => {
-        const actualIdx = jadwalList.findIndex(item => item.tgl === j.tgl);
-        const isToday = j.tgl.includes(todayStr);
-        let badgeLabel = isToday ? '<span class="badge" style="background:#eab308; color:white;">Hari Ini</span>' : '<span class="badge" style="background:#3b82f6; color:white;">Besok</span>';
-        let s1 = j.sesi?.[0] ? `<small>${j.sesi[0].jam}</small><br><strong>${j.sesi[0].kegiatan}</strong>` : '-';
-        let s2 = j.sesi?.[1] ? `<small>${j.sesi[1].jam}</small><br><strong>${j.sesi[1].kegiatan}</strong>` : '-';
-        let s3 = j.sesi?.[2] ? `<small>${j.sesi[2].jam}</small><br><strong>${j.sesi[2].kegiatan}</strong>` : '-';
-        let s4 = j.sesi?.[3] ? `<small>${j.sesi[3].jam}</small><br><strong>${j.sesi[3].kegiatan}</strong>` : '-';
-        let actBtn = isAdmin ? `<button class="btn" style="padding:2px 6px; font-size:11px;" onclick="deleteJadwalItem(${actualIdx})">Hapus</button>` : '';
-        tbody.innerHTML += `<tr><td>${j.tgl}<br>${badgeLabel}</td><td>${s1}</td><td>${s2}</td><td>${s3}</td><td>${s4}</td>${isAdmin ? `<td>${actBtn}</td>` : ''}</tr>`;
-    });
-}
-
-window.openJadwalModal = async function(index = -1) {
-    if(!dbData.jadwalCustom) {
-        try { const res = await fetch('jadwal.json'); const data = await res.json(); dbData.jadwalCustom = data.jadwal; } catch (e) { dbData.jadwalCustom = []; }
-    }
-    document.getElementById('edit-jadwal-index').value = index;
-    if(index >= 0) {
-        document.getElementById('jadwal-modal-title').innerText = "Edit Jadwal";
-        let item = dbData.jadwalCustom[index];
-        document.getElementById('j-tgl').value = item.tgl || '';
-        document.getElementById('j-jam1').value = item.sesi?.[0]?.jam || ''; document.getElementById('j-keg1').value = item.sesi?.[0]?.kegiatan || '';
-        document.getElementById('j-jam2').value = item.sesi?.[1]?.jam || ''; document.getElementById('j-keg2').value = item.sesi?.[1]?.kegiatan || '';
-        document.getElementById('j-jam3').value = item.sesi?.[2]?.jam || ''; document.getElementById('j-keg3').value = item.sesi?.[2]?.kegiatan || '';
-        document.getElementById('j-jam4').value = item.sesi?.[3]?.jam || ''; document.getElementById('j-keg4').value = item.sesi?.[3]?.kegiatan || '';
-    } else {
-        document.getElementById('jadwal-modal-title').innerText = "Tambah Jadwal Baru";
-        document.getElementById('j-tgl').value = '';
-        document.getElementById('j-jam1').value = '07.50-09.30'; document.getElementById('j-keg1').value = '';
-        document.getElementById('j-jam2').value = '09.50-11.30'; document.getElementById('j-keg2').value = '';
-        document.getElementById('j-jam3').value = '12.30-14.10'; document.getElementById('j-keg3').value = '';
-        document.getElementById('j-jam4').value = '14.15-15.55'; document.getElementById('j-keg4').value = '';
-    }
-    document.getElementById('jadwal-modal').style.display = 'flex';
-};
-
-window.saveJadwalItem = async function() {
-    const idx = parseInt(document.getElementById('edit-jadwal-index').value);
-    if(!dbData.jadwalCustom) {
-        const res = await fetch('jadwal.json'); const data = await res.json(); dbData.jadwalCustom = data.jadwal;
-    }
-    const newEntry = {
-        tgl: document.getElementById('j-tgl').value,
-        sesi: [
-            { jam: document.getElementById('j-jam1').value || '-', kegiatan: document.getElementById('j-keg1').value || '-' },
-            { jam: document.getElementById('j-jam2').value || '-', kegiatan: document.getElementById('j-keg2').value || '-' },
-            { jam: document.getElementById('j-jam3').value || '-', kegiatan: document.getElementById('j-keg3').value || '-' },
-            { jam: document.getElementById('j-jam4').value || '-', kegiatan: document.getElementById('j-keg4').value || '-' }
-        ]
-    };
-    if(idx >= 0) dbData.jadwalCustom[idx] = newEntry;
-    else dbData.jadwalCustom.push(newEntry);
-    closeModal('jadwal-modal'); alert('Jadwal tersimpan lokal!');
-};
-
-window.deleteJadwalItem = async function(index) {
-    if(confirm('Hapus jadwal ini?')) {
-        dbData.jadwalCustom.splice(index, 1);
-        alert('Jadwal dihapus!');
-    }
-};
-
 window.openEditMateriModal = function(index) {
     document.getElementById('edit-materi-index').value = index;
     const item = dbData.materi[index];
@@ -583,6 +633,26 @@ window.saveEditedMateri = async function() {
     closeModal('materi-modal');
     alert('Materi berhasil diperbarui!');
 };
+
+function renderReminder() {
+    const list = document.getElementById('reminder-list');
+    if(!list) return; list.innerHTML = '';
+    if (!dbData.reminder) dbData.reminder = [];
+    const isAdmin = currentUser && currentUser.role === 'admin';
+    dbData.reminder.forEach((r, idx) => {
+        list.innerHTML += `<li style="margin-bottom: 6px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; color:var(--text);"><span>${r}</span> ${isAdmin ? `<button onclick="deleteItem('reminder', ${idx})" style="color:red; border:none; background:none; cursor:pointer;">[Hapus]</button>` : ''}</li>`;
+    });
+}
+
+function renderJadwalUpdates() {
+    const list = document.getElementById('jadwal-update-list');
+    if(!list) return; list.innerHTML = '';
+    if (!dbData.jadwalUpdates) dbData.jadwalUpdates = [];
+    const isAdmin = currentUser && currentUser.role === 'admin';
+    dbData.jadwalUpdates.forEach((u, idx) => {
+        list.innerHTML += `<li style="margin-bottom: 6px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; color:var(--text);"><span>📄 ${u}</span> ${isAdmin ? `<button onclick="deleteItem('jadwalUpdates', ${idx})" style="color:red; border:none; background:none; cursor:pointer;">[Hapus]</button>` : ''}</li>`;
+    });
+}
 
 function renderTugas() {
     const tbody = document.getElementById('tugas-table-body');
@@ -638,6 +708,7 @@ window.addJadwalUpdateWithFile = async function() {
     if(!title) return;
     if (!dbData.jadwalUpdates) dbData.jadwalUpdates = [];
     dbData.jadwalUpdates.push(title);
+    await saveCategoryData('jadwalUpdates');
     document.getElementById('up-title').value = '';
 };
 
