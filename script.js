@@ -1,3 +1,6 @@
+// ==========================================================================
+// KONFIGURASI PENGGUNA & KONEKSI SUPABASE
+// ==========================================================================
 const allowedUsers = {
     "21105032610023": "ALICA MARATU SULHA",
     "21105032610047": "AYESHA LILIAN PUTRI",
@@ -15,9 +18,9 @@ const allowedUsers = {
 let currentUser = null;
 const INACTIVITY_LIMIT = 30 * 60 * 1000;
 
+// CONFIG SUPABASE
 const SUPABASE_URL = "https://vqzklxbfrvmvcoeykias.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_-NTQ0VL2xQmIYJ_ieREXkg_WUcU3L0t";
-
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let dbData = {
@@ -34,6 +37,9 @@ let dbData = {
     theme: 'light'
 };
 
+// ==========================================================================
+// INISIALISASI APLIKASI
+// ==========================================================================
 window.addEventListener('DOMContentLoaded', async () => {
     await fetchDatabaseFromCloud();
     applyTheme(dbData.theme || 'light');
@@ -103,7 +109,7 @@ async function saveData() {
     }
 }
 
-// Fungsi bantu membaca file dari PC ke Base64 URL
+// Helper membaca file dari PC ke Base64
 function getFileAsBase64(fileInputId) {
     return new Promise((resolve) => {
         const fileInput = document.getElementById(fileInputId);
@@ -116,16 +122,35 @@ function getFileAsBase64(fileInputId) {
         reader.onload = function(e) {
             resolve({
                 name: file.name,
-                url: e.target.result // Hasil Base64 data URL
+                url: e.target.result
             });
         };
-        reader.onerror = function() {
-            resolve(null);
-        };
+        reader.onerror = function() { resolve(null); };
         reader.readAsDataURL(file);
     });
 }
 
+// Helper Otomatiskan Pembuatan Pengumuman
+async function triggerAutoAnnouncement(judul, isi, deadlineDays = 7) {
+    if (!dbData.pengumuman) dbData.pengumuman = [];
+    
+    // Hitung tanggal deadline otomatis (default 7 hari ke depan)
+    const d = new Date();
+    d.setDate(d.getDate() + deadlineDays);
+    const deadlineStr = d.toISOString().split('T')[0];
+
+    // Tambahkan pengumuman ke urutan paling atas agar jadi TERBARU
+    dbData.pengumuman.unshift({
+        id: Date.now(),
+        judul: judul,
+        isi: isi,
+        deadline: deadlineStr
+    });
+}
+
+// ==========================================================================
+// MANAJEMEN TEMA & MAINTENANCE
+// ==========================================================================
 window.toggleThemeSwitch = function() {
     const checkbox = document.getElementById('theme-toggle-checkbox');
     const newTheme = checkbox && checkbox.checked ? 'dark' : 'light';
@@ -177,6 +202,9 @@ setInterval(() => {
     if(clockEl) clockEl.innerText = `Waktu WIB: ${now.toLocaleDateString('id-ID', options)}`;
 }, 1000);
 
+// ==========================================================================
+// AUTENTIKASI
+// ==========================================================================
 window.toggleLoginFields = function() {
     const roleEl = document.getElementById('login-role');
     if(!roleEl) return;
@@ -268,32 +296,160 @@ window.switchTab = function(tabName, btnElement) {
 
 window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; };
 
+// ==========================================================================
+// RENDER & AKSI INPUT DENGAN TEMPLATE PENGUMUMAN OTOMATIS
+// ==========================================================================
 function renderAll() {
     renderPengumuman(); renderReminder(); renderJadwalUpdates(); renderJadwal();
     renderTugas(); renderPraktikum('laboratorium', 'lab-list');
     renderPraktikum('skills_lab', 'skills-list'); renderPraktikum('tutorial', 'tutorial-list'); renderMateri();
 }
 
+// 1. TAMBAH PENGUMUMAN MANUAL ADMIN
+window.addPengumuman = async function() {
+    const judul = document.getElementById('p-judul').value;
+    const isi = document.getElementById('p-isi').value;
+    const deadline = document.getElementById('p-deadline').value;
+    if(!judul || !isi || !deadline) return alert('Semua kolom wajib diisi!');
+    if (!dbData.pengumuman) dbData.pengumuman = [];
+    
+    dbData.pengumuman.unshift({ id: Date.now(), judul, isi, deadline });
+    await saveData();
+
+    document.getElementById('p-judul').value = ''; 
+    document.getElementById('p-isi').value = ''; 
+    document.getElementById('p-deadline').value = '';
+    alert('Pengumuman berhasil ditambahkan!');
+};
+
+// 2. RENDER PENGUMUMAN DENGAN HIGHLIGHT WARNA TERBARU
 function renderPengumuman() {
     const container = document.getElementById('pengumuman-list');
     if(!container) return; container.innerHTML = '';
     const today = new Date().toISOString().split('T')[0];
     if (!dbData.pengumuman) dbData.pengumuman = [];
-    dbData.pengumuman.forEach((p, idx) => {
-        if(p.deadline && p.deadline < today && currentUser && currentUser.role !== 'admin') return;
-        const waText = encodeURIComponent(`*PENGUMUMAN*\n\n*${p.judul}*\n${p.isi}\n\nBerlaku s/d: ${p.deadline}`);
+    
+    const validList = dbData.pengumuman.filter(p => !(p.deadline && p.deadline < today && currentUser && currentUser.role !== 'admin'));
+    if(validList.length === 0) {
+        container.innerHTML = `<p style="color:var(--text-muted); font-size:14px;">Belum ada pengumuman aktif saat ini.</p>`;
+        return;
+    }
+
+    validList.forEach((p, idx) => {
+        const isLatest = (idx === 0); // Pengumuman paling atas dianggap TERBARU
+        const waText = encodeURIComponent(`*PENGUMUMAN AKADEMIK A9*\n\n*${p.judul}*\n${p.isi}\n\nBerlaku s/d: ${p.deadline}`);
         const isAdmin = currentUser && currentUser.role === 'admin';
+        
         container.innerHTML += `
-            <div style="background: var(--bg-light); border-left: 4px solid var(--accent); padding: 15px; margin-bottom: 10px; border-radius: 4px; position: relative;">
-                <h4 style="color:var(--text);">${p.judul}</h4>
-                <p style="margin-top: 5px; font-size: 14px; color:var(--text);">${p.isi}</p>
-                <small style="color: var(--text-muted); display: block; margin-top: 8px;">Aktif sampai: ${p.deadline}</small>
-                <div style="margin-top: 10px;"><a href="https://wa.me/?text=${waText}" target="_blank" class="badge badge-wa">📲 Kirim ke WhatsApp</a></div>
+            <div class="pengumuman-card ${isLatest ? 'is-latest' : ''}" style="background: var(--bg-light); border-left: 4px solid var(--accent); padding: 15px; margin-bottom: 12px; border-radius: 6px; position: relative; transition: all 0.3s ease;">
+                <h4 style="color:var(--text); display:flex; align-items:center;">
+                    ${p.judul} 
+                    ${isLatest ? `<span class="badge-new">🔥 NEW</span>` : ''}
+                </h4>
+                <p style="margin-top: 6px; font-size: 14px; color:var(--text); line-height: 1.6;">${p.isi}</p>
+                <small style="color: var(--text-muted); display: block; margin-top: 8px;">🗓️ Aktif sampai: ${p.deadline}</small>
+                <div style="margin-top: 10px;"><a href="https://wa.me/?text=${waText}" target="_blank" class="badge badge-wa">📲 Bagikan ke WA</a></div>
                 ${isAdmin ? `<button class="btn btn-danger" style="width: auto; padding: 2px 8px; font-size: 11px; position: absolute; top: 10px; right: 10px;" onclick="deleteItem('pengumuman', ${idx})">Hapus</button>` : ''}
             </div>`;
     });
 }
 
+// 3. TAMBAH TUGAS (TEMPLATE PENGUMUMAN AUTOMATIC)
+window.addTugasItem = async function() {
+    const nama = document.getElementById('t-nama').value;
+    const deadline = document.getElementById('t-deadline').value;
+    const ket = document.getElementById('t-ket').value;
+    const manualLink = document.getElementById('t-link-manual').value.trim();
+    
+    if(!nama || !deadline) return alert('Nama dan Deadline wajib diisi!');
+    if (!dbData.tugas) dbData.tugas = [];
+
+    let finalLink = manualLink || '#';
+    const fileData = await getFileAsBase64('t-file-pc');
+    if (fileData) { finalLink = fileData.url; }
+
+    dbData.tugas.push({ id: Date.now(), nama, deadline, ket, link: finalLink });
+    
+    // TEMPLATE PENGUMUMAN TUGAS BARU
+    const judulPengumuman = `📋 TUGAS BARU: ${nama}`;
+    const isiPengumuman = `Telah ditambahkan penugasan baru untuk mahasiswa:\n📌 *Tugas:* ${nama}\n⏰ *Deadline:* ${deadline}\n📝 *Instruksi:* ${ket || 'Silakan cek detail pada menu Tugas.'}`;
+    await triggerAutoAnnouncement(judulPengumuman, isiPengumuman);
+
+    await saveData();
+    
+    document.getElementById('t-nama').value = ''; 
+    document.getElementById('t-deadline').value = ''; 
+    document.getElementById('t-ket').value = ''; 
+    document.getElementById('t-file-pc').value = '';
+    document.getElementById('t-link-manual').value = '';
+    alert('Tugas disimpan & Pengumuman dipublikasikan!');
+};
+
+// 4. TAMBAH PRAKTIKUM / LAB / SKILLS LAB / TUTORIAL (TEMPLATE AUTOMATIC)
+window.handlePraktikumUpload = async function(category, idNama, idSkenario, idKet, idFilePc, idLink) {
+    const nama = document.getElementById(idNama).value;
+    const skenario = document.getElementById(idSkenario).value;
+    const ket = document.getElementById(idKet).value;
+    const manualLink = document.getElementById(idLink).value.trim();
+    
+    if(!nama) return alert('Nama wajib diisi!');
+    if (!dbData[category]) dbData[category] = [];
+
+    let finalLink = manualLink || '#';
+    const fileData = await getFileAsBase64(idFilePc);
+    if (fileData) { finalLink = fileData.url; }
+
+    dbData[category].push({ id: Date.now(), nama, skenario, ket, link: finalLink });
+    
+    // TEMPLATE PENGUMUMAN KHUSUS PER SUB-MENU
+    let prefixJudul = "🔬 LAB";
+    if(category === "skills_lab") prefixJudul = "🩺 SKILLS LAB";
+    if(category === "tutorial") prefixJudul = "💬 TUTORIAL";
+
+    const judulPengumuman = `${prefixJudul}: ${nama}`;
+    const isiPengumuman = `Modul/Materi baru telah diunggah:\n📌 *Kegiatan:* ${nama}\n📖 *Modul/Skenario:* ${skenario || '-'}\nCatatan: ${ket || 'Silakan diakses pada tab menu terkait.'}`;
+    await triggerAutoAnnouncement(judulPengumuman, isiPengumuman);
+
+    await saveData();
+    
+    document.getElementById(idNama).value = ''; 
+    document.getElementById(idSkenario).value = ''; 
+    document.getElementById(idKet).value = ''; 
+    document.getElementById(idFilePc).value = '';
+    document.getElementById(idLink).value = '';
+    alert('Berhasil disimpan & Pengumuman dipublikasikan!');
+};
+
+// 5. TAMBAH MATERI KULIAH (TEMPLATE AUTOMATIC)
+window.handleMateriUpload = async function() {
+    const kuliah = document.getElementById('m-kuliah').value;
+    const materi = document.getElementById('m-materi').value;
+    const manualLink = document.getElementById('m-link-manual').value.trim();
+    
+    if(!kuliah || !materi) return alert('Nama kuliah dan materi wajib diisi!');
+    if (!dbData.materi) dbData.materi = [];
+
+    let finalLink = manualLink || '#';
+    const fileData = await getFileAsBase64('m-file-pc');
+    if (fileData) { finalLink = fileData.url; }
+
+    dbData.materi.push({ id: Date.now(), kuliah, materi, link: finalLink });
+    
+    // TEMPLATE PENGUMUMAN MATERI KULIAH
+    const judulPengumuman = `📚 MATERI KULIAH BARU: ${kuliah}`;
+    const isiPengumuman = `Berkas materi perkuliahan baru telah diunggah ke Bank Materi:\n📖 *Mata Kuliah:* ${kuliah}\n✍️ *Topik Materi:* ${materi}\nSilakan unduh atau pelajari berkas di tab Materi.`;
+    await triggerAutoAnnouncement(judulPengumuman, isiPengumuman);
+
+    await saveData();
+    
+    document.getElementById('m-kuliah').value = ''; 
+    document.getElementById('m-materi').value = ''; 
+    document.getElementById('m-file-pc').value = '';
+    document.getElementById('m-link-manual').value = '';
+    alert('Materi disimpan & Pengumuman dipublikasikan!');
+};
+
+// RENDER LAIN-LAIN
 function renderReminder() {
     const list = document.getElementById('reminder-list');
     if(!list) return; list.innerHTML = '';
@@ -393,82 +549,6 @@ window.deleteJadwalItem = async function(index) {
     }
 };
 
-window.addTugasItem = async function() {
-    const nama = document.getElementById('t-nama').value;
-    const deadline = document.getElementById('t-deadline').value;
-    const ket = document.getElementById('t-ket').value;
-    const manualLink = document.getElementById('t-link-manual').value.trim();
-    
-    if(!nama || !deadline) return alert('Nama dan Deadline wajib diisi!');
-    if (!dbData.tugas) dbData.tugas = [];
-
-    let finalLink = manualLink || '#';
-    const fileData = await getFileAsBase64('t-file-pc');
-    if (fileData) {
-        finalLink = fileData.url; // Menyimpan file PC sebagai Base64
-    }
-
-    dbData.tugas.push({ id: Date.now(), nama, deadline, ket, link: finalLink });
-    await saveData();
-    
-    document.getElementById('t-nama').value = ''; 
-    document.getElementById('t-deadline').value = ''; 
-    document.getElementById('t-ket').value = ''; 
-    document.getElementById('t-file-pc').value = '';
-    document.getElementById('t-link-manual').value = '';
-    alert('Tugas berhasil disimpan!');
-};
-
-window.handlePraktikumUpload = async function(category, idNama, idSkenario, idKet, idFilePc, idLink) {
-    const nama = document.getElementById(idNama).value;
-    const skenario = document.getElementById(idSkenario).value;
-    const ket = document.getElementById(idKet).value;
-    const manualLink = document.getElementById(idLink).value.trim();
-    
-    if(!nama) return alert('Nama wajib diisi!');
-    if (!dbData[category]) dbData[category] = [];
-
-    let finalLink = manualLink || '#';
-    const fileData = await getFileAsBase64(idFilePc);
-    if (fileData) {
-        finalLink = fileData.url;
-    }
-
-    dbData[category].push({ id: Date.now(), nama, skenario, ket, link: finalLink });
-    await saveData();
-    
-    document.getElementById(idNama).value = ''; 
-    document.getElementById(idSkenario).value = ''; 
-    document.getElementById(idKet).value = ''; 
-    document.getElementById(idFilePc).value = '';
-    document.getElementById(idLink).value = '';
-    alert('Berhasil disimpan!');
-};
-
-window.handleMateriUpload = async function() {
-    const kuliah = document.getElementById('m-kuliah').value;
-    const materi = document.getElementById('m-materi').value;
-    const manualLink = document.getElementById('m-link-manual').value.trim();
-    
-    if(!kuliah || !materi) return alert('Nama kuliah dan materi wajib diisi!');
-    if (!dbData.materi) dbData.materi = [];
-
-    let finalLink = manualLink || '#';
-    const fileData = await getFileAsBase64('m-file-pc');
-    if (fileData) {
-        finalLink = fileData.url;
-    }
-
-    dbData.materi.push({ id: Date.now(), kuliah, materi, link: finalLink });
-    await saveData();
-    
-    document.getElementById('m-kuliah').value = ''; 
-    document.getElementById('m-materi').value = ''; 
-    document.getElementById('m-file-pc').value = '';
-    document.getElementById('m-link-manual').value = '';
-    alert('Materi berhasil disimpan!');
-};
-
 window.openEditMateriModal = function(index) {
     document.getElementById('edit-materi-index').value = index;
     const item = dbData.materi[index];
@@ -484,9 +564,7 @@ window.saveEditedMateri = async function() {
     dbData.materi[idx].kuliah = document.getElementById('edit-m-kuliah').value;
     dbData.materi[idx].materi = document.getElementById('edit-m-materi').value;
     const newLink = document.getElementById('edit-m-link').value.trim();
-    if(newLink) {
-        dbData.materi[idx].link = newLink;
-    }
+    if(newLink) { dbData.materi[idx].link = newLink; }
     await saveData();
     closeModal('materi-modal');
     alert('Materi berhasil diperbarui!');
@@ -531,18 +609,6 @@ function renderMateri() {
         tbody.innerHTML += `<tr><td><strong>${m.kuliah}</strong></td><td>${m.materi}</td><td>${aksesHtml} ${adminBtns}</td></tr>`;
     });
 }
-
-window.addPengumuman = async function() {
-    const judul = document.getElementById('p-judul').value;
-    const isi = document.getElementById('p-isi').value;
-    const deadline = document.getElementById('p-deadline').value;
-    if(!judul || !isi || !deadline) return alert('Semua kolom wajib diisi!');
-    if (!dbData.pengumuman) dbData.pengumuman = [];
-    dbData.pengumuman.push({ id: Date.now(), judul, isi, deadline });
-    await saveData();
-    document.getElementById('p-judul').value = ''; document.getElementById('p-isi').value = ''; document.getElementById('p-deadline').value = '';
-    alert('Pengumuman ditambahkan!');
-};
 
 window.addReminder = async function() {
     const val = document.getElementById('rem-text').value;
