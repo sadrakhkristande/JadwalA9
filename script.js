@@ -16,9 +16,9 @@ const allowedUsers = {
 let currentUser = null;
 const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 Menit
 
-// KONFIGURASI SUPABASE
+// KONFIGURASI SUPABASE (TERBARU)
 const SUPABASE_URL = "https://vqzklxbfrvmvcoeykias.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxemtseGJmcnZtdmNvZXlraWFzIjsicm9sZSI6ImFub24iLCJpYXQiOjE3UGlJODAyMTcwNzQ5OTIwMX0.VWEtF51RMeTXverKjaI6cL4m8R2utzwecYglo6XWkBs";
+const SUPABASE_ANON_KEY = "sb_publishable_-NTQ0VL2xQmIYJ_ieREXkg_WUcU3L0t";
 
 // Inisialisasi Klien Supabase
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
