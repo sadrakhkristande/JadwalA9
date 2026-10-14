@@ -357,15 +357,15 @@ window.switchTab = function(tabName, btnElement) {
 window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; };
 
 // ==========================================================================
-// KELOLA JADWAL (SYNC CLOUD SUPABASE)
+// KELOLA JADWAL (FILTER HARI INI & BESOK + SYNC CLOUD SUPABASE)
 // ==========================================================================
 async function renderJadwal() {
     const tbody = document.getElementById('jadwal-table-body');
-    if(!tbody) return; tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Memuat jadwal...</td></tr>';
+    if(!tbody) return; 
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Memuat jadwal...</td></tr>';
     
     let jadwalList = dbData.jadwalCustom || [];
     
-    // Jika data jadwal di Supabase masih kosong, muat default dari file jadwal.json lokal
     if(jadwalList.length === 0) {
         try { 
             const res = await fetch('jadwal.json'); 
@@ -376,27 +376,49 @@ async function renderJadwal() {
     }
     
     tbody.innerHTML = '';
-    if(jadwalList.length === 0) { 
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Belum ada agenda jadwal kuliah tersimpan.</td></tr>`; 
+    
+    const nowWIB = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
+    const tomorrowWIB = new Date(nowWIB); 
+    tomorrowWIB.setDate(nowWIB.getDate() + 1);
+    
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    function formatDateStr(d) { 
+        return `${String(d.getDate()).padStart(2, '0')}-${months[d.getMonth()]}-${String(d.getFullYear()).slice(-2)}`; 
+    }
+    
+    const todayStr = formatDateStr(nowWIB);      
+    const tomorrowStr = formatDateStr(tomorrowWIB); 
+
+    const filteredJadwal = jadwalList.filter(j => j && j.tgl && (j.tgl.includes(todayStr) || j.tgl.includes(tomorrowStr)));
+
+    if(filteredJadwal.length === 0) { 
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Tidak ada agenda jadwal untuk hari ini & besok.</td></tr>`; 
         return; 
     }
 
     const isAdmin = currentUser && currentUser.role === 'admin';
 
-    jadwalList.forEach((j, idx) => {
+    filteredJadwal.forEach((j) => {
+        const actualIdx = dbData.jadwalCustom.findIndex(item => item.tgl === j.tgl);
+        
+        const isToday = j.tgl.includes(todayStr);
+        let badgeLabel = isToday 
+            ? '<span class="badge" style="background:#eab308; color:white; margin-left:6px;">Hari Ini</span>' 
+            : '<span class="badge" style="background:#3b82f6; color:white; margin-left:6px;">Besok</span>';
+
         let s1 = j.sesi?.[0] ? `<small style="color:var(--text-muted);">${j.sesi[0].jam}</small><br><strong>${j.sesi[0].kegiatan}</strong>` : '-';
         let s2 = j.sesi?.[1] ? `<small style="color:var(--text-muted);">${j.sesi[1].jam}</small><br><strong>${j.sesi[1].kegiatan}</strong>` : '-';
         let s3 = j.sesi?.[2] ? `<small style="color:var(--text-muted);">${j.sesi[2].jam}</small><br><strong>${j.sesi[2].kegiatan}</strong>` : '-';
         let s4 = j.sesi?.[3] ? `<small style="color:var(--text-muted);">${j.sesi[3].jam}</small><br><strong>${j.sesi[3].kegiatan}</strong>` : '-';
         
         let actBtns = isAdmin ? `
-            <button class="btn" style="padding:3px 8px; font-size:11px; background:#eab308;" onclick="openJadwalModal(${idx})">Edit</button>
-            <button class="btn btn-danger" style="padding:3px 8px; font-size:11px; margin-left:4px;" onclick="deleteJadwalItem(${idx})">Hapus</button>
+            <button class="btn" style="padding:3px 8px; font-size:11px; background:#eab308;" onclick="openJadwalModal(${actualIdx})">Edit</button>
+            <button class="btn btn-danger" style="padding:3px 8px; font-size:11px; margin-left:4px;" onclick="deleteJadwalItem(${actualIdx})">Hapus</button>
         ` : '';
 
         tbody.innerHTML += `
             <tr>
-                <td><strong>${j.tgl || '-'}</strong></td>
+                <td><strong>${j.tgl || '-'}</strong><br>${badgeLabel}</td>
                 <td>${s1}</td>
                 <td>${s2}</td>
                 <td>${s3}</td>
