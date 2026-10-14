@@ -79,7 +79,7 @@ header {
     box-shadow: var(--shadow-sm);
 }
 
-/* NAVIGASI & DROPDOWN */
+/* NAVIGASI MENU TAB BERJAJAR */
 nav {
     display: flex;
     gap: 8px;
@@ -116,45 +116,6 @@ nav::-webkit-scrollbar {
     background-color: var(--accent);
     color: white;
     box-shadow: var(--shadow-sm);
-}
-
-.dropdown {
-    position: relative;
-    display: inline-block;
-}
-
-.dropdown-content {
-    display: none;
-    position: absolute;
-    background-color: var(--bg-card);
-    min-width: 200px;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    z-index: 1000;
-    top: 100%;
-    left: 0;
-    margin-top: 6px;
-    overflow: hidden;
-}
-
-.dropdown-content a {
-    color: var(--text);
-    padding: 10px 16px;
-    text-decoration: none;
-    display: block;
-    font-size: 14px;
-    font-weight: 500;
-    transition: background 0.2s;
-}
-
-.dropdown-content a:hover {
-    background-color: var(--bg-light);
-    color: var(--accent);
-}
-
-.dropdown-content.show {
-    display: block;
 }
 
 /* SAKLAR DARK MODE TOGGLE */
