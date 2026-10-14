@@ -235,6 +235,33 @@ main {
     text-decoration: none;
 }
 
+/* EFEK HIGHLIGHT PENGUMUMAN TERBARU */
+.pengumuman-card.is-latest {
+    border-left: 5px solid #f59e0b !important;
+    background: linear-gradient(135deg, var(--bg-card) 0%, rgba(245, 158, 11, 0.08) 100%) !important;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15) !important;
+}
+
+.badge-new {
+    background-color: #f59e0b;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    margin-left: 8px;
+    animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.85; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
 /* TABLES & RESPONSIVE MOBILE */
 table {
     width: 100%;
