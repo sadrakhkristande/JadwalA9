@@ -1,5 +1,4 @@
 const allowedUsers = {
-    "12345": "Guest Utama",
     "21105032610023": "ALICA MARATU SULHA",
     "21105032610047": "AYESHA LILIAN PUTRI",
     "21105032610049": "AYSAR HAMMAM IBRAHIM",
@@ -18,8 +17,6 @@ const INACTIVITY_LIMIT = 30 * 60 * 1000;
 
 const SUPABASE_URL = "https://vqzklxbfrvmvcoeykias.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_-NTQ0VL2xQmIYJ_ieREXkg_WUcU3L0t";
-
-// URL WEB APP TERBARU (VERSI /2)
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxQVzmE_L4NXfsN0ZsSyOej2uWPUUKy_U5VShI9s-QEJJdYFvy2IJnDVa5tatKJk-ss/exec";
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -106,50 +103,53 @@ async function saveData() {
     }
 }
 
-async function uploadToGoogleDrive(fileInput) {
-    if (!fileInput || fileInput.files.length === 0) return '#';
-    const file = fileInput.files[0];
+async function processFileOrLink(fileInput, linkManualInputId) {
+    const manualLink = document.getElementById(linkManualInputId)?.value.trim();
     
-    // Batasan ukuran file maksimal 5 MB agar tidak macet / timeout
-    const MAX_SIZE = 5 * 1024 * 1024;
-    if (file.size > MAX_SIZE) {
-        alert("Ukuran file terlalu besar! Batas maksimal adalah 5 MB.\nSilakan kompres file terlebih dahulu.");
-        return '#';
-    }
-
-    alert("Sedang mengunggah file ke Google Drive (Maks 5 MB)...");
-    
-    return new Promise((resolve) => {
-        const reader = new FileReader();
+    if (fileInput && fileInput.files.length > 0) {
+        const file = fileInput.files[0];
         
-        // Pengaman timer 20 detik agar tidak stuck selamanya jika jaringan/skrip bermasalah
-        const timer = setTimeout(() => {
-            alert("Waktu unggah habis (Timeout). Koneksi lambat atau skrip Google Drive bermasalah.");
-            resolve('#');
-        }, 20000);
+        // Batasan Maksimal 20 MB (20 * 1024 * 1024 bytes)
+        const MAX_SIZE = 20 * 1024 * 1024;
+        if (file.size > MAX_SIZE) {
+            alert("❌ Gagal: Ukuran file melebihi batas maksimal 20 MB! File tidak diunggah.");
+            return null; // Menghentikan proses
+        }
 
-        reader.onload = async function(e) {
-            clearTimeout(timer);
-            const base64Data = e.target.result.split(',')[1];
-            const payload = { fileName: file.name, mimeType: file.type, fileData: base64Data };
-            try {
-                const response = await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
-                const result = await response.json();
-                if(result.status === 'success') {
-                    alert("File Berhasil Masuk ke Google Drive!");
-                    resolve(result.url);
-                } else {
-                    alert("Gagal upload ke Drive: " + result.message);
+        alert("Sedang mengunggah file ke Google Drive (Maks 20 MB)...");
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            const timer = setTimeout(() => {
+                alert("Waktu unggah habis (Timeout).");
+                resolve('#');
+            }, 30000);
+
+            reader.onload = async function(e) {
+                clearTimeout(timer);
+                const base64Data = e.target.result.split(',')[1];
+                const payload = { fileName: file.name, mimeType: file.type, fileData: base64Data };
+                try {
+                    const response = await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+                    const result = await response.json();
+                    if(result.status === 'success') {
+                        alert("File Berhasil Masuk ke Google Drive!");
+                        resolve(result.url);
+                    } else {
+                        alert("Gagal upload ke Drive: " + result.message);
+                        resolve('#');
+                    }
+                } catch(err) {
+                    console.error(err);
+                    alert("Kesalahan koneksi saat mengunggah.");
                     resolve('#');
                 }
-            } catch(err) {
-                console.error(err);
-                alert("Kesalahan saat mengunggah file.");
-                resolve('#');
-            }
-        };
-        reader.readAsDataURL(file);
-    });
+            };
+            reader.readAsDataURL(file);
+        });
+    } else if (manualLink) {
+        return manualLink;
+    }
+    return '#';
 }
 
 window.toggleThemeSwitch = function() {
@@ -223,10 +223,10 @@ window.handleLogin = function() {
         if (dbData.maintenance) { alert('Portal sedang Maintenance.'); return; }
         const nimInput = document.getElementById('login-nim-input');
         const nim = nimInput ? nimInput.value.trim() : '';
-        if (nim === "12345" || allowedUsers[nim]) {
-            currentUser = { role: 'guest', name: allowedUsers[nim] || "Guest " + nim, nim: nim };
+        if (allowedUsers[nim]) {
+            currentUser = { role: 'guest', name: allowedUsers[nim], nim: nim };
             saveUserSession(); initApp(); setupInactivityTracker();
-        } else { alert('NIM tidak valid!'); }
+        } else { alert('NIM tidak terdaftar!'); }
     }
 };
 
@@ -411,34 +411,42 @@ window.addTugasItem = async function() {
     const deadline = document.getElementById('t-deadline').value;
     const ket = document.getElementById('t-ket').value;
     const fileInput = document.getElementById('t-file');
+    
     if(!nama || !deadline) return alert('Nama dan Deadline wajib diisi!');
     if (!dbData.tugas) dbData.tugas = [];
     
-    let fileUrl = '#';
-    if(fileInput.files.length > 0) {
-        fileUrl = await uploadToGoogleDrive(fileInput);
-    }
+    let fileUrl = await processFileOrLink(fileInput, 't-link-manual');
+    if(fileUrl === null) return; // Batal jika file > 20 MB
+
     dbData.tugas.push({ id: Date.now(), nama, deadline, ket, link: fileUrl });
     await saveData();
-    document.getElementById('t-nama').value = ''; document.getElementById('t-deadline').value = ''; document.getElementById('t-ket').value = ''; fileInput.value = '';
+    document.getElementById('t-nama').value = ''; 
+    document.getElementById('t-deadline').value = ''; 
+    document.getElementById('t-ket').value = ''; 
+    fileInput.value = '';
+    document.getElementById('t-link-manual').value = '';
     alert('Tugas berhasil disimpan!');
 };
 
-window.handlePraktikumUpload = async function(category, idNama, idSkenario, idKet, idFile) {
+window.handlePraktikumUpload = async function(category, idNama, idSkenario, idKet, idFile, idLinkManual) {
     const nama = document.getElementById(idNama).value;
     const skenario = document.getElementById(idSkenario).value;
     const ket = document.getElementById(idKet).value;
     const fileInput = document.getElementById(idFile);
+    
     if(!nama) return alert('Nama wajib diisi!');
     if (!dbData[category]) dbData[category] = [];
     
-    let fileUrl = '#';
-    if(fileInput.files.length > 0) {
-        fileUrl = await uploadToGoogleDrive(fileInput);
-    }
+    let fileUrl = await processFileOrLink(fileInput, idLinkManual);
+    if(fileUrl === null) return; // Batal jika file > 20 MB
+
     dbData[category].push({ id: Date.now(), nama, skenario, ket, link: fileUrl });
     await saveData();
-    document.getElementById(idNama).value = ''; document.getElementById(idSkenario).value = ''; document.getElementById(idKet).value = ''; fileInput.value = '';
+    document.getElementById(idNama).value = ''; 
+    document.getElementById(idSkenario).value = ''; 
+    document.getElementById(idKet).value = ''; 
+    fileInput.value = '';
+    document.getElementById(idLinkManual).value = '';
     alert('Berhasil disimpan!');
 };
 
@@ -446,17 +454,40 @@ window.handleMateriUpload = async function() {
     const kuliah = document.getElementById('m-kuliah').value;
     const materi = document.getElementById('m-materi').value;
     const fileInput = document.getElementById('m-file');
+    
     if(!kuliah || !materi) return alert('Nama kuliah dan materi wajib diisi!');
     if (!dbData.materi) dbData.materi = [];
     
-    let fileUrl = '#';
-    if(fileInput.files.length > 0) {
-        fileUrl = await uploadToGoogleDrive(fileInput);
-    }
+    let fileUrl = await processFileOrLink(fileInput, 'm-link-manual');
+    if(fileUrl === null) return; // Batal jika file > 20 MB
+
     dbData.materi.push({ id: Date.now(), kuliah, materi, link: fileUrl });
     await saveData();
-    document.getElementById('m-kuliah').value = ''; document.getElementById('m-materi').value = ''; fileInput.value = '';
+    document.getElementById('m-kuliah').value = ''; 
+    document.getElementById('m-materi').value = ''; 
+    fileInput.value = '';
+    document.getElementById('m-link-manual').value = '';
     alert('Materi berhasil diunggah!');
+};
+
+window.openEditMateriModal = function(index) {
+    document.getElementById('edit-materi-index').value = index;
+    const item = dbData.materi[index];
+    document.getElementById('edit-m-kuliah').value = item.kuliah || '';
+    document.getElementById('edit-m-materi').value = item.materi || '';
+    document.getElementById('edit-m-link').value = item.link || '';
+    document.getElementById('materi-modal').style.display = 'flex';
+};
+
+window.saveEditedMateri = async function() {
+    const idx = parseInt(document.getElementById('edit-materi-index').value);
+    if(idx < 0) return;
+    dbData.materi[idx].kuliah = document.getElementById('edit-m-kuliah').value;
+    dbData.materi[idx].materi = document.getElementById('edit-m-materi').value;
+    dbData.materi[idx].link = document.getElementById('edit-m-link').value;
+    await saveData();
+    closeModal('materi-modal');
+    alert('Materi berhasil diperbarui!');
 };
 
 function renderTugas() {
@@ -465,9 +496,9 @@ function renderTugas() {
     if (!dbData.tugas) dbData.tugas = [];
     const isAdmin = currentUser && currentUser.role === 'admin';
     dbData.tugas.forEach((t, idx) => {
-        let linkBtn = t.link && t.link !== '#' ? `<a href="${t.link}" target="_blank" class="btn" style="padding: 5px 10px; font-size: 12px; text-decoration:none;">🔗 Buka File Drive ↗</a>` : `<span style="color:var(--text-muted);">Tanpa file</span>`;
+        let linkBtn = t.link && t.link !== '#' ? `<a href="${t.link}" target="_blank" class="btn" style="padding: 5px 10px; font-size: 12px; text-decoration:none;">🔗 Buka File/Link ↗</a>` : `<span style="color:var(--text-muted);">Tanpa berkas</span>`;
         let adminBtns = isAdmin ? `<button class="btn btn-danger" style="padding: 3px 6px; font-size: 11px; margin-left:5px;" onclick="deleteItem('tugas', ${idx})">Hapus</button>` : '';
-        tbody.innerHTML += `<tr><td><strong>${t.nama}</strong></td><td>${t.deadline}</td><td>${linkBtn} ${adminBtns}</td></tr>`;
+        tbody.innerHTML += `<tr><td><strong>${t.nama}</strong><br><small style="color:var(--text-muted);">${t.ket || ''}</small></td><td>${t.deadline}</td><td>${linkBtn} ${adminBtns}</td></tr>`;
     });
 }
 
@@ -477,11 +508,11 @@ function renderPraktikum(category, elementId) {
     if (!dbData[category]) dbData[category] = [];
     const isAdmin = currentUser && currentUser.role === 'admin';
     dbData[category].forEach((item, idx) => {
-        let actionLink = item.link && item.link !== '#' ? `<a href="${item.link}" target="_blank" class="btn" style="padding: 6px 12px; font-size: 12px; text-decoration:none;">🔗 Akses File ↗</a>` : `<span style="color:var(--text-muted);">Tanpa file</span>`;
+        let actionLink = item.link && item.link !== '#' ? `<a href="${item.link}" target="_blank" class="btn" style="padding: 6px 12px; font-size: 12px; text-decoration:none;">🔗 Akses Berkas ↗</a>` : `<span style="color:var(--text-muted);">Tanpa berkas</span>`;
         let adminBtns = isAdmin ? `<button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px; margin-left:5px;" onclick="deleteItem('${category}', ${idx})">Hapus</button>` : '';
         container.innerHTML += `
-            <div style="background: var(--bg-light); border: 1px solid var(--border); padding: 15px; border-radius: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                <div><h4 style="color: var(--text);">${item.nama}</h4><p style="font-size: 13px; color: var(--text-muted);">Modul: ${item.skenario}</p></div>
+            <div style="background: var(--bg-light); border: 1px solid var(--border); padding: 15px; border-radius: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap:wrap; gap:10px;">
+                <div><h4 style="color: var(--text);">${item.nama}</h4><p style="font-size: 13px; color: var(--text-muted);">Modul: ${item.skenario} | ${item.ket || ''}</p></div>
                 <div>${actionLink} ${adminBtns}</div>
             </div>`;
     });
@@ -493,8 +524,8 @@ function renderMateri() {
     if (!dbData.materi) dbData.materi = [];
     const isAdmin = currentUser && currentUser.role === 'admin';
     dbData.materi.forEach((m, idx) => {
-        let aksesHtml = m.link && m.link !== '#' ? `<a href="${m.link}" target="_blank" style="color: var(--accent); font-weight: 600; text-decoration: none;">🔗 Buka File Drive ↗</a>` : `<span style="color:var(--text-muted);">Tanpa file</span>`;
-        let adminBtns = isAdmin ? `<button class="btn btn-danger" style="padding: 3px 6px; font-size: 11px; margin-left: 5px;" onclick="deleteItem('materi', ${idx})">Hapus</button>` : '';
+        let aksesHtml = m.link && m.link !== '#' ? `<a href="${m.link}" target="_blank" style="color: var(--accent); font-weight: 600; text-decoration: none;">🔗 Buka Berkas ↗</a>` : `<span style="color:var(--text-muted);">Tanpa berkas</span>`;
+        let adminBtns = isAdmin ? `<button class="btn" style="padding: 3px 6px; font-size: 11px; margin-left: 5px; background:#eab308;" onclick="openEditMateriModal(${idx})">Edit</button> <button class="btn btn-danger" style="padding: 3px 6px; font-size: 11px; margin-left: 5px;" onclick="deleteItem('materi', ${idx})">Hapus</button>` : '';
         tbody.innerHTML += `<tr><td><strong>${m.kuliah}</strong></td><td>${m.materi}</td><td>${aksesHtml} ${adminBtns}</td></tr>`;
     });
 }
