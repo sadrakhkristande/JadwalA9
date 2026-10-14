@@ -33,10 +33,9 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
 }
 
-/* Pengaturan Halaman Login agar Sempurna di Tengah */
+/* Halaman Login Responsif di Tengah */
 #login-page {
     width: 100%;
     max-width: 420px;
@@ -47,8 +46,10 @@ body {
 .card {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
     border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
 }
 
 .input-field {
@@ -56,6 +57,9 @@ body {
     color: var(--text);
     border: 1px solid var(--border);
     font-size: 14px;
+    border-radius: 6px;
+    padding: 10px;
+    width: 100%;
     transition: all 0.2s ease;
 }
 
@@ -81,30 +85,43 @@ body {
     background-color: var(--accent-hover);
 }
 
-.btn-danger {
-    background-color: #ef4444;
-}
-.btn-danger:hover {
-    background-color: #dc2626;
+.btn-danger { background-color: #ef4444; }
+.btn-danger:hover { background-color: #dc2626; }
+.btn-success { background-color: #10b981; }
+.btn-warning { background-color: #f59e0b; }
+
+/* Header & Navigasi Fleksibel */
+header {
+    background: var(--bg-card);
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 15px;
 }
 
-.btn-success {
-    background-color: #10b981;
-}
-
-.btn-warning {
-    background-color: #f59e0b;
+nav {
+    background: var(--bg-card);
+    padding: 10px 20px;
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
 }
 
 .nav-btn {
     background: transparent;
     color: var(--text);
     border: none;
-    padding: 10px 18px;
+    padding: 8px 16px;
     border-radius: 8px;
     cursor: pointer;
     font-weight: 500;
-    white-space: nowrap;
+    font-size: 14px;
     transition: all 0.2s ease;
 }
 
@@ -113,11 +130,35 @@ body {
     color: white;
 }
 
+main {
+    padding: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    flex: 1;
+}
+
+/* Grid Layout Otomatis untuk PC & HP */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+/* Tabel Responsif dengan Scroll Horizontal otomatis */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 15px;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
     color: var(--text);
     font-size: 14px;
+    min-width: 600px; /* Mencegah tabel tertekan terlalu kecil di HP */
 }
 
 th, td {
@@ -153,7 +194,13 @@ tr.highlight-tomorrow {
     display: inline-block;
 }
 
-/* Responsif & Perbaikan Tampilan di HP */
+/* Penyesuaian Otomatis untuk Tampilan HP / Tablet (Responsive Media Query) */
+@media (max-width: 900px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr; /* Berubah jadi 1 kolom ke bawah di layar sedang/kecil */
+    }
+}
+
 @media (max-width: 768px) {
     body {
         overflow-x: hidden;
@@ -165,36 +212,25 @@ tr.highlight-tomorrow {
 
     header {
         flex-direction: column;
-        gap: 10px;
         text-align: center;
         padding: 15px !important;
     }
 
     #login-page {
-        margin-top: 40px !important;
+        margin-top: 20px !important;
         padding: 15px;
-    }
-    
-    /* Membuat semua tabel bisa digeser ke samping dengan mulus tanpa merusak layar */
-    table {
-        display: block;
-        overflow-x: auto;
-        white-space: nowrap;
-        width: 100%;
     }
 
     .card {
         padding: 15px !important;
-        margin-bottom: 15px !important;
     }
 
     nav {
         padding: 8px 10px !important;
-        gap: 5px !important;
     }
     
     .nav-btn {
-        padding: 8px 12px !important;
+        padding: 6px 12px !important;
         font-size: 13px !important;
     }
 }
