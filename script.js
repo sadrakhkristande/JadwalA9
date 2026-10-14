@@ -39,7 +39,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     applyTheme(dbData.theme || 'light');
     checkMaintenanceStatus();
     
-    // Tutup dropdown jika klik di luar
+    // Tutup dropdown jika pengguna mengklik di luar area dropdown
     window.addEventListener('click', function(e) {
         if (!e.target.matches('.dropdown-toggle')) {
             const dropdowns = document.getElementsByClassName("dropdown-content");
@@ -82,14 +82,21 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
+// FUNGSI DROPDOWN MENU AKADEMIK
 window.toggleDropdown = function(event) {
     event.stopPropagation();
-    document.getElementById("academic-dropdown-content").classList.toggle("show");
+    const dropdownContent = document.getElementById("academic-dropdown-content");
+    if (dropdownContent) {
+        dropdownContent.classList.toggle("show");
+    }
 };
 
 window.switchTabAndCloseDropdown = function(tabName, btnElement) {
     switchTab(tabName, btnElement);
-    document.getElementById("academic-dropdown-content").classList.remove('show');
+    const dropdownContent = document.getElementById("academic-dropdown-content");
+    if (dropdownContent) {
+        dropdownContent.classList.remove('show');
+    }
 };
 
 async function fetchDatabaseFromCloud() {
