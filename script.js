@@ -39,6 +39,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     applyTheme(dbData.theme || 'light');
     checkMaintenanceStatus();
     
+    // Tutup dropdown jika klik di luar
+    window.addEventListener('click', function(e) {
+        if (!e.target.matches('.dropdown-toggle')) {
+            const dropdowns = document.getElementsByClassName("dropdown-content");
+            for (let i = 0; i < dropdowns.length; i++) {
+                let openDropdown = dropdowns[i];
+                if (openDropdown.classList.contains('show')) {
+                    openDropdown.classList.remove('show');
+                }
+            }
+        }
+    });
+
     const nimInput = document.getElementById('login-nim-input');
     const adminInput = document.getElementById('login-admin-code');
     
@@ -68,6 +81,16 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
     }
 });
+
+window.toggleDropdown = function(event) {
+    event.stopPropagation();
+    document.getElementById("academic-dropdown-content").classList.toggle("show");
+};
+
+window.switchTabAndCloseDropdown = function(tabName, btnElement) {
+    switchTab(tabName, btnElement);
+    document.getElementById("academic-dropdown-content").classList.remove('show');
+};
 
 async function fetchDatabaseFromCloud() {
     try {
