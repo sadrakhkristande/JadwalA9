@@ -49,13 +49,13 @@ body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* HALAMAN LOGIN RESPONSIP TANPA SCROLL DI HP */
+/* LOGIN DI HP: PAS DALAM LAYAR TANPA PERLU SCROLL */
 #login-page {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: calc(100vh - 45px); /* Menyesuaikan ruang banner atas agar tidak terpotong */
-    padding: 15px;
+    min-height: 100vh;
+    padding: 12px;
     background: linear-gradient(135deg, #022c22 0%, #064e3b 50%, #047857 100%);
 }
 
@@ -65,7 +65,7 @@ body {
     border-radius: 16px;
     box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 24px 20px !important;
+    padding: 20px 18px !important;
 }
 
 header {
@@ -216,7 +216,7 @@ main {
 .btn:hover { background-color: var(--accent-hover); }
 .btn-danger { background-color: #ef4444; }
 .btn-danger:hover { background-color: #dc2626; }
-.btn-warning { background-color: #d97706; color: white; }
+.btn-warning { background-color: var(--gold); color: white; }
 .btn-warning:hover { background-color: #b45309; }
 .btn-success { background-color: #059669; }
 
@@ -281,22 +281,13 @@ th {
     font-size: 12px;
 }
 
-/* KHUSUS PENYESUAIAN TAMBILAN DI HP (LAYAR KECIL) */
 @media (max-width: 768px) {
     #login-page {
-        min-height: calc(100vh - 40px);
         padding: 10px;
-        align-items: center;
     }
 
     #login-page .card {
-        padding: 18px 16px !important;
-        margin: 0 auto;
-    }
-
-    #login-page h2 {
-        font-size: 20px !important;
-        margin-bottom: 12px !important;
+        padding: 16px 14px !important;
     }
 
     header {
