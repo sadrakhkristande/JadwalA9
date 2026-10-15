@@ -150,7 +150,7 @@ function getFileAsBase64(fileInputId) {
         }
         const file = fileInput.files[0];
         
-        const maxSize = 1 * 1024 * 1024; // Limit 1 MB
+        const maxSize = 1 * 1024 * 1024;
         if (file.size > maxSize) {
             alert(`⚠️ Ukuran file "${file.name}" adalah ${(file.size / (1024*1024)).toFixed(2)} MB.\nUnggah file dari PC dibatasi maksimal 1 MB agar portal tetap cepat.\n\nSaran: Unggah file besar ke Google Drive lalu salin URL link-nya.`);
             fileInput.value = '';
@@ -297,7 +297,7 @@ window.handleLogin = function() {
         if (allowedUsers[nim]) {
             currentUser = { role: 'guest', name: allowedUsers[nim], nim: nim };
             saveUserSession(); initApp(); setupInactivityTracker();
-        } else { alert('NIM tidak terdaftar!'); }
+        } else { alert('Nomor Identitas tidak terdaftar!'); }
     }
 };
 
@@ -403,8 +403,8 @@ async function renderJadwal() {
         
         const isToday = j.tgl.includes(todayStr);
         let badgeLabel = isToday 
-            ? '<span class="badge" style="background:#eab308; color:white; margin-left:6px;">Hari Ini</span>' 
-            : '<span class="badge" style="background:#3b82f6; color:white; margin-left:6px;">Besok</span>';
+            ? '<span class="badge" style="background:#d97706; color:white; margin-left:6px;">Hari Ini</span>' 
+            : '<span class="badge" style="background:#047857; color:white; margin-left:6px;">Besok</span>';
 
         let s1 = j.sesi?.[0] ? `<small style="color:var(--text-muted);">${j.sesi[0].jam}</small><br><strong>${j.sesi[0].kegiatan}</strong>` : '-';
         let s2 = j.sesi?.[1] ? `<small style="color:var(--text-muted);">${j.sesi[1].jam}</small><br><strong>${j.sesi[1].kegiatan}</strong>` : '-';
@@ -412,7 +412,7 @@ async function renderJadwal() {
         let s4 = j.sesi?.[3] ? `<small style="color:var(--text-muted);">${j.sesi[3].jam}</small><br><strong>${j.sesi[3].kegiatan}</strong>` : '-';
         
         let actBtns = isAdmin ? `
-            <button class="btn" style="padding:3px 8px; font-size:11px; background:#eab308;" onclick="openJadwalModal(${actualIdx})">Edit</button>
+            <button class="btn" style="padding:3px 8px; font-size:11px; background:#d97706;" onclick="openJadwalModal(${actualIdx})">Edit</button>
             <button class="btn btn-danger" style="padding:3px 8px; font-size:11px; margin-left:4px;" onclick="deleteJadwalItem(${actualIdx})">Hapus</button>
         ` : '';
 
@@ -491,7 +491,6 @@ function renderAll() {
     renderPraktikum('skills_lab', 'skills-list'); renderPraktikum('tutorial', 'tutorial-list'); renderMateri();
 }
 
-// PENGUMUMAN MANUAL
 window.addPengumuman = async function() {
     const judul = document.getElementById('p-judul').value;
     const isi = document.getElementById('p-isi').value;
@@ -539,7 +538,6 @@ function renderPengumuman() {
     });
 }
 
-// TUGAS BARU
 window.addTugasItem = async function() {
     const nama = document.getElementById('t-nama').value;
     const deadline = document.getElementById('t-deadline').value;
@@ -570,7 +568,6 @@ window.addTugasItem = async function() {
     alert('Tugas disimpan & dipublikasikan!');
 };
 
-// PRAKTIKUM / LAB / SKILLS LAB / TUTORIAL
 window.handlePraktikumUpload = async function(category, idNama, idSkenario, idKet, idFilePc, idLink) {
     const nama = document.getElementById(idNama).value;
     const skenario = document.getElementById(idSkenario).value;
@@ -605,7 +602,6 @@ window.handlePraktikumUpload = async function(category, idNama, idSkenario, idKe
     alert('Berhasil disimpan & dipublikasikan!');
 };
 
-// MATERI KULIAH
 window.handleMateriUpload = async function() {
     const kuliah = document.getElementById('m-kuliah').value;
     const materi = document.getElementById('m-materi').value;
@@ -711,7 +707,7 @@ function renderMateri() {
     const isAdmin = currentUser && currentUser.role === 'admin';
     dbData.materi.forEach((m, idx) => {
         let aksesHtml = m.link && m.link !== '#' ? `<a href="${m.link}" target="_blank" download style="color: var(--accent); font-weight: 600; text-decoration: none;">📥 Unduh / Buka Berkas ↗</a>` : `<span style="color:var(--text-muted);">Tanpa berkas</span>`;
-        let adminBtns = isAdmin ? `<button class="btn" style="padding: 3px 6px; font-size: 11px; margin-left: 5px; background:#eab308;" onclick="openEditMateriModal(${idx})">Edit</button> <button class="btn btn-danger" style="padding: 3px 6px; font-size: 11px; margin-left: 5px;" onclick="deleteItem('materi', ${idx})">Hapus</button>` : '';
+        let adminBtns = isAdmin ? `<button class="btn" style="padding: 3px 6px; font-size: 11px; margin-left: 5px; background:#d97706;" onclick="openEditMateriModal(${idx})">Edit</button> <button class="btn btn-danger" style="padding: 3px 6px; font-size: 11px; margin-left: 5px;" onclick="deleteItem('materi', ${idx})">Hapus</button>` : '';
         tbody.innerHTML += `<tr><td><strong>${m.kuliah}</strong></td><td>${m.materi}</td><td>${aksesHtml} ${adminBtns}</td></tr>`;
     });
 }
