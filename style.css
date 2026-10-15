@@ -1,5 +1,5 @@
 /* ==========================================================================
-   DESAIN PORTAL AKADEMIK A9 - PALET HIJAU ELEGAN (UNS INSPIRED)
+   DESAIN PORTAL AKADEMIK A9 - HIJAU ELEGAN (UNS) & RINGAN TAMPILAN
    ========================================================================== */
 
 :root {
@@ -49,7 +49,7 @@ body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* LOGIN DI HP: PAS DALAM LAYAR TANPA PERLU SCROLL */
+/* TAMPILAN LOGIN HP: OTOMATIS FIT DALAM SCREEN */
 #login-page {
     display: flex;
     justify-content: center;
