@@ -22,7 +22,7 @@
         <span id="global-announcement-text"></span>
     </div>
 
-    <!-- HALAMAN LOGIN (PAS DI LAYAR HP TANPA SCROLL) -->
+    <!-- HALAMAN LOGIN -->
     <div id="login-page">
         <div class="card" style="margin: auto; width: 100%; max-width: 380px;">
             <h2 style="text-align: center; margin-bottom: 16px; color: var(--accent); font-size: 22px;">Portal Akademik A9</h2>
@@ -37,7 +37,8 @@
 
             <div id="guest-fields" style="margin-bottom: 12px;">
                 <label style="display: block; margin-bottom: 4px; font-weight: 600; font-size: 13px;">Masukkan Nomor Identitas:</label>
-                <input type="text" id="login-nim-input" class="input-field" placeholder="Contoh: 21105032610227" style="padding: 8px 12px; font-size: 13px;">
+                <!-- DAHULU: 21105032610227 -> SEKARANG DITULIS NEUTRAL: 211... -->
+                <input type="text" id="login-nim-input" class="input-field" placeholder="Contoh: 21105032610000" style="padding: 8px 12px; font-size: 13px;">
                 <small style="color: var(--text-muted); display: block; margin-top: 3px; font-size: 11px;">Tekan Enter untuk langsung masuk.</small>
             </div>
 
@@ -53,7 +54,6 @@
 
     <!-- APLIKASI UTAMA -->
     <div id="main-app" style="display: none;">
-        
         <header>
             <div>
                 <h2 style="margin: 0; color: var(--accent);">Portal Akademik A9</h2>
@@ -63,7 +63,6 @@
             <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                 <span id="wib-clock" style="font-weight: 600; font-size: 13px;"></span>
                 
-                <!-- SAKLAR DARK MODE -->
                 <div style="display: flex; align-items: center; gap: 6px;">
                     <span style="font-size: 12px; font-weight: 600;">🌙 Dark</span>
                     <label class="switch">
@@ -72,13 +71,11 @@
                     </label>
                 </div>
 
-                <!-- TOMBOL PENGATURAN ADMIN -->
                 <button class="btn btn-warning admin-only" style="display: none; padding: 6px 12px; font-size: 12px;" onclick="openAdminSettingsModal()">⚙️ Pengaturan Web</button>
                 <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick="handleLogout()">Keluar</button>
             </div>
         </header>
 
-        <!-- NAVIGASI MENU TAB BERJAJAR -->
         <nav>
             <button class="btn nav-btn active" onclick="switchTab('home', this)">🏠 Beranda</button>
             <button class="btn nav-btn" onclick="switchTab('jadwal', this)">📅 Jadwal</button>
@@ -97,7 +94,6 @@
                         <div class="card">
                             <h3 style="margin-bottom: 15px; color: var(--accent);">📢 Pengumuman Akademik</h3>
                             
-                            <!-- FORM TAMBAH PENGUMUMAN (ADMIN ONLY) -->
                             <div id="form-pengumuman" class="admin-form-box" style="display: none; background: var(--bg-light); padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px dashed var(--accent);">
                                 <h4 style="margin-bottom: 8px; color: var(--accent);">➕ Tambah Pengumuman Manual</h4>
                                 <input type="text" id="p-judul" class="input-field" placeholder="Judul Pengumuman" style="margin-bottom:8px;">
@@ -190,7 +186,7 @@
                 </div>
             </div>
 
-            <!-- TAB LABORATORIUM -->
+            <!-- TAB LAB -->
             <div id="tab-lab" class="tab-content" style="display: none;">
                 <div class="card">
                     <h3 style="margin-bottom: 15px; color: var(--accent);">🔬 Praktikum Laboratorium</h3>
@@ -327,7 +323,7 @@
         </div>
     </div>
 
-    <!-- MODAL PENGATURAN WEB KHUSUS ADMIN -->
+    <!-- MODAL PENGATURAN WEB ADMIN -->
     <div id="admin-settings-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:9999; padding: 15px;">
         <div class="card" style="width:100%; max-width:550px; max-height:90vh; overflow-y:auto;">
             <h3 style="color:var(--accent); margin-bottom:15px;">⚙️ Panel Pengaturan Web (Kewenangan Admin)</h3>
