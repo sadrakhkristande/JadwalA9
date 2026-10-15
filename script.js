@@ -107,6 +107,18 @@ async function fetchDatabaseFromCloud() {
     } catch (err) {
         console.error("Gagal memuat data dari Supabase:", err);
     }
+
+    // Jika data jadwal dari Supabase masih kosong, muat default dari jadwal.json lokal SATU KALI SAJA
+    if (!dbData.jadwalCustom || dbData.jadwalCustom.length === 0) {
+        try {
+            const res = await fetch('jadwal.json');
+            const data = await res.json();
+            dbData.jadwalCustom = data.jadwal || [];
+        } catch (e) {
+            dbData.jadwalCustom = [];
+        }
+    }
+
     checkMaintenanceStatus();
     checkGlobalAnnouncement();
     renderAll();
@@ -114,6 +126,7 @@ async function fetchDatabaseFromCloud() {
 
 // SIMPAN TERSAMBUNG KE KEY SUPABASE KATEGORI SPESIFIK
 async function saveCategoryData(categoryKey) {
+    // Jalankan render lokal tanpa loop berat
     renderAll();
     try {
         let payload = dbData[categoryKey];
@@ -357,25 +370,14 @@ window.switchTab = function(tabName, btnElement) {
 window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; };
 
 // ==========================================================================
-// KELOLA JADWAL (FILTER HARI INI & BESOK + SYNC CLOUD SUPABASE)
+// KELOLA JADWAL (FILTER HARI INI & BESOK + PRESERVE DARI SUPABASE CLOUD)
 // ==========================================================================
-async function renderJadwal() {
+function renderJadwal() {
     const tbody = document.getElementById('jadwal-table-body');
     if(!tbody) return; 
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Memuat jadwal...</td></tr>';
+    tbody.innerHTML = '';
     
     let jadwalList = dbData.jadwalCustom || [];
-    
-    if(jadwalList.length === 0) {
-        try { 
-            const res = await fetch('jadwal.json'); 
-            const data = await res.json(); 
-            jadwalList = data.jadwal || []; 
-            dbData.jadwalCustom = jadwalList;
-        } catch (e) { jadwalList = []; }
-    }
-    
-    tbody.innerHTML = '';
     
     const nowWIB = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
     const tomorrowWIB = new Date(nowWIB); 
