@@ -13,41 +13,41 @@
 <body>
 
     <!-- BANNER MAINTENANCE -->
-    <div id="maintenance-banner" style="display: none; background: #ef4444; color: white; text-align: center; padding: 12px; font-weight: bold; position: sticky; top: 0; z-index: 9999; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+    <div id="maintenance-banner" style="display: none; background: #ef4444; color: white; text-align: center; padding: 10px; font-weight: bold; position: sticky; top: 0; z-index: 9999; box-shadow: 0 2px 5px rgba(0,0,0,0.2); font-size: 13px;">
         ⚠️ PORTAL SEDANG DALAM PEMELIHARAAN (MAINTENANCE) ⚠️
     </div>
 
     <!-- BANNER PENGUMUMAN GLOBAL ADMIN -->
-    <div id="global-announcement-banner" style="display: none; background: #047857; color: white; text-align: center; padding: 8px 12px; font-size: 13px; font-weight: 600;">
+    <div id="global-announcement-banner" style="display: none; background: #047857; color: white; text-align: center; padding: 8px 12px; font-size: 12px; font-weight: 600; position: sticky; top: 0; z-index: 9998;">
         <span id="global-announcement-text"></span>
     </div>
 
-    <!-- HALAMAN LOGIN -->
+    <!-- HALAMAN LOGIN (PAS DI LAYAR HP TANPA SCROLL) -->
     <div id="login-page">
-        <div class="card" style="padding: 30px;">
-            <h2 style="text-align: center; margin-bottom: 20px; color: var(--accent);">Portal Akademik A9</h2>
+        <div class="card" style="margin: auto; width: 100%; max-width: 380px;">
+            <h2 style="text-align: center; margin-bottom: 16px; color: var(--accent); font-size: 22px;">Portal Akademik A9</h2>
             
-            <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; font-weight: 600;">Pilih Peran (Role):</label>
-                <select id="login-role" class="input-field" onchange="toggleLoginFields()">
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 4px; font-weight: 600; font-size: 13px;">Pilih Peran (Role):</label>
+                <select id="login-role" class="input-field" onchange="toggleLoginFields()" style="padding: 8px 12px; font-size: 13px;">
                     <option value="guest">Mahasiswa</option>
                     <option value="admin">Administrator</option>
                 </select>
             </div>
 
-            <div id="guest-fields" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; font-weight: 600;">Masukkan Nomor Identitas:</label>
-                <input type="text" id="login-nim-input" class="input-field" placeholder="Contoh: 21105032610227">
-                <small style="color: var(--text-muted); display: block; margin-top: 5px;">Tekan Enter untuk langsung masuk.</small>
+            <div id="guest-fields" style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 4px; font-weight: 600; font-size: 13px;">Masukkan Nomor Identitas:</label>
+                <input type="text" id="login-nim-input" class="input-field" placeholder="Contoh: 21105032610227" style="padding: 8px 12px; font-size: 13px;">
+                <small style="color: var(--text-muted); display: block; margin-top: 3px; font-size: 11px;">Tekan Enter untuk langsung masuk.</small>
             </div>
 
-            <div id="admin-fields" style="margin-bottom: 15px; display: none;">
-                <label style="display: block; margin-bottom: 5px; font-weight: 600;">Kode Rahasia Admin:</label>
-                <input type="password" id="login-admin-code" class="input-field" placeholder="Masukkan kode admin...">
-                <small style="color: var(--text-muted); display: block; margin-top: 5px;">Tekan Enter untuk langsung masuk.</small>
+            <div id="admin-fields" style="margin-bottom: 12px; display: none;">
+                <label style="display: block; margin-bottom: 4px; font-weight: 600; font-size: 13px;">Kode Rahasia Admin:</label>
+                <input type="password" id="login-admin-code" class="input-field" placeholder="Masukkan kode admin..." style="padding: 8px 12px; font-size: 13px;">
+                <small style="color: var(--text-muted); display: block; margin-top: 3px; font-size: 11px;">Tekan Enter untuk langsung masuk.</small>
             </div>
 
-            <button class="btn" onclick="handleLogin()" style="width: 100%; padding: 12px; font-weight: bold;">Masuk Portal</button>
+            <button class="btn" onclick="handleLogin()" style="width: 100%; padding: 10px; font-weight: bold; font-size: 14px; margin-top: 4px;">Masuk Portal</button>
         </div>
     </div>
 
@@ -72,7 +72,7 @@
                     </label>
                 </div>
 
-                <!-- TOMBOL PENGATURAN ADMIN (ADMIN ONLY) -->
+                <!-- TOMBOL PENGATURAN ADMIN -->
                 <button class="btn btn-warning admin-only" style="display: none; padding: 6px 12px; font-size: 12px;" onclick="openAdminSettingsModal()">⚙️ Pengaturan Web</button>
                 <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick="handleLogout()">Keluar</button>
             </div>
