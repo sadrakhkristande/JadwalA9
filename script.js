@@ -108,7 +108,6 @@ async function fetchDatabaseFromCloud() {
         console.error("Gagal memuat data dari Supabase:", err);
     }
 
-    // Jika data jadwal dari Supabase masih kosong, muat default dari jadwal.json lokal SATU KALI SAJA
     if (!dbData.jadwalCustom || dbData.jadwalCustom.length === 0) {
         try {
             const res = await fetch('jadwal.json');
@@ -126,7 +125,6 @@ async function fetchDatabaseFromCloud() {
 
 // SIMPAN TERSAMBUNG KE KEY SUPABASE KATEGORI SPESIFIK
 async function saveCategoryData(categoryKey) {
-    // Jalankan render lokal tanpa loop berat
     renderAll();
     try {
         let payload = dbData[categoryKey];
@@ -370,7 +368,7 @@ window.switchTab = function(tabName, btnElement) {
 window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; };
 
 // ==========================================================================
-// KELOLA JADWAL (FILTER HARI INI & BESOK + PRESERVE DARI SUPABASE CLOUD)
+// KELOLA JADWAL (FILTER HARI INI & BESOK)
 // ==========================================================================
 function renderJadwal() {
     const tbody = document.getElementById('jadwal-table-body');
