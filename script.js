@@ -151,32 +151,69 @@ async function saveCategoryData(categoryKey) {
     }
 }
 
-// HELPER FILE BASE64 (MAX 1 MB)
-function getFileAsBase64(fileInputId) {
-    return new Promise((resolve) => {
-        const fileInput = document.getElementById(fileInputId);
-        if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-            resolve(null);
-            return;
-        }
-        const file = fileInput.files[0];
-        
-        const maxSize = 1 * 1024 * 1024;
-        if (file.size > maxSize) {
-            alert(`⚠️ Ukuran file "${file.name}" adalah ${(file.size / (1024*1024)).toFixed(2)} MB.\nUnggah file dari PC dibatasi maksimal 1 MB agar portal tetap cepat.\n\nSaran: Unggah file besar ke Google Drive lalu salin URL link-nya.`);
-            fileInput.value = '';
-            resolve(null);
-            return;
-        }
+// FUNGSI UPLOAD FILE HINGGA 50MB KE SUPABASE STORAGE
+async function uploadFileToSupabaseStorage(fileInputId) {
+    const fileInput = document.getElementById(fileInputId);
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        return null;
+    }
+    const file = fileInput.files[0];
+    
+    // Batas maksimal 50 MB
+    const maxSize = 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+        alert(`⚠️ Ukuran file "${file.name}" adalah ${(file.size / (1024*1024)).toFixed(2)} MB.\nMaksimal ukuran berkas yang diizinkan adalah 50 MB.`);
+        fileInput.value = '';
+        return null;
+    }
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            resolve({ name: file.name, url: e.target.result });
-        };
-        reader.onerror = function() { resolve(null); };
-        reader.readAsDataURL(file);
-    });
+    try {
+        const filePath = `uploads/${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+        const { data, error } = await supabaseClient.storage
+            .from('portal-files')
+            .upload(filePath, file);
+
+        if (error) throw error;
+
+        // Ambil Public URL
+        const { data: publicUrlData } = supabaseClient.storage
+            .from('portal-files')
+            .getPublicUrl(filePath);
+
+        return publicUrlData.publicUrl;
+    } catch (err) {
+        console.error("Gagal mengunggah file ke Storage:", err);
+        alert("Gagal mengunggah berkas ke server penyimpanan Supabase.");
+        return null;
+    }
 }
+
+// MODAL PREVIEW DOKUMEN (BISA DILIHAT LANGSUNG DI WEB)
+window.openPreviewModal = function(fileUrl, title = "Preview Dokumen") {
+    const modal = document.getElementById('preview-modal');
+    const frame = document.getElementById('preview-frame');
+    const titleEl = document.getElementById('preview-title');
+    
+    if(!modal || !frame) return;
+    
+    titleEl.innerText = title;
+    
+    // Jika file berupa PDF atau Office, gunakan Google Viewer atau langsung iframe
+    if (fileUrl.match(/\.(pdf|docx?|pptx?)$/i)) {
+        frame.src = `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`;
+    } else {
+        frame.src = fileUrl;
+    }
+    
+    modal.style.display = 'flex';
+};
+
+window.closePreviewModal = function() {
+    const modal = document.getElementById('preview-modal');
+    const frame = document.getElementById('preview-frame');
+    if(modal) modal.style.display = 'none';
+    if(frame) frame.src = '';
+};
 
 // AUTOMATIC ANNOUNCEMENT TEMPLATE GENERATOR
 async function triggerAutoAnnouncement(judul, isi, deadlineDays = 7) {
@@ -548,8 +585,8 @@ window.addTugasItem = async function() {
     if (!dbData.tugas) dbData.tugas = [];
 
     let finalLink = manualLink || '#';
-    const fileData = await getFileAsBase64('t-file-pc');
-    if (fileData) { finalLink = fileData.url; }
+    const uploadedUrl = await uploadFileToSupabaseStorage('t-file-pc');
+    if (uploadedUrl) { finalLink = uploadedUrl; }
 
     dbData.tugas.push({ id: Date.now(), nama, deadline, ket, link: finalLink });
     
@@ -578,8 +615,8 @@ window.handlePraktikumUpload = async function(category, idNama, idSkenario, idKe
     if (!dbData[category]) dbData[category] = [];
 
     let finalLink = manualLink || '#';
-    const fileData = await getFileAsBase64(idFilePc);
-    if (fileData) { finalLink = fileData.url; }
+    const uploadedUrl = await uploadFileToSupabaseStorage(idFilePc);
+    if (uploadedUrl) { finalLink = uploadedUrl; }
 
     dbData[category].push({ id: Date.now(), nama, skenario, ket, link: finalLink });
     
@@ -611,8 +648,8 @@ window.handleMateriUpload = async function() {
     if (!dbData.materi) dbData.materi = [];
 
     let finalLink = manualLink || '#';
-    const fileData = await getFileAsBase64('m-file-pc');
-    if (fileData) { finalLink = fileData.url; }
+    const uploadedUrl = await uploadFileToSupabaseStorage('m-file-pc');
+    if (uploadedUrl) { finalLink = uploadedUrl; }
 
     dbData.materi.push({ id: Date.now(), kuliah, materi, link: finalLink });
     
@@ -678,9 +715,12 @@ function renderTugas() {
     if (!dbData.tugas) dbData.tugas = [];
     const isAdmin = currentUser && currentUser.role === 'admin';
     dbData.tugas.forEach((t, idx) => {
-        let linkBtn = t.link && t.link !== '#' ? `<a href="${t.link}" target="_blank" download class="btn" style="padding: 5px 10px; font-size: 12px; text-decoration:none;">📥 Unduh / Buka Berkas ↗</a>` : `<span style="color:var(--text-muted);">Tanpa berkas</span>`;
+        let actionBtn = t.link && t.link !== '#' ? `
+            <button class="btn" style="padding: 5px 10px; font-size: 12px; background:var(--accent);" onclick="openPreviewModal('${t.link}', '${t.nama}')">👁️ Preview</button>
+            <a href="${t.link}" target="_blank" download class="btn" style="padding: 5px 10px; font-size: 12px; text-decoration:none; background:#047857; margin-left:4px;">📥 Unduh</a>
+        ` : `<span style="color:var(--text-muted);">Tanpa berkas</span>`;
         let adminBtns = isAdmin ? `<button class="btn btn-danger" style="padding: 3px 6px; font-size: 11px; margin-left:5px;" onclick="deleteItem('tugas', ${idx})">Hapus</button>` : '';
-        tbody.innerHTML += `<tr><td><strong>${t.nama}</strong><br><small style="color:var(--text-muted);">${t.ket || ''}</small></td><td>${t.deadline}</td><td>${linkBtn} ${adminBtns}</td></tr>`;
+        tbody.innerHTML += `<tr><td><strong>${t.nama}</strong><br><small style="color:var(--text-muted);">${t.ket || ''}</small></td><td>${t.deadline}</td><td>${actionBtn} ${adminBtns}</td></tr>`;
     });
 }
 
@@ -690,12 +730,15 @@ function renderPraktikum(category, elementId) {
     if (!dbData[category]) dbData[category] = [];
     const isAdmin = currentUser && currentUser.role === 'admin';
     dbData[category].forEach((item, idx) => {
-        let actionLink = item.link && item.link !== '#' ? `<a href="${item.link}" target="_blank" download class="btn" style="padding: 6px 12px; font-size: 12px; text-decoration:none;">📥 Unduh / Buka Berkas ↗</a>` : `<span style="color:var(--text-muted);">Tanpa berkas</span>`;
+        let actionBtn = item.link && item.link !== '#' ? `
+            <button class="btn" style="padding: 6px 12px; font-size: 12px; background:var(--accent);" onclick="openPreviewModal('${item.link}', '${item.nama}')">👁️ Preview</button>
+            <a href="${item.link}" target="_blank" download class="btn" style="padding: 6px 12px; font-size: 12px; text-decoration:none; background:#047857; margin-left:4px;">📥 Unduh</a>
+        ` : `<span style="color:var(--text-muted);">Tanpa berkas</span>`;
         let adminBtns = isAdmin ? `<button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px; margin-left:5px;" onclick="deleteItem('${category}', ${idx})">Hapus</button>` : '';
         container.innerHTML += `
             <div style="background: var(--bg-light); border: 1px solid var(--border); padding: 15px; border-radius: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap:wrap; gap:10px;">
                 <div><h4 style="color: var(--text);">${item.nama}</h4><p style="font-size: 13px; color: var(--text-muted);">Modul: ${item.skenario} | ${item.ket || ''}</p></div>
-                <div>${actionLink} ${adminBtns}</div>
+                <div>${actionBtn} ${adminBtns}</div>
             </div>`;
     });
 }
@@ -706,7 +749,10 @@ function renderMateri() {
     if (!dbData.materi) dbData.materi = [];
     const isAdmin = currentUser && currentUser.role === 'admin';
     dbData.materi.forEach((m, idx) => {
-        let aksesHtml = m.link && m.link !== '#' ? `<a href="${m.link}" target="_blank" download style="color: var(--accent); font-weight: 600; text-decoration: none;">📥 Unduh / Buka Berkas ↗</a>` : `<span style="color:var(--text-muted);">Tanpa berkas</span>`;
+        let aksesHtml = m.link && m.link !== '#' ? `
+            <button class="btn" style="padding: 4px 8px; font-size: 12px; background:var(--accent);" onclick="openPreviewModal('${m.link}', '${m.kuliah} - ${m.materi}')">👁️ Preview</button>
+            <a href="${m.link}" target="_blank" download style="color: var(--accent); font-weight: 600; text-decoration: none; margin-left:6px;">📥 Unduh</a>
+        ` : `<span style="color:var(--text-muted);">Tanpa berkas</span>`;
         let adminBtns = isAdmin ? `<button class="btn" style="padding: 3px 6px; font-size: 11px; margin-left: 5px; background:#d97706;" onclick="openEditMateriModal(${idx})">Edit</button> <button class="btn btn-danger" style="padding: 3px 6px; font-size: 11px; margin-left: 5px;" onclick="deleteItem('materi', ${idx})">Hapus</button>` : '';
         tbody.innerHTML += `<tr><td><strong>${m.kuliah}</strong></td><td>${m.materi}</td><td>${aksesHtml} ${adminBtns}</td></tr>`;
     });
