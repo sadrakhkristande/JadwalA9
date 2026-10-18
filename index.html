@@ -164,7 +164,7 @@
                         <input type="date" id="t-deadline" class="input-field" style="margin-bottom:8px;">
                         <textarea id="t-ket" class="input-field" placeholder="Keterangan instruksi tugas..." style="margin-bottom:8px; height: 70px;"></textarea>
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih File dari PC (Maks 1MB):</label>
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih File dari PC (Maks 50MB):</label>
                         <input type="file" id="t-file-pc" class="input-field" style="margin-bottom:8px; padding: 6px;">
 
                         <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Link URL (Google Drive / Lainnya):</label>
@@ -195,7 +195,7 @@
                         <input type="text" id="lab-skenario" class="input-field" placeholder="Modul / Skenario" style="margin-bottom:8px;">
                         <textarea id="lab-ket" class="input-field" placeholder="Keterangan..." style="margin-bottom:8px; height: 70px;"></textarea>
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih File dari PC:</label>
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih File dari PC (Maks 50MB):</label>
                         <input type="file" id="lab-file-pc" class="input-field" style="margin-bottom:8px; padding: 6px;">
 
                         <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Link URL:</label>
@@ -217,7 +217,7 @@
                         <input type="text" id="skills-skenario" class="input-field" placeholder="Modul" style="margin-bottom:8px;">
                         <textarea id="skills-ket" class="input-field" placeholder="Keterangan..." style="margin-bottom:8px; height: 70px;"></textarea>
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih File dari PC:</label>
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih File dari PC (Maks 50MB):</label>
                         <input type="file" id="skills-file-pc" class="input-field" style="margin-bottom:8px; padding: 6px;">
 
                         <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Link URL:</label>
@@ -239,7 +239,7 @@
                         <input type="text" id="tut-skenario" class="input-field" placeholder="Skenario / Kasus" style="margin-bottom:8px;">
                         <textarea id="tut-ket" class="input-field" placeholder="Catatan diskusi..." style="margin-bottom:8px; height: 70px;"></textarea>
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih File dari PC:</label>
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih File dari PC (Maks 50MB):</label>
                         <input type="file" id="tut-file-pc" class="input-field" style="margin-bottom:8px; padding: 6px;">
 
                         <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Link URL:</label>
@@ -260,7 +260,7 @@
                         <input type="text" id="m-kuliah" class="input-field" placeholder="Nama Mata Kuliah" style="margin-bottom:8px;">
                         <input type="text" id="m-materi" class="input-field" placeholder="Topik / Judul Materi" style="margin-bottom:8px;">
                         
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih File dari PC:</label>
+                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih File dari PC (Maks 50MB):</label>
                         <input type="file" id="m-file-pc" class="input-field" style="margin-bottom:8px; padding: 6px;">
 
                         <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Link URL:</label>
@@ -281,6 +281,17 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- MODAL PREVIEW DOKUMEN / BERKAS -->
+    <div id="preview-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:99999; justify-content:center; align-items:center; padding: 20px;">
+        <div style="position:relative; width:100%; max-width:900px; height:85vh; background:var(--bg-card); padding:15px; border-radius:12px; display:flex; flex-direction:column;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 id="preview-title" style="color:var(--accent); font-size:16px;">Preview Dokumen</h3>
+                <button class="btn btn-danger" onclick="closePreviewModal()" style="padding:4px 10px; font-size:12px;">✕ Tutup</button>
+            </div>
+            <iframe id="preview-frame" src="" style="width:100%; flex:1; border:1px solid var(--border); border-radius:8px; background:#fff;"></iframe>
+        </div>
     </div>
 
     <!-- MODAL EDIT JADWAL -->
