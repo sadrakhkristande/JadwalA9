@@ -160,7 +160,6 @@ async function uploadFileToSupabaseStorage(fileInputId) {
     }
     const file = fileInput.files[0];
     
-    // Batas maksimal 50 MB
     const maxSize = 50 * 1024 * 1024;
     if (file.size > maxSize) {
         alert(`⚠️ Ukuran file "${file.name}" adalah ${(file.size / (1024*1024)).toFixed(2)} MB.\nMaksimal ukuran berkas yang diizinkan adalah 50 MB.`);
@@ -176,7 +175,6 @@ async function uploadFileToSupabaseStorage(fileInputId) {
 
         if (error) throw error;
 
-        // Ambil Public URL
         const { data: publicUrlData } = supabaseClient.storage
             .from('portal-files')
             .getPublicUrl(filePath);
@@ -189,7 +187,6 @@ async function uploadFileToSupabaseStorage(fileInputId) {
     }
 }
 
-// MODAL PREVIEW DOKUMEN (BISA DILIHAT LANGSUNG DI WEB)
 window.openPreviewModal = function(fileUrl, title = "Preview Dokumen") {
     const modal = document.getElementById('preview-modal');
     const frame = document.getElementById('preview-frame');
@@ -199,7 +196,6 @@ window.openPreviewModal = function(fileUrl, title = "Preview Dokumen") {
     
     titleEl.innerText = title;
     
-    // Jika file berupa PDF atau Office, gunakan Google Viewer atau langsung iframe
     if (fileUrl.match(/\.(pdf|docx?|pptx?)$/i)) {
         frame.src = `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`;
     } else {
@@ -216,7 +212,6 @@ window.closePreviewModal = function() {
     if(frame) frame.src = '';
 };
 
-// AUTOMATIC ANNOUNCEMENT TEMPLATE GENERATOR
 async function triggerAutoAnnouncement(judul, isi, deadlineDays = 7) {
     if (!dbData.pengumuman) dbData.pengumuman = [];
     
@@ -787,13 +782,12 @@ window.deleteItem = async function(category, index) {
 };
 
 // ==========================================================================
-// KELOLA BANK SOAL & LATIHAN KUIS INTERAKTIF
+// KELOLA BANK SOAL & LATIHAN KUIS ISIAN INTERAKTIF
 // ==========================================================================
 function renderSoalTab() {
     const startCard = document.getElementById('quiz-start-card');
     const activeArea = document.getElementById('quiz-active-area');
     
-    // Reset ke mode awal (menampilkan tombol Start)
     if (startCard) startCard.style.display = 'block';
     if (activeArea) activeArea.style.display = 'none';
 }
@@ -807,7 +801,6 @@ function startQuiz() {
     if (startCard) startCard.style.display = 'none';
     if (activeArea) activeArea.style.display = 'block';
 
-    // Reset tombol & hasil
     document.getElementById('submit-quiz-btn').style.display = 'inline-flex';
     document.getElementById('reset-quiz-btn').style.display = 'none';
     document.getElementById('quiz-result-card').style.display = 'none';
@@ -818,7 +811,7 @@ function startQuiz() {
     const categorySoal = dbData.soal.filter(s => s.category === category);
 
     if (categorySoal.length === 0) {
-        container.innerHTML = `<p style="text-align:center; color:var(--text-muted); padding:20px;">Belum ada soal untuk sub-bagian Anatomi ini.</p>`;
+        container.innerHTML = `<p style="text-align:center; color:var(--text-muted); padding:20px;">Belum ada soal isian untuk sub-bagian Anatomi ini.</p>`;
         document.getElementById('submit-quiz-btn').style.display = 'none';
         return;
     }
@@ -827,16 +820,6 @@ function startQuiz() {
 
     categorySoal.forEach((s, idx) => {
         const actualIdx = dbData.soal.findIndex(item => item.id === s.id);
-
-        let optionsHtml = '';
-        s.options.forEach((opt, optIdx) => {
-            optionsHtml += `
-                <label style="display:flex; align-items:center; padding:10px 14px; border:1px solid var(--border); border-radius:8px; cursor:pointer; background:var(--bg-main); transition:background 0.2s;" onmouseover="this.style.background='var(--bg-light)'" onmouseout="this.style.background='var(--bg-main)'">
-                    <input type="radio" name="soal_${s.id}" value="${optIdx}" style="margin-right:12px; transform:scale(1.2);">
-                    <span style="font-size:14px; color:var(--text);"><strong>${String.fromCharCode(65 + optIdx)}.</strong> ${opt}</span>
-                </label>
-            `;
-        });
 
         let adminBtns = isAdmin ? `
             <div style="margin-top:10px;">
@@ -848,7 +831,9 @@ function startQuiz() {
         container.innerHTML += `
             <div class="card" style="margin-bottom:18px; border-left:4px solid var(--accent); background:var(--bg-card);">
                 <p style="font-size:15px; font-weight:bold; color:var(--text); margin-bottom:12px;">Soal ${idx + 1}: ${s.question}</p>
-                <div style="display:flex; flex-direction:column; gap:8px;">${optionsHtml}</div>
+                <div style="margin-bottom: 10px;">
+                    <input type="text" id="jawaban_${s.id}" class="input-field" placeholder="Ketik jawaban Anda di sini..." style="padding: 10px 14px; font-size: 14px;">
+                </div>
                 <div id="feedback-${s.id}" class="feedback-box" style="display:none; margin-top:12px; padding:12px; border-radius:8px; font-size:13px; line-height:1.5;"></div>
                 ${adminBtns}
             </div>
@@ -865,31 +850,30 @@ function submitQuiz() {
     let score = 0;
 
     categorySoal.forEach((s) => {
-        const selected = document.querySelector(`input[name="soal_${s.id}"]:checked`);
+        const inputEl = document.getElementById(`jawaban_${s.id}`);
         const feedbackEl = document.getElementById(`feedback-${s.id}`);
-        if (!feedbackEl) return;
+        if (!inputEl || !feedbackEl) return;
 
         feedbackEl.style.display = 'block';
+        const userAns = inputEl.value.trim().toLowerCase();
+        const correctAnswer = (s.answer || "").trim().toLowerCase();
 
-        if (selected) {
-            const userAns = parseInt(selected.value);
-            if (userAns === s.correct) {
-                score++;
-                feedbackEl.style.background = '#d1fae5';
-                feedbackEl.style.color = '#065f46';
-                feedbackEl.style.border = '1px solid #a7f3d0';
-                feedbackEl.innerHTML = `<strong>✅ Benar!</strong><br>${s.explanation || ''}`;
-            } else {
-                feedbackEl.style.background = '#fee2e2';
-                feedbackEl.style.color = '#991b1b';
-                feedbackEl.style.border = '1px solid #fca5a5';
-                feedbackEl.innerHTML = `<strong>❌ Salah!</strong> Jawaban yang benar adalah <strong>${String.fromCharCode(65 + s.correct)}</strong>.<br>${s.explanation || ''}`;
-            }
+        if (userAns !== "" && (userAns === correctAnswer || correctAnswer.includes(userAns) || userAns.includes(correctAnswer))) {
+            score++;
+            feedbackEl.style.background = '#d1fae5';
+            feedbackEl.style.color = '#065f46';
+            feedbackEl.style.border = '1px solid #a7f3d0';
+            feedbackEl.innerHTML = `<strong>✅ Benar!</strong> Jawaban Anda sesuai.<br><em>Kunci:</em> <strong>${s.answer}</strong><br>${s.explanation || ''}`;
+        } else if (userAns === "") {
+            feedbackEl.style.background = '#fee2e2';
+            feedbackEl.style.color = '#991b1b';
+            feedbackEl.style.border = '1px solid #fca5a5';
+            feedbackEl.innerHTML = `<strong>⚠️ Tidak Dijawab!</strong><br><em>Kunci Jawaban:</em> <strong>${s.answer}</strong><br>${s.explanation || ''}`;
         } else {
             feedbackEl.style.background = '#fee2e2';
             feedbackEl.style.color = '#991b1b';
             feedbackEl.style.border = '1px solid #fca5a5';
-            feedbackEl.innerHTML = `<strong>⚠️ Tidak Dijawab!</strong> Jawaban yang benar adalah <strong>${String.fromCharCode(65 + s.correct)}</strong>.<br>${s.explanation || ''}`;
+            feedbackEl.innerHTML = `<strong>❌ Kurang Tepat / Salah!</strong><br>Jawaban Anda: "${inputEl.value}"<br><em>Kunci Jawaban:</em> <strong>${s.answer}</strong><br>${s.explanation || ''}`;
         }
     });
 
@@ -911,25 +895,17 @@ function resetQuiz() {
 window.openSoalModal = function(index = -1) {
     document.getElementById('edit-soal-index').value = index;
     if (index >= 0 && dbData.soal[index]) {
-        document.getElementById('soal-modal-title').innerText = "Edit Soal";
+        document.getElementById('soal-modal-title').innerText = "Edit Soal Isian";
         let item = dbData.soal[index];
         document.getElementById('s-category').value = item.category || 'anatomi';
         document.getElementById('s-question').value = item.question || '';
-        document.getElementById('s-opt0').value = item.options?.[0] || '';
-        document.getElementById('s-opt1').value = item.options?.[1] || '';
-        document.getElementById('s-opt2').value = item.options?.[2] || '';
-        document.getElementById('s-opt3').value = item.options?.[3] || '';
-        document.getElementById('s-correct').value = item.correct !== undefined ? item.correct : 0;
+        document.getElementById('s-answer').value = item.answer || '';
         document.getElementById('s-exp').value = item.explanation || '';
     } else {
-        document.getElementById('soal-modal-title').innerText = "Tambah Soal Baru";
+        document.getElementById('soal-modal-title').innerText = "Tambah Soal Isian Baru";
         document.getElementById('s-category').value = 'anatomi';
         document.getElementById('s-question').value = '';
-        document.getElementById('s-opt0').value = '';
-        document.getElementById('s-opt1').value = '';
-        document.getElementById('s-opt2').value = '';
-        document.getElementById('s-opt3').value = '';
-        document.getElementById('s-correct').value = 0;
+        document.getElementById('s-answer').value = '';
         document.getElementById('s-exp').value = '';
     }
     document.getElementById('soal-modal').style.display = 'flex';
@@ -939,14 +915,10 @@ window.saveSoalItem = async function() {
     const idx = parseInt(document.getElementById('edit-soal-index').value);
     const category = document.getElementById('s-category').value;
     const question = document.getElementById('s-question').value.trim();
-    const opt0 = document.getElementById('s-opt0').value.trim();
-    const opt1 = document.getElementById('s-opt1').value.trim();
-    const opt2 = document.getElementById('s-opt2').value.trim();
-    const opt3 = document.getElementById('s-opt3').value.trim();
-    const correct = parseInt(document.getElementById('s-correct').value);
+    const answer = document.getElementById('s-answer').value.trim();
     const explanation = document.getElementById('s-exp').value.trim();
 
-    if (!question || !opt0 || !opt1) return alert("Pertanyaan dan minimal 2 pilihan jawaban wajib diisi!");
+    if (!question || !answer) return alert("Pertanyaan dan Kunci Jawaban wajib diisi!");
 
     if (!dbData.soal) dbData.soal = [];
 
@@ -954,8 +926,7 @@ window.saveSoalItem = async function() {
         id: idx >= 0 && dbData.soal[idx] ? dbData.soal[idx].id : Date.now(),
         category: category,
         question: question,
-        options: [opt0, opt1, opt2, opt3].filter(o => o !== ''),
-        correct: correct,
+        answer: answer,
         explanation: explanation
     };
 
@@ -965,7 +936,7 @@ window.saveSoalItem = async function() {
     await saveCategoryData('soal');
     closeModal('soal-modal');
     startQuiz();
-    alert('✅ Soal berhasil disimpan ke cloud Supabase!');
+    alert('✅ Soal isian berhasil disimpan ke cloud Supabase!');
 };
 
 window.deleteSoalItem = async function(index) {
