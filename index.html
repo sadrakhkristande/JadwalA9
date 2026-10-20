@@ -282,28 +282,28 @@
                 </div>
             </div>
 
-            <!-- TAB LATIHAN SOAL -->
+            <!-- TAB LATIHAN SOAL ISIAN -->
             <div id="tab-soal" class="tab-content" style="display: none;">
                 <div class="card">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                        <h3 style="color: var(--accent);">❓ Bank & Latihan Soal Interaktif</h3>
+                        <h3 style="color: var(--accent);">❓ Latihan Soal Isian Anatomi</h3>
                         <div style="display: flex; gap: 10px; align-items: center;">
                             <label style="font-weight: 600; font-size: 13px;">Pilih Sub-Bagian:</label>
                             <select id="soal-category-select" class="input-field" onchange="renderSoalTab()" style="width: auto; margin-bottom: 0;">
                                 <option value="anatomi">🦴 Anatomi</option>
                             </select>
-                            <button class="btn admin-only" style="display: none;" onclick="openSoalModal(-1)">+ Tambah Soal Baru</button>
+                            <button class="btn admin-only" style="display: none;" onclick="openSoalModal(-1)">+ Tambah Soal Isian</button>
                         </div>
                     </div>
 
                     <!-- TAMPILAN AWAL SEBELUM MULAI (START CARD) -->
                     <div id="quiz-start-card" style="background: var(--bg-light); border: 1px solid var(--border); padding: 30px; border-radius: 12px; text-align: center; margin-top: 10px;">
-                        <h3 id="quiz-start-title" style="color: var(--accent); margin-bottom: 10px;">Latihan Soal Sub-Bagian Anatomi</h3>
-                        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Uji pemahaman materi Anatomi Kedokteran Anda. Pilihlah jawaban yang paling tepat untuk setiap pertanyaan, lalu tekan tombol <strong>Submit Jawaban</strong> di bagian akhir untuk melihat skor dan pembahasan.</p>
-                        <button class="btn" onclick="startQuiz()" style="padding: 12px 28px; font-size: 16px; font-weight: bold; background: var(--accent);">▶️ Mulai Kuis Anatomi</button>
+                        <h3 id="quiz-start-title" style="color: var(--accent); margin-bottom: 10px;">Latihan Soal Isian Sub-Bagian Anatomi</h3>
+                        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Uji pemahaman Anda dengan menjawab pertanyaan secara mandiri. Ketik jawaban singkat pada kolom yang tersedia, lalu tekan tombol <strong>Submit Jawaban</strong> untuk melihat kecocokan jawaban dan pembahasannya.</p>
+                        <button class="btn" onclick="startQuiz()" style="padding: 12px 28px; font-size: 16px; font-weight: bold; background: var(--accent);">▶️ Mulai Kuis Isian</button>
                     </div>
 
-                    <!-- TAMPILAN AREA KERJA KUIS (SELEPAS TOMBOL START) -->
+                    <!-- TAMPILAN AREA KERJA KUIS ISIAN -->
                     <div id="quiz-active-area" style="display: none; margin-top: 15px;">
                         <div id="soal-cards-container"></div>
 
@@ -419,10 +419,10 @@
         </div>
     </div>
 
-    <!-- MODAL ADMIN EDIT / TAMBAH SOAL -->
+    <!-- MODAL ADMIN EDIT / TAMBAH SOAL ISIAN -->
     <div id="soal-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:9999; padding: 15px;">
         <div class="card" style="width:100%; max-width:650px; max-height:90vh; overflow-y:auto;">
-            <h3 id="soal-modal-title" style="color:var(--accent); margin-bottom:15px;">Kelola Soal</h3>
+            <h3 id="soal-modal-title" style="color:var(--accent); margin-bottom:15px;">Kelola Soal Isian</h3>
             <input type="hidden" id="edit-soal-index" value="-1">
             
             <label style="font-weight:600; font-size:13px; display:block; margin-bottom:4px;">Sub-Bagian Topik:</label>
@@ -431,30 +431,14 @@
             </select>
 
             <label style="font-weight:600; font-size:13px; display:block; margin-bottom:4px;">Pertanyaan Soal:</label>
-            <textarea id="s-question" class="input-field" style="height:80px; margin-bottom:10px;" placeholder="Tuliskan soal di sini..."></textarea>
+            <textarea id="s-question" class="input-field" style="height:80px; margin-bottom:10px;" placeholder="Tuliskan pertanyaan isian di sini..."></textarea>
 
-            <label style="font-weight:600; font-size:13px; display:block; margin-bottom:4px;">Pilihan A:</label>
-            <input type="text" id="s-opt0" class="input-field" placeholder="Opsi A" style="margin-bottom:8px;">
+            <label style="font-weight:600; font-size:13px; display:block; margin-bottom:4px;">Kunci Jawaban (Kata Kunci / Jawaban Benar):</label>
+            <input type="text" id="s-answer" class="input-field" placeholder="Contoh: Os Clavicula" style="margin-bottom:10px;">
+            <small style="color: var(--text-muted); display: block; margin-top: -6px; margin-bottom: 10px; font-size: 11px;">Sistem akan mencocokkan jawaban mahasiswa secara fleksibel (mengabaikan perbedaan huruf besar/kecil).</small>
 
-            <label style="font-weight:600; font-size:13px; display:block; margin-bottom:4px;">Pilihan B:</label>
-            <input type="text" id="s-opt1" class="input-field" placeholder="Opsi B" style="margin-bottom:8px;">
-
-            <label style="font-weight:600; font-size:13px; display:block; margin-bottom:4px;">Pilihan C:</label>
-            <input type="text" id="s-opt2" class="input-field" placeholder="Opsi C" style="margin-bottom:8px;">
-
-            <label style="font-weight:600; font-size:13px; display:block; margin-bottom:4px;">Pilihan D:</label>
-            <input type="text" id="s-opt3" class="input-field" placeholder="Opsi D" style="margin-bottom:10px;">
-
-            <label style="font-weight:600; font-size:13px; display:block; margin-bottom:4px;">Pilih Kunci Jawaban Benar:</label>
-            <select id="s-correct" class="input-field" style="margin-bottom:10px;">
-                <option value="0">A</option>
-                <option value="1">B</option>
-                <option value="2">C</option>
-                <option value="3">D</option>
-            </select>
-
-            <label style="font-weight:600; font-size:13px; display:block; margin-bottom:4px;">Pembahasan Jawaban:</label>
-            <textarea id="s-exp" class="input-field" style="height:70px; margin-bottom:15px;" placeholder="Tuliskan pembahasan singkat..."></textarea>
+            <label style="font-weight:600; font-size:13px; display:block; margin-bottom:4px;">Pembahasan / Penjelasan:</label>
+            <textarea id="s-exp" class="input-field" style="height:70px; margin-bottom:15px;" placeholder="Tuliskan pembahasan lengkap..."></textarea>
 
             <div style="display:flex; gap:10px;">
                 <button class="btn" onclick="saveSoalItem()" style="flex:1;">Simpan Soal ke Cloud</button>
