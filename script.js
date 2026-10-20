@@ -34,6 +34,7 @@ let dbData = {
     tutorial: [],
     materi: [],
     jadwalCustom: [],
+    soal: [],
     maintenance: false,
     globalAnnouncement: '',
     adminCode: 'A9ACOR',
@@ -82,7 +83,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 // FETCH DATA MULTI-JSON SUPABASE
 async function fetchDatabaseFromCloud() {
     try {
-        const keys = ['pengumuman', 'reminder', 'tugas', 'laboratorium', 'skills_lab', 'tutorial', 'materi', 'jadwal', 'config'];
+        const keys = ['pengumuman', 'reminder', 'tugas', 'laboratorium', 'skills_lab', 'tutorial', 'materi', 'jadwal', 'soal', 'config'];
         
         for (const k of keys) {
             const { data, error } = await supabaseClient
@@ -526,6 +527,7 @@ function renderAll() {
     renderPengumuman(); renderReminder(); renderJadwalUpdates(); renderJadwal();
     renderTugas(); renderPraktikum('laboratorium', 'lab-list');
     renderPraktikum('skills_lab', 'skills-list'); renderPraktikum('tutorial', 'tutorial-list'); renderMateri();
+    renderSoalTab();
 }
 
 window.addPengumuman = async function() {
@@ -781,5 +783,196 @@ window.deleteItem = async function(category, index) {
         dbData[category].splice(index, 1);
         await saveCategoryData(category);
         alert('Berhasil dihapus!');
+    }
+};
+
+// ==========================================================================
+// KELOLA BANK SOAL & LATIHAN KUIS INTERAKTIF
+// ==========================================================================
+function renderSoalTab() {
+    const startCard = document.getElementById('quiz-start-card');
+    const activeArea = document.getElementById('quiz-active-area');
+    
+    // Reset ke mode awal (menampilkan tombol Start)
+    if (startCard) startCard.style.display = 'block';
+    if (activeArea) activeArea.style.display = 'none';
+}
+
+function startQuiz() {
+    const startCard = document.getElementById('quiz-start-card');
+    const activeArea = document.getElementById('quiz-active-area');
+    const container = document.getElementById('soal-cards-container');
+    const category = document.getElementById('soal-category-select').value;
+    
+    if (startCard) startCard.style.display = 'none';
+    if (activeArea) activeArea.style.display = 'block';
+
+    // Reset tombol & hasil
+    document.getElementById('submit-quiz-btn').style.display = 'inline-flex';
+    document.getElementById('reset-quiz-btn').style.display = 'none';
+    document.getElementById('quiz-result-card').style.display = 'none';
+
+    container.innerHTML = '';
+
+    if (!dbData.soal) dbData.soal = [];
+    const categorySoal = dbData.soal.filter(s => s.category === category);
+
+    if (categorySoal.length === 0) {
+        container.innerHTML = `<p style="text-align:center; color:var(--text-muted); padding:20px;">Belum ada soal untuk sub-bagian Anatomi ini.</p>`;
+        document.getElementById('submit-quiz-btn').style.display = 'none';
+        return;
+    }
+
+    const isAdmin = currentUser && currentUser.role === 'admin';
+
+    categorySoal.forEach((s, idx) => {
+        const actualIdx = dbData.soal.findIndex(item => item.id === s.id);
+
+        let optionsHtml = '';
+        s.options.forEach((opt, optIdx) => {
+            optionsHtml += `
+                <label style="display:flex; align-items:center; padding:10px 14px; border:1px solid var(--border); border-radius:8px; cursor:pointer; background:var(--bg-main); transition:background 0.2s;" onmouseover="this.style.background='var(--bg-light)'" onmouseout="this.style.background='var(--bg-main)'">
+                    <input type="radio" name="soal_${s.id}" value="${optIdx}" style="margin-right:12px; transform:scale(1.2);">
+                    <span style="font-size:14px; color:var(--text);"><strong>${String.fromCharCode(65 + optIdx)}.</strong> ${opt}</span>
+                </label>
+            `;
+        });
+
+        let adminBtns = isAdmin ? `
+            <div style="margin-top:10px;">
+                <button class="btn" style="padding:3px 8px; font-size:11px; background:#d97706;" onclick="openSoalModal(${actualIdx})">Edit Soal</button>
+                <button class="btn btn-danger" style="padding:3px 8px; font-size:11px; margin-left:4px;" onclick="deleteSoalItem(${actualIdx})">Hapus Soal</button>
+            </div>
+        ` : '';
+
+        container.innerHTML += `
+            <div class="card" style="margin-bottom:18px; border-left:4px solid var(--accent); background:var(--bg-card);">
+                <p style="font-size:15px; font-weight:bold; color:var(--text); margin-bottom:12px;">Soal ${idx + 1}: ${s.question}</p>
+                <div style="display:flex; flex-direction:column; gap:8px;">${optionsHtml}</div>
+                <div id="feedback-${s.id}" class="feedback-box" style="display:none; margin-top:12px; padding:12px; border-radius:8px; font-size:13px; line-height:1.5;"></div>
+                ${adminBtns}
+            </div>
+        `;
+    });
+}
+
+function submitQuiz() {
+    const category = document.getElementById('soal-category-select').value;
+    const categorySoal = dbData.soal.filter(s => s.category === category);
+
+    if (categorySoal.length === 0) return;
+
+    let score = 0;
+
+    categorySoal.forEach((s) => {
+        const selected = document.querySelector(`input[name="soal_${s.id}"]:checked`);
+        const feedbackEl = document.getElementById(`feedback-${s.id}`);
+        if (!feedbackEl) return;
+
+        feedbackEl.style.display = 'block';
+
+        if (selected) {
+            const userAns = parseInt(selected.value);
+            if (userAns === s.correct) {
+                score++;
+                feedbackEl.style.background = '#d1fae5';
+                feedbackEl.style.color = '#065f46';
+                feedbackEl.style.border = '1px solid #a7f3d0';
+                feedbackEl.innerHTML = `<strong>✅ Benar!</strong><br>${s.explanation || ''}`;
+            } else {
+                feedbackEl.style.background = '#fee2e2';
+                feedbackEl.style.color = '#991b1b';
+                feedbackEl.style.border = '1px solid #fca5a5';
+                feedbackEl.innerHTML = `<strong>❌ Salah!</strong> Jawaban yang benar adalah <strong>${String.fromCharCode(65 + s.correct)}</strong>.<br>${s.explanation || ''}`;
+            }
+        } else {
+            feedbackEl.style.background = '#fee2e2';
+            feedbackEl.style.color = '#991b1b';
+            feedbackEl.style.border = '1px solid #fca5a5';
+            feedbackEl.innerHTML = `<strong>⚠️ Tidak Dijawab!</strong> Jawaban yang benar adalah <strong>${String.fromCharCode(65 + s.correct)}</strong>.<br>${s.explanation || ''}`;
+        }
+    });
+
+    const resultCard = document.getElementById('quiz-result-card');
+    const scoreText = document.getElementById('quiz-score-text');
+    const percentage = Math.round((score / categorySoal.length) * 100);
+
+    scoreText.innerText = `Skor Anda: ${score} / ${categorySoal.length} (${percentage}%)`;
+    resultCard.style.display = 'block';
+
+    document.getElementById('submit-quiz-btn').style.display = 'none';
+    document.getElementById('reset-quiz-btn').style.display = 'inline-flex';
+}
+
+function resetQuiz() {
+    startQuiz();
+}
+
+window.openSoalModal = function(index = -1) {
+    document.getElementById('edit-soal-index').value = index;
+    if (index >= 0 && dbData.soal[index]) {
+        document.getElementById('soal-modal-title').innerText = "Edit Soal";
+        let item = dbData.soal[index];
+        document.getElementById('s-category').value = item.category || 'anatomi';
+        document.getElementById('s-question').value = item.question || '';
+        document.getElementById('s-opt0').value = item.options?.[0] || '';
+        document.getElementById('s-opt1').value = item.options?.[1] || '';
+        document.getElementById('s-opt2').value = item.options?.[2] || '';
+        document.getElementById('s-opt3').value = item.options?.[3] || '';
+        document.getElementById('s-correct').value = item.correct !== undefined ? item.correct : 0;
+        document.getElementById('s-exp').value = item.explanation || '';
+    } else {
+        document.getElementById('soal-modal-title').innerText = "Tambah Soal Baru";
+        document.getElementById('s-category').value = 'anatomi';
+        document.getElementById('s-question').value = '';
+        document.getElementById('s-opt0').value = '';
+        document.getElementById('s-opt1').value = '';
+        document.getElementById('s-opt2').value = '';
+        document.getElementById('s-opt3').value = '';
+        document.getElementById('s-correct').value = 0;
+        document.getElementById('s-exp').value = '';
+    }
+    document.getElementById('soal-modal').style.display = 'flex';
+};
+
+window.saveSoalItem = async function() {
+    const idx = parseInt(document.getElementById('edit-soal-index').value);
+    const category = document.getElementById('s-category').value;
+    const question = document.getElementById('s-question').value.trim();
+    const opt0 = document.getElementById('s-opt0').value.trim();
+    const opt1 = document.getElementById('s-opt1').value.trim();
+    const opt2 = document.getElementById('s-opt2').value.trim();
+    const opt3 = document.getElementById('s-opt3').value.trim();
+    const correct = parseInt(document.getElementById('s-correct').value);
+    const explanation = document.getElementById('s-exp').value.trim();
+
+    if (!question || !opt0 || !opt1) return alert("Pertanyaan dan minimal 2 pilihan jawaban wajib diisi!");
+
+    if (!dbData.soal) dbData.soal = [];
+
+    const newEntry = {
+        id: idx >= 0 && dbData.soal[idx] ? dbData.soal[idx].id : Date.now(),
+        category: category,
+        question: question,
+        options: [opt0, opt1, opt2, opt3].filter(o => o !== ''),
+        correct: correct,
+        explanation: explanation
+    };
+
+    if (idx >= 0) dbData.soal[idx] = newEntry;
+    else dbData.soal.push(newEntry);
+
+    await saveCategoryData('soal');
+    closeModal('soal-modal');
+    startQuiz();
+    alert('✅ Soal berhasil disimpan ke cloud Supabase!');
+};
+
+window.deleteSoalItem = async function(index) {
+    if (confirm('Apakah Anda yakin ingin menghapus soal ini?')) {
+        dbData.soal.splice(index, 1);
+        await saveCategoryData('soal');
+        startQuiz();
+        alert('✅ Soal berhasil dihapus!');
     }
 };
