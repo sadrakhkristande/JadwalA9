@@ -109,6 +109,119 @@ async function fetchDatabaseFromCloud() {
         console.error("Gagal memuat data dari Supabase:", err);
     }
 
+    // Default soal awal jika tabel soal masih kosong
+    if (!dbData.soal || dbData.soal.length === 0) {
+        dbData.soal = [
+            {
+                "id": 1711000000001,
+                "category": "anatomi",
+                "question": "Seorang mahasiswa kedokteran mengamati struktur tulang shoulder girdle (cingulum membri superioris). Tulang ini memiliki dua extremitas, yaitu extremitas sternalis dan extremitas acromialis, serta sulcus musculi subclavii di permukaan inferiornya. Apakah nama tulang yang dimaksud?",
+                "answer": "Os Clavicula",
+                "explanation": "Os clavicula (tulang selangka) adalah tulang berbentuk S panjang yang menghubungkan sternum dengan scapula.",
+                "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Clavicle_-_inferior_surface.png/800px-Clavicle_-_inferior_surface.png"
+            },
+            {
+                "id": 1711000000002,
+                "category": "anatomi",
+                "question": "Kelompok otot Rotator Cuff sangat penting untuk menjaga stabilitas articulatio humeri. Sebutkan satu otot besar yang BUKAN merupakan anggota dari kelompok musculi rotator cuff (otot yang sering keliru dianggap bagian SITS)?",
+                "answer": "M. Teres Major",
+                "explanation": "Otot Rotator Cuff disingkat SITS: M. Supraspinatus, M. Infraspinatus, M. Teres Minor, dan M. Subscapularis. M. Teres Major tidak termasuk di dalamnya."
+            },
+            {
+                "id": 1711000000003,
+                "category": "anatomi",
+                "question": "Struktur saraf apakah yang mengalami kompresi atau penekanan di dalam Canalis Carpi hingga menyebabkan kondisi Carpal Tunnel Syndrome (CTS)?",
+                "answer": "Nervus Medianus",
+                "explanation": "Canalis carpi dilewati oleh 9 tendon otot flexor dan 1 saraf utama yaitu Nervus Medianus.",
+                "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Carpal_tunnel_and_carpal_bones.png/640px-Carpal_tunnel_and_carpal_bones.png"
+            },
+            {
+                "id": 1711000000004,
+                "category": "anatomi",
+                "question": "Pria yang mengalami fraktur pada pertengahan shaft/corpus os humerus (di sulcus nervi radialis) mengalami kelumpuhan otot extensor sehingga pergelangan tangannya terkulai ke bawah. Apakah nama kelainan klinis tersebut?",
+                "answer": "Wrist Drop",
+                "explanation": "Kerusakan pada Nervus Radialis akibat fraktur shaft humerus menyebabkan hilangnya fungsi otot extensor lengan bawah yang bergejala sebagai wrist drop."
+            },
+            {
+                "id": 1711000000005,
+                "category": "anatomi",
+                "question": "Fasciculus posterior dari plexus brachialis (C5-T1) bercabang menjadi dua nervus utama penunjang ekstremitas superior. Sebutkan salah satu dari dua nervus utama tersebut!",
+                "answer": "Nervus Radialis",
+                "explanation": "Fasciculus posterior plexus brachialis memberikan cabang terminal utama berupa Nervus Axillaris dan Nervus Radialis."
+            },
+            {
+                "id": 1711000000006,
+                "category": "anatomi",
+                "question": "Pada cranium neonatus, terdapat area membranosa berbentuk rhomboid (belah ketupat) pada persimpangan sutura coronalis dan sagittalis yang disebut fontanella major. Apakah nama titik pertemuan dewasa dari area ini?",
+                "answer": "Bregma",
+                "explanation": "Fontanella major (fonticulus anterior) berangsur menutup dan membentuk titik kranio-metrik dewasa yang dinamakan Bregma."
+            },
+            {
+                "id": 1711000000007,
+                "category": "anatomi",
+                "question": "Dari 8 tulang penyusun neurocranium, terdapat 4 tulang tunggal (unpaired). Sebutkan salah satu dari tulang tunggal penyusun neurocranium tersebut!",
+                "answer": "Os Frontale",
+                "explanation": "4 tulang tunggal Neurocranium adalah Os Frontale, Os Ethmoidale, Os Sphenoidale, dan Os Occipitale."
+            },
+            {
+                "id": 1711000000008,
+                "category": "anatomi",
+                "question": "Lubang (foramen) di basis cranii bagian fossa cranii media yang dilewati oleh cabang nervus mandibularis (V3) disebut foramen...",
+                "answer": "Foramen Ovale",
+                "explanation": "Fissura orbitalis superior dilewati N. V1, Foramen Rotundum dilewati N. V2, dan Foramen Ovale dilewati N. V3 (N. mandibularis)."
+            },
+            {
+                "id": 1711000000009,
+                "category": "anatomi",
+                "question": "Viscerocranium (ossa faciei) terdiri dari 14 tulang, di mana dua di antaranya merupakan tulang tunggal (unpaired). Sebutkan salah satu dari dua tulang wajah tunggal tersebut!",
+                "answer": "Os Mandibula",
+                "explanation": "Viscerocranium memiliki 2 tulang tunggal yaitu Os Mandibula dan Os Vomer."
+            },
+            {
+                "id": 1711000000010,
+                "category": "anatomi",
+                "question": "Titik kranio-metrik 'Pterion' merupakan area rawan cedera di dinding lateral cranium. Pecahnya pembuluh darah di balik area ini berisiko tinggi menyebabkan hematoma jenis...",
+                "answer": "Epidural Hematoma",
+                "explanation": "Di balik titik Pterion berjalan cabang anterior Arteri Meningea Media, sehingga ruda paksa pada area ini dapat memicu terjadinya Epidural Hematoma (EDH)."
+            },
+            {
+                "id": 1711000000011,
+                "category": "anatomi",
+                "question": "Otot kompartemen anterior brachium yang diinervasi oleh Nervus Musculocutaneus dan berfungsi utama sebagai flexor kuat pada articulatio cubiti serta supinator lengan bawah adalah M...",
+                "answer": "M. Biceps Brachii",
+                "explanation": "M. biceps brachii memiliki dua caput (longum et breve) dan merupakan flexor serta supinator utama lengan bawah."
+            },
+            {
+                "id": 1711000000012,
+                "category": "anatomi",
+                "question": "Foramen jugulare di basis cranii yang dibentuk oleh os temporale dan os occipitale dilewati oleh vena jugularis interna serta beberapa saraf kranial, di antaranya Nervus Glossopharyngeus (IX), Nervus Vagus (X), dan Nervus...",
+                "answer": "Nervus Accessorius",
+                "explanation": "Foramen jugulare dilewati oleh N. IX, N. X, dan N. XI (N. accessorius), serta awal Vena Jugularis Interna."
+            },
+            {
+                "id": 1711000000013,
+                "category": "anatomi",
+                "question": "Otot kelompok penunjang ekspresi wajah (mimik) yang melingkari mata dan berfungsi untuk menutup kelopak mata secara rapat adalah M...",
+                "answer": "M. Orbicularis Oculi",
+                "explanation": "M. orbicularis oculi adalah otot sphincter di sekitar mata yang dipersarafi oleh cabang Nervus Facialis (VII)."
+            },
+            {
+                "id": 1711000000014,
+                "category": "anatomi",
+                "question": "Kelompok otot thenar pada telapak tangan yang berperan penting untuk gerak opposisi ibu jari sebagian besar diinervasi oleh cabang dari Nervus...",
+                "answer": "Nervus Medianus",
+                "explanation": "Sebagian besar otot thenar diinervasi oleh N. medianus, kecuali bagian profunda M. flexor pollicis brevis yang dipersarafi N. ulnaris."
+            },
+            {
+                "id": 1711000000015,
+                "category": "anatomi",
+                "question": "Pada basis cranii fossa cranii anterior, terdapat lempengan bertulang berpori dari os ethmoidale tempat lewatnya serabut-serabut saraf penciuman (N. I). Apakah nama lempengan tersebut?",
+                "answer": "Lamina Cribrosa",
+                "explanation": "Lamina cribrosa os ethmoidale dilewati oleh fila olfactoria (Nervus Olfactorius / N. I) menuju bulbus olfactorius."
+            }
+        ];
+    }
+
     if (!dbData.jadwalCustom || dbData.jadwalCustom.length === 0) {
         try {
             const res = await fetch('jadwal.json');
@@ -821,6 +934,12 @@ function startQuiz() {
     categorySoal.forEach((s, idx) => {
         const actualIdx = dbData.soal.findIndex(item => item.id === s.id);
 
+        let imageHtml = s.image ? `
+            <div style="margin: 12px 0; text-align: center;">
+                <img src="${s.image}" alt="Ilustrasi Soal Anatomi" style="max-width: 100%; max-height: 220px; border-radius: 8px; border: 1px solid var(--border); object-fit: contain; background: #fff; padding: 4px;">
+            </div>
+        ` : '';
+
         let adminBtns = isAdmin ? `
             <div style="margin-top:10px;">
                 <button class="btn" style="padding:3px 8px; font-size:11px; background:#d97706;" onclick="openSoalModal(${actualIdx})">Edit Soal</button>
@@ -830,8 +949,9 @@ function startQuiz() {
 
         container.innerHTML += `
             <div class="card" style="margin-bottom:18px; border-left:4px solid var(--accent); background:var(--bg-card);">
-                <p style="font-size:15px; font-weight:bold; color:var(--text); margin-bottom:12px;">Soal ${idx + 1}: ${s.question}</p>
-                <div style="margin-bottom: 10px;">
+                <p style="font-size:15px; font-weight:bold; color:var(--text); margin-bottom:8px;">Soal ${idx + 1}: ${s.question}</p>
+                ${imageHtml}
+                <div style="margin-top: 10px;">
                     <input type="text" id="jawaban_${s.id}" class="input-field" placeholder="Ketik jawaban Anda di sini..." style="padding: 10px 14px; font-size: 14px;">
                 </div>
                 <div id="feedback-${s.id}" class="feedback-box" style="display:none; margin-top:12px; padding:12px; border-radius:8px; font-size:13px; line-height:1.5;"></div>
@@ -899,12 +1019,14 @@ window.openSoalModal = function(index = -1) {
         let item = dbData.soal[index];
         document.getElementById('s-category').value = item.category || 'anatomi';
         document.getElementById('s-question').value = item.question || '';
+        document.getElementById('s-image').value = item.image || '';
         document.getElementById('s-answer').value = item.answer || '';
         document.getElementById('s-exp').value = item.explanation || '';
     } else {
         document.getElementById('soal-modal-title').innerText = "Tambah Soal Isian Baru";
         document.getElementById('s-category').value = 'anatomi';
         document.getElementById('s-question').value = '';
+        document.getElementById('s-image').value = '';
         document.getElementById('s-answer').value = '';
         document.getElementById('s-exp').value = '';
     }
@@ -915,6 +1037,7 @@ window.saveSoalItem = async function() {
     const idx = parseInt(document.getElementById('edit-soal-index').value);
     const category = document.getElementById('s-category').value;
     const question = document.getElementById('s-question').value.trim();
+    const image = document.getElementById('s-image').value.trim();
     const answer = document.getElementById('s-answer').value.trim();
     const explanation = document.getElementById('s-exp').value.trim();
 
@@ -926,6 +1049,7 @@ window.saveSoalItem = async function() {
         id: idx >= 0 && dbData.soal[idx] ? dbData.soal[idx].id : Date.now(),
         category: category,
         question: question,
+        image: image,
         answer: answer,
         explanation: explanation
     };
