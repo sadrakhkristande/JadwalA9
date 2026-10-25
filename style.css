@@ -1,11 +1,318 @@
 /* ==========================================================================
-   CBT SIMULASI BLOK 1.2 - SCOPED UNDER #tab-cbt
-   Menggunakan variabel tema portal agar konsisten (termasuk dark mode)
+   DESAIN PORTAL AKADEMIK A9 - HIJAU ELEGAN (UNS) & RINGAN TAMPILAN
    ========================================================================== */
 
-#tab-cbt {
-    padding-bottom: 20px;
+:root {
+    --primary: #064e3b;
+    --accent: #047857;
+    --accent-hover: #065f46;
+    --bg-main: #f4f7f5;
+    --bg-card: #ffffff;
+    --bg-light: #e6f4ea;
+    --text: #0f172a;
+    --text-muted: #475569;
+    --border: #cbd5e1;
+    --gold: #d97706;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 6px -1px rgba(6, 78, 59, 0.08), 0 2px 4px -1px rgba(6, 78, 59, 0.04);
+    --shadow-lg: 0 10px 15px -3px rgba(6, 78, 59, 0.12);
+    --radius: 12px;
 }
+
+body.theme-dark {
+    --primary: #10b981;
+    --accent: #059669;
+    --accent-hover: #10b981;
+    --bg-main: #061e14;
+    --bg-card: #0b2d21;
+    --bg-light: #134e3a;
+    --text: #f0fdf4;
+    --text-muted: #93c5fd;
+    --border: #1b4d3e;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+    --shadow-md: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text);
+    line-height: 1.5;
+    padding-bottom: 40px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* TAMPILAN LOGIN HP: OTOMATIS FIT DALAM SCREEN */
+#login-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 12px;
+    background: linear-gradient(135deg, #022c22 0%, #064e3b 50%, #047857 100%);
+}
+
+#login-page .card {
+    width: 100%;
+    max-width: 380px;
+    border-radius: 16px;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 20px 18px !important;
+}
+
+header {
+    background-color: var(--bg-card);
+    border-bottom: 2px solid var(--accent);
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: var(--shadow-sm);
+}
+
+nav {
+    display: flex;
+    gap: 8px;
+    padding: 12px 24px;
+    background-color: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+nav::-webkit-scrollbar {
+    display: none;
+}
+
+.nav-btn {
+    background: transparent;
+    color: var(--text-muted);
+    border: none;
+    padding: 8px 16px;
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.nav-btn:hover {
+    background-color: var(--bg-light);
+    color: var(--accent);
+}
+
+.nav-btn.active {
+    background-color: var(--accent);
+    color: white;
+    box-shadow: 0 2px 8px rgba(4, 120, 87, 0.3);
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 22px;
+}
+
+.switch input { 
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #cbd5e1;
+    transition: .3s;
+    border-radius: 22px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--accent);
+}
+
+input:checked + .slider:before {
+    transform: translateX(22px);
+}
+
+main {
+    max-width: 1200px;
+    margin: 24px auto;
+    padding: 0 16px;
+}
+
+.card {
+    background-color: var(--bg-card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-md);
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+.input-field {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background-color: var(--bg-main);
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    margin-bottom: 8px;
+}
+
+.input-field:focus {
+    border-color: var(--accent);
+}
+
+.btn {
+    background-color: var(--accent);
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.btn:hover { background-color: var(--accent-hover); }
+.btn-danger { background-color: #ef4444; }
+.btn-danger:hover { background-color: #dc2626; }
+.btn-warning { background-color: var(--gold); color: white; }
+.btn-warning:hover { background-color: #b45309; }
+.btn-success { background-color: #059669; }
+
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-wa {
+    background-color: #10b981;
+    color: white;
+    text-decoration: none;
+}
+
+.pengumuman-card.is-latest {
+    border-left: 5px solid var(--gold) !important;
+    background: linear-gradient(135deg, var(--bg-card) 0%, rgba(217, 119, 6, 0.08) 100%) !important;
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.15) !important;
+}
+
+.badge-new {
+    background-color: var(--gold);
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    margin-left: 8px;
+    animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.85; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+th, td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+}
+
+th {
+    background-color: var(--bg-light);
+    color: var(--primary);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 12px;
+}
+
+@media (max-width: 768px) {
+    #login-page { padding: 10px; }
+    #login-page .card { padding: 16px 14px !important; }
+    header { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .dashboard-grid { grid-template-columns: 1fr; }
+
+    table, thead, tbody, th, td, tr { display: block; }
+    thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+    tr {
+        background-color: var(--bg-light);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        margin-bottom: 12px;
+        padding: 12px;
+    }
+    td {
+        border: none;
+        border-bottom: 1px solid var(--border);
+        padding: 8px 0;
+    }
+    td:last-child { border-bottom: none; }
+}
+
+/* ==========================================================================
+   CBT SIMULASI BLOK 1.2 - SCOPED DI #tab-cbt (TIDAK MENIMPA TEMA PORTAL)
+   ========================================================================== */
+
+#tab-cbt { padding-bottom: 20px; }
 
 #tab-cbt .cbt-container {
     max-width: 900px;
@@ -23,18 +330,21 @@
     padding: 20px;
     text-align: center;
     position: relative;
+    /* Sengaja pakai <div> bukan <header> agar tidak kena global sticky header */
 }
 
 #tab-cbt .cbt-header h1 {
     margin: 0;
     font-size: 20px;
     letter-spacing: 0.5px;
+    color: #ffffff;
 }
 
 #tab-cbt .cbt-header p {
     margin: 5px 0 0;
     font-size: 13px;
     opacity: 0.95;
+    color: #ffffff;
 }
 
 #tab-cbt .cbt-timer {
@@ -47,6 +357,7 @@
     font-weight: 700;
     font-size: 13px;
     font-variant-numeric: tabular-nums;
+    color: #ffffff;
 }
 
 #tab-cbt #cbt-question-container {
