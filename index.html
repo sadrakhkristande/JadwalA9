@@ -268,22 +268,41 @@
 
                     <div id="cbt-start-card" class="empty-state">
                         <div class="empty-icon">📝</div>
-                        <h3>Ujian CBT Interaktif</h3>
-                        <p>Total <strong id="cbt-total-label">100</strong> soal pilihan ganda. Jawaban akan langsung dinilai dan pembahasan akan muncul setelah Anda memilih.</p>
-                        <button class="btn btn-primary btn-lg" onclick="startCBT()">▶️ Mulai Ujian</button>
+                        <h3>Pilih Mode Ujian</h3>
+                        <p>Total <strong id="cbt-total-label">100</strong> soal pilihan ganda. Soal akan diacak secara otomatis setiap kali dimulai.</p>
+                        
+                        <div class="grid-2" style="max-width: 600px; margin: 20px auto;">
+                            <button class="card btn-mode" onclick="startCBT('practice')" style="cursor: pointer; text-align: left; border: 2px solid var(--border-color); background: var(--bg-base);">
+                                <h4 style="color: var(--primary); margin-bottom: 10px;">📖 Mode Latihan</h4>
+                                <ul style="font-size: 13px; color: var(--text-muted); padding-left: 15px; margin-bottom: 0;">
+                                    <li>Tanpa batas waktu</li>
+                                    <li>Feedback instan saat menjawab</li>
+                                    <li>Penjelasan langsung muncul</li>
+                                </ul>
+                            </button>
+                            
+                            <button class="card btn-mode" onclick="startCBT('exam')" style="cursor: pointer; text-align: left; border: 2px solid var(--border-color); background: var(--bg-base);">
+                                <h4 style="color: var(--danger); margin-bottom: 10px;">⏱️ Mode CBT</h4>
+                                <ul style="font-size: 13px; color: var(--text-muted); padding-left: 15px; margin-bottom: 0;">
+                                    <li>Waktu 60 Menit (Hitung Mundur)</li>
+                                    <li>Tidak ada feedback saat menjawab</li>
+                                    <li>Laporan nilai di akhir ujian</li>
+                                </ul>
+                            </button>
+                        </div>
                     </div>
 
                     <div id="cbt-active-area" style="display: none;">
                         <div id="cbt-question-container" class="cbt-questions"></div>
                         <div class="cbt-footer">
-                            <button class="btn btn-primary btn-lg" onclick="submitCBT()">Selesai & Simpan</button>
+                            <button class="btn btn-primary btn-lg" onclick="submitCBT()">Selesai & Simpan Jawaban</button>
                         </div>
                     </div>
 
                     <div id="cbt-result-card" class="empty-state" style="display: none;">
-                        <div class="empty-icon">🎉</div>
-                        <h3>Ujian Selesai!</h3>
-                        <p id="cbt-result-text"></p>
+                        <div class="empty-icon">📊</div>
+                        <h3>Laporan Hasil CBT</h3>
+                        <div id="cbt-report-content" style="margin: 20px auto; max-width: 600px; text-align: left; background: var(--bg-base); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-color);"></div>
                         <button class="btn btn-primary" onclick="resetCBT()">🔄 Ulangi Ujian</button>
                     </div>
                 </div>
