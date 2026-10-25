@@ -167,14 +167,14 @@ function startClock() {
 }
 
 // ==========================================================================
-// LOGIKA CBT (MODE LATIHAN / EXAM, ACAK, & LAPORAN)
+// LOGIKA CBT (MODE LATIHAN / EXAM, ACAK 100 DARI 300, & LAPORAN)
 // ==========================================================================
 let cbtTimeInSeconds = 0, cbtTimerInterval = null, cbtStarted = false;
-let cbtMode = 'practice'; // 'practice' atau 'exam'
+let cbtMode = 'practice'; 
 let currentCbtQuestions = [];
-let cbtAnswers = {}; // Format: { qId: selectedOption }
+let cbtAnswers = {}; 
 const CBT_LETTERS = ['A', 'B', 'C', 'D', 'E'];
-const EXAM_DURATION = 60 * 60; // 60 Menit dalam detik
+const EXAM_DURATION = 60 * 60; // 60 Menit
 
 function cbtFormatTime(total) {
     const h = String(Math.floor(total / 3600)).padStart(2, '0');
@@ -194,9 +194,12 @@ window.startCBT = function(mode) {
     cbtStarted = true;
     cbtAnswers = {};
     
-    // Acak Soal (Shuffle)
-    currentCbtQuestions = [...dbData.cbt_soal];
-    currentCbtQuestions.sort(() => Math.random() - 0.5);
+    // --- LOGIKA PENGACAKAN 100 DARI 300 SOAL ---
+    let allQuestions = [...dbData.cbt_soal];
+    // Acak seluruh array (Fisher-Yates Shuffle / Math.random)
+    allQuestions.sort(() => Math.random() - 0.5);
+    // Ambil 100 soal pertama (atau semua jika bank soal < 100)
+    currentCbtQuestions = allQuestions.slice(0, 100);
 
     // Set Timer Awal
     if (cbtMode === 'exam') {
@@ -209,7 +212,6 @@ window.startCBT = function(mode) {
     document.getElementById('cbt-start-card').style.display = 'none';
     document.getElementById('cbt-active-area').style.display = 'block';
     document.getElementById('cbt-result-card').style.display = 'none';
-    document.getElementById('cbt-total-label').innerText = currentCbtQuestions.length;
 
     // Render Soal
     let html = '';
@@ -257,7 +259,6 @@ window.selectCBTAnswer = function(qId, selectedOpt, inputEl) {
     cbtAnswers[qId] = selectedOpt;
     const q = dbData.cbt_soal.find(item => item.id === qId);
 
-    // Jika Mode Latihan, berikan feedback instan
     if (cbtMode === 'practice') {
         document.querySelectorAll(`input[name="cbt-q${qId}"]`).forEach(el => el.disabled = true);
         const feedbackEl = document.getElementById(`cbt-feedback-${qId}`);
@@ -277,9 +278,7 @@ window.selectCBTAnswer = function(qId, selectedOpt, inputEl) {
                 document.getElementById(`label-cbt-${qId}-${correctIdx}`).classList.add('correct-answer');
             }
         }
-    } 
-    // Jika Mode Exam, beri highlight biru (hanya menandai dipilih)
-    else {
+    } else {
         document.querySelectorAll(`input[name="cbt-q${qId}"]`).forEach(inp => inp.closest('.option-label').style.borderColor = 'var(--border-color)');
         inputEl.closest('.option-label').style.borderColor = 'var(--primary)';
     }
@@ -294,10 +293,9 @@ window.submitCBT = function() {
     
     if (cbtTimerInterval) { clearInterval(cbtTimerInterval); cbtTimerInterval = null; }
     
-    // Hitung Skor
     let correctCount = 0;
     let wrongCount = 0;
-    let wrongTopics = {}; // Untuk deteksi kelemahan
+    let wrongTopics = {}; 
 
     currentCbtQuestions.forEach(q => {
         const userAnswer = cbtAnswers[q.id];
@@ -307,14 +305,13 @@ window.submitCBT = function() {
             wrongCount++;
             if (q.topic) wrongTopics[q.topic] = (wrongTopics[q.topic] || 0) + 1;
         } else {
-            wrongCount++; // Tidak dijawab dihitung salah
+            wrongCount++; 
         }
     });
 
     const total = currentCbtQuestions.length;
     const score = Math.round((correctCount / total) * 100);
 
-    // Render Laporan
     let reportHtml = `
         <div class="report-score">
             <h4>Nilai Akhir</h4>
@@ -335,7 +332,6 @@ window.submitCBT = function() {
         </div>
     `;
 
-    // Analisis Rekomendasi Belajar
     if (Object.keys(wrongTopics).length > 0) {
         reportHtml += `<div class="report-recommendation">
             <h5>📚 Rekomendasi Belajar (Fokus Tingkatkan):</h5>
@@ -395,9 +391,6 @@ window.toggleThemeSwitch = async function() {
     await saveCategoryData('config');
 };
 
-// ==========================================================================
-// RENDER DATA & FITUR ADMIN
-// ==========================================================================
 function renderAll() {
     const pList = document.getElementById('pengumuman-list');
     if(pList) pList.innerHTML = dbData.pengumuman.length === 0 ? '<p style="color:var(--text-muted);">Belum ada pengumuman.</p>' : dbData.pengumuman.map(p => `
@@ -429,7 +422,6 @@ function renderAll() {
     `).join('');
 }
 
-// Fungsi Admin (Menggunakan logika orisinal + modern UI)
 window.addPengumuman = async function() {
     const judul = document.getElementById('p-judul').value;
     const isi = document.getElementById('p-isi').value;
@@ -507,7 +499,6 @@ window.saveAdminSettings = async function() { dbData.globalAnnouncement = docume
 window.openPreviewModal = function(url) { document.getElementById('preview-frame').src = url; document.getElementById('preview-modal').style.display = 'flex'; };
 window.closePreviewModal = function() { document.getElementById('preview-modal').style.display = 'none'; document.getElementById('preview-frame').src = ''; };
 
-// Sederhanakan fungsi Latihan Soal Isian (jika digunakan)
 window.startQuiz = function() {
     document.getElementById('quiz-start-card').style.display = 'none';
     document.getElementById('quiz-active-area').style.display = 'block';
@@ -515,6 +506,4 @@ window.startQuiz = function() {
 };
 window.submitQuiz = function() { alert("Fitur evaluasi disederhanakan."); };
 window.resetQuiz = function() { window.startQuiz(); };
-
-// Fungsi Jadwal Modal
 window.openJadwalModal = function() { alert("Fitur edit jadwal via UI sedang dalam pengembangan. Menggunakan Supabase."); };
