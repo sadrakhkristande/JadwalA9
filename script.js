@@ -1,5 +1,5 @@
 // ==========================================================================
-// LOGIKA PORTAL AKADEMIK A9 (MODERN UI & SUPABASE)
+// LOGIKA PORTAL AKADEMIK A9 (MODERN UI & SUPABASE) - VERSI REVISI
 // ==========================================================================
 const allowedUsers = {
     "21105032610023": "ALICA MARATU SULHA", "21105032610047": "AYESHA LILIAN PUTRI",
@@ -24,10 +24,15 @@ try {
 } catch (err) { console.error('Supabase error:', err); }
 
 let dbData = {
-    pengumuman: [], reminder: [], jadwalUpdates: [], tugas: [], laboratorium: [], 
+    pengumuman: [], reminder: [], jadwalUpdates: [], tugas: [], laboratorium: [],
     skills_lab: [], tutorial: [], materi: [], jadwalCustom: [], soal: [], cbt_soal: [],
     maintenance: false, globalAnnouncement: '', adminCode: 'A9ACOR', theme: 'light'
 };
+
+// Bersihkan sisa sitasi seperti "[cite: 1]" dari teks yang ditampilkan
+function cleanText(t) {
+    return String(t == null ? '' : t).replace(/\s*\[cite:[^\]]*\]/g, '');
+}
 
 // ==========================================================================
 // INISIALISASI & LOGIN
@@ -35,7 +40,7 @@ let dbData = {
 window.addEventListener('DOMContentLoaded', async () => {
     await fetchDatabaseFromCloud();
     applyTheme(dbData.theme || 'light');
-    
+
     const nimInput = document.getElementById('login-nim-input');
     const adminInput = document.getElementById('login-admin-code');
     if (nimInput) nimInput.addEventListener('keypress', e => { if (e.key === 'Enter') handleLogin(); });
@@ -52,27 +57,33 @@ window.addEventListener('DOMContentLoaded', async () => {
 async function fetchDatabaseFromCloud() {
     try {
         if (!supabaseClient) return;
-        const keys = ['pengumuman', 'reminder', 'tugas', 'laboratorium', 'skills_lab', 'tutorial', 'materi', 'jadwal', 'soal', 'config', 'cbt_soal'];
+        const keys = ['pengumuman', 'reminder', 'jadwalUpdates', 'tugas', 'laboratorium', 'skills_lab', 'tutorial', 'materi', 'jadwal', 'soal', 'config', 'cbt_soal'];
         for (const k of keys) {
             const { data, error } = await supabaseClient.from('portal_db').select('value').eq('key', k).single();
             if (!error && data && data.value) {
+                // Kalau JSON tersimpan sebagai teks, ubah dulu menjadi data
+                let v = data.value;
+                if (typeof v === 'string') {
+                    try { v = JSON.parse(v); } catch (e) { console.error('JSON "' + k + '" rusak:', e); }
+                }
                 if (k === 'config') {
-                    dbData.maintenance = data.value.maintenance || false;
-                    dbData.theme = data.value.theme || 'light';
-                    dbData.globalAnnouncement = data.value.globalAnnouncement || '';
-                    dbData.adminCode = data.value.adminCode || 'A9ACOR';
+                    dbData.maintenance = v.maintenance || false;
+                    dbData.theme = v.theme || 'light';
+                    dbData.globalAnnouncement = v.globalAnnouncement || '';
+                    dbData.adminCode = v.adminCode || 'A9ACOR';
                 } else if (k === 'jadwal') {
-                    dbData.jadwalCustom = data.value || [];
+                    dbData.jadwalCustom = v || [];
                 } else {
-                    dbData[k] = data.value || [];
+                    dbData[k] = v || [];
                 }
             }
         }
     } catch (err) { console.error("Gagal memuat Supabase:", err); }
 
-    if (!dbData.soal || dbData.soal.length === 0) {
+    if (!Array.isArray(dbData.soal) || dbData.soal.length === 0) {
         dbData.soal = [{ id: 1, category: "anatomi", question: "Sebutkan tulang selangka?", answer: "Clavicula", explanation: "Tulang penghubung sternum dan scapula." }];
     }
+    if (!Array.isArray(dbData.cbt_soal)) dbData.cbt_soal = [];
     renderAll();
 }
 
@@ -86,7 +97,8 @@ async function saveCategoryData(categoryKey) {
         } else if (categoryKey === 'jadwal') {
             payload = dbData.jadwalCustom;
         }
-        const { error } = await supabaseClient.from('portal_db').update({ value: payload }).eq('key', categoryKey);
+        // upsert: baris dibuat otomatis kalau belum ada
+        const { error } = await supabaseClient.from('portal_db').upsert({ key: categoryKey, value: payload }, { onConflict: 'key' });
         if (error) throw error;
     } catch (err) { console.error(`Gagal simpan ${categoryKey}:`, err); }
 }
@@ -129,11 +141,11 @@ window.handleLogin = function() {
 function finishLogin() {
     sessionStorage.setItem('portal_current_user', JSON.stringify(currentUser));
     sessionStorage.setItem('portal_last_active', Date.now().toString());
-    
+
     document.getElementById('login-page').style.display = 'none';
     document.getElementById('main-app').style.display = 'block';
     document.getElementById('user-info').innerText = `${currentUser.name} (${currentUser.role === 'admin' ? 'Admin' : 'Mahasiswa'})`;
-    
+
     if (currentUser.role === 'admin') {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'inline-block');
         document.querySelectorAll('.admin-form-box').forEach(el => el.style.display = 'block');
@@ -149,11 +161,11 @@ function finishLogin() {
 window.handleLogout = function() { sessionStorage.clear(); location.reload(); };
 
 function setupInactivityTracker() {
-    const update = () => { if(currentUser) sessionStorage.setItem('portal_last_active', Date.now().toString()); };
+    const update = () => { if (currentUser) sessionStorage.setItem('portal_last_active', Date.now().toString()); };
     window.addEventListener('mousemove', update); window.addEventListener('keydown', update); window.addEventListener('click', update);
     setInterval(() => {
         const lastActive = sessionStorage.getItem('portal_last_active');
-        if(currentUser && lastActive && (Date.now() - parseInt(lastActive) > INACTIVITY_LIMIT)) {
+        if (currentUser && lastActive && (Date.now() - parseInt(lastActive) > INACTIVITY_LIMIT)) {
             alert('Sesi berakhir karena tidak ada aktivitas.'); handleLogout();
         }
     }, 60000);
@@ -162,21 +174,22 @@ function setupInactivityTracker() {
 function startClock() {
     setInterval(() => {
         const el = document.getElementById('wib-clock');
-        if(el) el.innerText = `${new Date().toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', weekday: 'short', day: 'numeric', month: 'short' })}`;
+        if (el) el.innerText = `${new Date().toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', weekday: 'short', day: 'numeric', month: 'short' })}`;
     }, 1000);
 }
 
 // ==========================================================================
-// LOGIKA CBT (MODE LATIHAN / EXAM, ACAK 100 DARI 300, & LAPORAN)
+// LOGIKA CBT (MODE LATIHAN / EXAM, ACAK 100 DARI BANK SOAL, & LAPORAN)
 // ==========================================================================
 let cbtTimeInSeconds = 0, cbtTimerInterval = null, cbtStarted = false;
-let cbtMode = 'practice'; 
+let cbtMode = 'practice';
 let currentCbtQuestions = [];
-let cbtAnswers = {}; 
+let cbtAnswers = {};
 const CBT_LETTERS = ['A', 'B', 'C', 'D', 'E'];
 const EXAM_DURATION = 100 * 60; // 100 Menit
 
 function cbtFormatTime(total) {
+    if (total < 0) total = 0;
     const h = String(Math.floor(total / 3600)).padStart(2, '0');
     const m = String(Math.floor((total % 3600) / 60)).padStart(2, '0');
     const s = String(total % 60).padStart(2, '0');
@@ -193,36 +206,35 @@ window.startCBT = function(mode) {
     cbtMode = mode;
     cbtStarted = true;
     cbtAnswers = {};
-    
-    // Acak Soal (Shuffle) & Ambil 100
-    let allQuestions = [...dbData.cbt_soal];
-    allQuestions.sort(() => Math.random() - 0.5);
-    currentCbtQuestions = allQuestions.slice(0, 100); // Ambil 100 soal acak
 
-    // Set Timer Awal
-    if (cbtMode === 'exam') {
-        cbtTimeInSeconds = EXAM_DURATION;
-    } else {
-        cbtTimeInSeconds = 0;
+    // Acak soal (Fisher-Yates) & ambil maksimal 100
+    const allQuestions = [...dbData.cbt_soal];
+    for (let i = allQuestions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
     }
-    
+    currentCbtQuestions = allQuestions.slice(0, 100);
+
+    cbtTimeInSeconds = (cbtMode === 'exam') ? EXAM_DURATION : 0;
+
     document.getElementById('cbt-timer').innerText = cbtFormatTime(cbtTimeInSeconds);
     document.getElementById('cbt-start-card').style.display = 'none';
     document.getElementById('cbt-active-area').style.display = 'block';
     document.getElementById('cbt-result-card').style.display = 'none';
 
-    // Render Soal
     let html = '';
     currentCbtQuestions.forEach((q, idx) => {
-        let imgHtml = q.image ? `<div class="cbt-image-container"><img src="${q.image}" class="cbt-image" alt="Ilustrasi Soal"></div>` : '';
-        
+        const imgHtml = q.image
+            ? `<div class="cbt-image-container"><img src="${q.image}" class="cbt-image" alt="Ilustrasi Soal" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'"><small style="display:block;color:var(--text-muted);margin-top:6px;font-size:11px;">${q.image_credit || ''}</small></div>`
+            : '';
+
         let optionsHtml = '';
         q.options.forEach((opt, i) => {
-            const safeOpt = opt.replace(/'/g, "\\'");
+            const safeOpt = String(opt).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
             optionsHtml += `
                 <li>
                     <label class="option-label" id="label-cbt-${q.id}-${i}">
-                        <input type="radio" name="cbt-q${q.id}" value="${safeOpt}" onchange="selectCBTAnswer(${q.id}, '${safeOpt}', this)">
+                        <input type="radio" name="cbt-q${q.id}" onchange="selectCBTAnswer(${q.id}, '${safeOpt}', this)">
                         <span class="option-text"><strong>${CBT_LETTERS[i]}.</strong> ${opt}</span>
                     </label>
                 </li>`;
@@ -238,7 +250,6 @@ window.startCBT = function(mode) {
     });
     document.getElementById('cbt-question-container').innerHTML = html;
 
-    // Jalankan Timer
     if (cbtTimerInterval) clearInterval(cbtTimerInterval);
     cbtTimerInterval = setInterval(() => {
         if (cbtMode === 'exam') {
@@ -247,7 +258,7 @@ window.startCBT = function(mode) {
             if (cbtTimeInSeconds <= 0) {
                 clearInterval(cbtTimerInterval);
                 alert("⏰ Waktu Ujian Habis! Jawaban otomatis disimpan.");
-                submitCBT();
+                finalizeCBT();
             }
         } else {
             cbtTimeInSeconds++;
@@ -258,7 +269,8 @@ window.startCBT = function(mode) {
 
 window.selectCBTAnswer = function(qId, selectedOpt, inputEl) {
     cbtAnswers[qId] = selectedOpt;
-    const q = dbData.cbt_soal.find(item => item.id === qId);
+    const q = currentCbtQuestions.find(item => item.id === qId) || dbData.cbt_soal.find(item => item.id === qId);
+    if (!q) return;
 
     if (cbtMode === 'practice') {
         document.querySelectorAll(`input[name="cbt-q${qId}"]`).forEach(el => el.disabled = true);
@@ -268,12 +280,12 @@ window.selectCBTAnswer = function(qId, selectedOpt, inputEl) {
         if (selectedOpt === q.answer) {
             inputEl.closest('.option-label').classList.add('correct-answer');
             feedbackEl.className = 'cbt-feedback feedback-success';
-            feedbackEl.innerHTML = `<strong>✅ Benar!</strong><br><br><em>Pembahasan:</em> ${q.explanation}`;
+            feedbackEl.innerHTML = `<strong>✅ Benar!</strong><br><br><em>Pembahasan:</em> ${cleanText(q.explanation)}`;
         } else {
             inputEl.closest('.option-label').classList.add('wrong-answer');
             feedbackEl.className = 'cbt-feedback feedback-danger';
-            feedbackEl.innerHTML = `<strong>❌ Salah!</strong> Jawaban yang benar adalah: <strong>${q.answer}</strong><br><br><em>Pembahasan:</em> ${q.explanation}`;
-            
+            feedbackEl.innerHTML = `<strong>❌ Salah!</strong> Jawaban yang benar adalah: <strong>${q.answer}</strong><br><br><em>Pembahasan:</em> ${cleanText(q.explanation)}`;
+
             const correctIdx = q.options.indexOf(q.answer);
             if (correctIdx !== -1) {
                 document.getElementById(`label-cbt-${qId}-${correctIdx}`).classList.add('correct-answer');
@@ -285,33 +297,36 @@ window.selectCBTAnswer = function(qId, selectedOpt, inputEl) {
     }
 };
 
+// Tombol "Selesai": tanya konfirmasi dulu
 window.submitCBT = function() {
-    let answeredCount = Object.keys(cbtAnswers).length;
-    
+    const answeredCount = Object.keys(cbtAnswers).length;
     if (answeredCount < currentCbtQuestions.length) {
         if (!confirm(`Anda baru menjawab ${answeredCount} dari ${currentCbtQuestions.length} soal. Yakin ingin menyelesaikan?`)) return;
     }
-    
+    finalizeCBT();
+};
+
+// Hitung nilai & tampilkan laporan (dipakai juga saat waktu habis)
+function finalizeCBT() {
     if (cbtTimerInterval) { clearInterval(cbtTimerInterval); cbtTimerInterval = null; }
-    
+
     let correctCount = 0;
     let wrongCount = 0;
-    let wrongTopics = {}; 
+    const wrongTopics = {};
 
     currentCbtQuestions.forEach(q => {
         const userAnswer = cbtAnswers[q.id];
         if (userAnswer === q.answer) {
             correctCount++;
-        } else if (userAnswer) {
+        } else {
             wrongCount++;
             if (q.topic) wrongTopics[q.topic] = (wrongTopics[q.topic] || 0) + 1;
-        } else {
-            wrongCount++; 
         }
     });
 
     const total = currentCbtQuestions.length;
-    const score = Math.round((correctCount / total) * 100);
+    const score = total ? Math.round((correctCount / total) * 100) : 0;
+    const elapsed = cbtMode === 'exam' ? EXAM_DURATION - cbtTimeInSeconds : cbtTimeInSeconds;
 
     let reportHtml = `
         <div class="report-score">
@@ -329,7 +344,7 @@ window.submitCBT = function() {
         </div>
         <div class="report-row">
             <span>Waktu Pengerjaan</span>
-            <span class="report-value">${cbtFormatTime(cbtMode === 'exam' ? EXAM_DURATION - cbtTimeInSeconds : cbtTimeInSeconds)}</span>
+            <span class="report-value">${cbtFormatTime(elapsed)}</span>
         </div>
     `;
 
@@ -337,12 +352,12 @@ window.submitCBT = function() {
         reportHtml += `<div class="report-recommendation">
             <h5>📚 Rekomendasi Belajar (Fokus Tingkatkan):</h5>
             <ul>`;
-        for (const [topic, count] of Object.entries(wrongTopics)) {
+        for (const [topic, count] of Object.entries(wrongTopics).sort((a, b) => b[1] - a[1])) {
             reportHtml += `<li><strong>${topic}</strong> (${count} kesalahan)</li>`;
         }
         reportHtml += `</ul></div>`;
     } else {
-         reportHtml += `<div class="report-recommendation" style="background:#ecfdf5; border-color:#10b981;">
+        reportHtml += `<div class="report-recommendation" style="background:#ecfdf5; border-color:#10b981;">
             <h5 style="color:#065f46;">🌟 Luar Biasa!</h5>
             <ul style="color:#065f46;"><li>Semua jawaban Anda benar. Tidak ada rekomendasi khusus.</li></ul>
         </div>`;
@@ -351,10 +366,11 @@ window.submitCBT = function() {
     document.getElementById('cbt-report-content').innerHTML = reportHtml;
     document.getElementById('cbt-active-area').style.display = 'none';
     document.getElementById('cbt-result-card').style.display = 'block';
-};
+}
 
 window.resetCBT = function() {
     if (cbtTimerInterval) clearInterval(cbtTimerInterval);
+    cbtTimerInterval = null;
     cbtStarted = false; cbtTimeInSeconds = 0;
     document.getElementById('cbt-timer').innerText = "00:00:00";
     document.getElementById('cbt-start-card').style.display = 'block';
@@ -370,7 +386,7 @@ window.switchTab = function(tab, btn) {
     document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.nav-pill').forEach(el => el.classList.remove('active'));
     document.getElementById(`tab-${tab}`).style.display = 'block';
-    if(btn) btn.classList.add('active');
+    if (btn) btn.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
@@ -381,9 +397,9 @@ window.toggleLoginFields = function() {
 };
 
 window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; };
-function applyTheme(theme) { 
-    if(theme === 'dark') document.body.classList.add('theme-dark'); 
-    else document.body.classList.remove('theme-dark'); 
+function applyTheme(theme) {
+    if (theme === 'dark') document.body.classList.add('theme-dark');
+    else document.body.classList.remove('theme-dark');
 }
 
 window.toggleThemeSwitch = async function() {
@@ -395,8 +411,6 @@ window.toggleThemeSwitch = async function() {
 // FITUR HAPUS (ADMIN)
 window.deleteItem = async function(category, index) {
     if (!confirm('Apakah Anda yakin ingin menghapus data ini secara permanen?')) return;
-    
-    // Hapus data berdasarkan index (atau ID jika menggunakan filter)
     if (Array.isArray(dbData[category])) {
         dbData[category].splice(index, 1);
         await saveCategoryData(category);
@@ -404,12 +418,24 @@ window.deleteItem = async function(category, index) {
     }
 };
 
+function applyBanners() {
+    const mb = document.getElementById('maintenance-banner');
+    if (mb) mb.style.display = dbData.maintenance ? 'block' : 'none';
+    const gb = document.getElementById('global-announcement-banner');
+    const gt = document.getElementById('global-announcement-text');
+    if (gb && gt) {
+        gt.innerText = dbData.globalAnnouncement || '';
+        gb.style.display = dbData.globalAnnouncement ? 'block' : 'none';
+    }
+}
+
 function renderAll() {
     const isAdmin = currentUser && currentUser.role === 'admin';
+    applyBanners();
 
     // Render Pengumuman
     const pList = document.getElementById('pengumuman-list');
-    if(pList) pList.innerHTML = dbData.pengumuman.length === 0 ? '<p style="color:var(--text-muted);">Belum ada pengumuman.</p>' : dbData.pengumuman.map((p, idx) => `
+    if (pList) pList.innerHTML = dbData.pengumuman.length === 0 ? '<p style="color:var(--text-muted);">Belum ada pengumuman.</p>' : dbData.pengumuman.map((p, idx) => `
         <div style="background:var(--bg-base); border-radius:var(--radius-md); padding:20px; margin-bottom:15px; border-left:4px solid var(--primary); position: relative;">
             <h4 style="margin-bottom:8px; color:var(--text-main); font-size:16px; padding-right: 80px;">${p.judul}</h4>
             <p style="font-size:14px; color:var(--text-muted); margin-bottom:12px;">${p.isi}</p>
@@ -423,22 +449,22 @@ function renderAll() {
 
     // Render Tugas
     const tBody = document.getElementById('tugas-table-body');
-    if(tBody) tBody.innerHTML = dbData.tugas.map((t, idx) => `
+    if (tBody) tBody.innerHTML = dbData.tugas.map((t, idx) => `
         <tr>
             <td data-label="Tugas"><strong>${t.nama}</strong></td>
             <td data-label="Deadline">${t.deadline}</td>
-            <td data-label="Aksi">${t.link !== '#' ? `<a href="${t.link}" target="_blank" class="btn btn-sm btn-primary">Lihat</a>` : '-'}</td>
+            <td data-label="Berkas">${t.link !== '#' ? `<a href="${t.link}" target="_blank" class="btn btn-sm btn-primary">Lihat</a>` : '-'}</td>
             ${isAdmin ? `<td class="admin-only" data-label="Aksi"><button class="btn btn-danger btn-sm" onclick="deleteItem('tugas', ${idx})">Hapus</button></td>` : ''}
         </tr>
     `).join('');
-    
+
     // Render Materi
     const mBody = document.getElementById('materi-table-body');
-    if(mBody) mBody.innerHTML = dbData.materi.map((m, idx) => `
+    if (mBody) mBody.innerHTML = dbData.materi.map((m, idx) => `
         <tr>
             <td data-label="Mata Kuliah"><strong>${m.kuliah}</strong></td>
             <td data-label="Topik">${m.materi}</td>
-            <td data-label="Aksi"><a href="${m.link}" target="_blank" class="btn btn-sm btn-outline">Buka</a></td>
+            <td data-label="Akses"><a href="${m.link}" target="_blank" class="btn btn-sm btn-outline">Buka</a></td>
             ${isAdmin ? `<td class="admin-only" data-label="Aksi"><button class="btn btn-danger btn-sm" onclick="deleteItem('materi', ${idx})">Hapus</button></td>` : ''}
         </tr>
     `).join('');
@@ -460,18 +486,18 @@ function renderAll() {
 
     // Render Reminder & Jadwal Updates
     const remList = document.getElementById('reminder-list');
-    if(remList) remList.innerHTML = dbData.reminder.map((r, idx) => `
+    if (remList) remList.innerHTML = dbData.reminder.map((r, idx) => `
         <li><span>${r}</span> ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="deleteItem('reminder', ${idx})">Hapus</button>` : ''}</li>
     `).join('');
 
     const upList = document.getElementById('jadwal-update-list');
-    if(upList) upList.innerHTML = dbData.jadwalUpdates.map((u, idx) => `
+    if (upList) upList.innerHTML = dbData.jadwalUpdates.map((u, idx) => `
         <li><span>${u}</span> ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="deleteItem('jadwalUpdates', ${idx})">Hapus</button>` : ''}</li>
     `).join('');
-    
+
     // Render Jadwal
     const jBody = document.getElementById('jadwal-table-body');
-    if(jBody) jBody.innerHTML = dbData.jadwalCustom.length === 0 ? '<tr><td colspan="5" style="text-align:center;">Tidak ada jadwal hari ini/besok.</td></tr>' : dbData.jadwalCustom.map((j, idx) => `
+    if (jBody) jBody.innerHTML = dbData.jadwalCustom.length === 0 ? '<tr><td colspan="5" style="text-align:center;">Tidak ada jadwal hari ini/besok.</td></tr>' : dbData.jadwalCustom.map((j, idx) => `
         <tr>
             <td data-label="Tanggal"><strong>${j.tgl}</strong></td>
             <td data-label="Sesi 1">${j.sesi[0].jam}<br><small>${j.sesi[0].kegiatan}</small></td>
@@ -482,12 +508,14 @@ function renderAll() {
     `).join('');
 }
 
-// Admin Form Handlers
+// ==========================================================================
+// FORM ADMIN
+// ==========================================================================
 window.addPengumuman = async function() {
     const judul = document.getElementById('p-judul').value;
     const isi = document.getElementById('p-isi').value;
     const deadline = document.getElementById('p-deadline').value;
-    if(!judul || !isi || !deadline) return alert('Semua kolom wajib diisi!');
+    if (!judul || !isi || !deadline) return alert('Semua kolom wajib diisi!');
     dbData.pengumuman.unshift({ id: Date.now(), judul, isi, deadline });
     await saveCategoryData('pengumuman');
     document.getElementById('p-judul').value = ''; document.getElementById('p-isi').value = ''; document.getElementById('p-deadline').value = '';
@@ -499,72 +527,144 @@ window.addTugasItem = async function() {
     const deadline = document.getElementById('t-deadline').value;
     const ket = document.getElementById('t-ket').value;
     const manualLink = document.getElementById('t-link-manual').value.trim();
-    if(!nama || !deadline) return alert('Nama dan Deadline wajib diisi!');
-    
+    if (!nama || !deadline) return alert('Nama dan Deadline wajib diisi!');
+
     let finalLink = manualLink || '#';
     const uploadedUrl = await uploadFileToSupabaseStorage('t-file-pc');
     if (uploadedUrl) { finalLink = uploadedUrl; }
-    
+
     dbData.tugas.push({ id: Date.now(), nama, deadline, ket, link: finalLink });
     await saveCategoryData('tugas');
-    document.getElementById('t-nama').value = ''; document.getElementById('t-deadline').value = ''; document.getElementById('t-ket').value = ''; 
+    document.getElementById('t-nama').value = ''; document.getElementById('t-deadline').value = ''; document.getElementById('t-ket').value = '';
     document.getElementById('t-file-pc').value = ''; document.getElementById('t-link-manual').value = '';
     alert('Tugas disimpan!');
 };
 
 window.handlePraktikumUpload = async function(category, idNama, idSkenario, idKet, idFilePc, idLink) {
-    const nama = document.getElementById(idNama).value; const skenario = document.getElementById(idSkenario).value;
-    const ket = document.getElementById(idKet).value; const manualLink = document.getElementById(idLink).value.trim();
-    if(!nama) return alert('Nama wajib diisi!');
-    
+    const nama = document.getElementById(idNama).value;
+    const skenario = document.getElementById(idSkenario).value;
+    const ketEl = document.getElementById(idKet);          // elemen "ket" tidak ada di HTML, jadi dicek dulu
+    const ket = ketEl ? ketEl.value : '';
+    const manualLink = document.getElementById(idLink).value.trim();
+    if (!nama) return alert('Nama wajib diisi!');
+
     let finalLink = manualLink || '#';
     const uploadedUrl = await uploadFileToSupabaseStorage(idFilePc);
     if (uploadedUrl) { finalLink = uploadedUrl; }
-    
+
     dbData[category].push({ id: Date.now(), nama, skenario, ket, link: finalLink });
     await saveCategoryData(category);
-    document.getElementById(idNama).value = ''; document.getElementById(idSkenario).value = ''; document.getElementById(idKet).value = ''; 
+    document.getElementById(idNama).value = ''; document.getElementById(idSkenario).value = '';
+    if (ketEl) ketEl.value = '';
     document.getElementById(idFilePc).value = ''; document.getElementById(idLink).value = '';
     alert('Berhasil disimpan!');
 };
 
 window.handleMateriUpload = async function() {
-    const kuliah = document.getElementById('m-kuliah').value; const materi = document.getElementById('m-materi').value;
+    const kuliah = document.getElementById('m-kuliah').value;
+    const materi = document.getElementById('m-materi').value;
     const manualLink = document.getElementById('m-link-manual').value.trim();
-    if(!kuliah || !materi) return alert('Nama kuliah dan materi wajib diisi!');
-    
+    if (!kuliah || !materi) return alert('Nama kuliah dan materi wajib diisi!');
+
     let finalLink = manualLink || '#';
     const uploadedUrl = await uploadFileToSupabaseStorage('m-file-pc');
     if (uploadedUrl) { finalLink = uploadedUrl; }
-    
+
     dbData.materi.push({ id: Date.now(), kuliah, materi, link: finalLink });
     await saveCategoryData('materi');
-    document.getElementById('m-kuliah').value = ''; document.getElementById('m-materi').value = ''; 
+    document.getElementById('m-kuliah').value = ''; document.getElementById('m-materi').value = '';
     document.getElementById('m-file-pc').value = ''; document.getElementById('m-link-manual').value = '';
     alert('Materi disimpan!');
 };
 
 window.addReminder = async function() {
-    const val = document.getElementById('rem-text').value; if(!val) return;
+    const val = document.getElementById('rem-text').value; if (!val) return;
     dbData.reminder.push(val); await saveCategoryData('reminder'); document.getElementById('rem-text').value = '';
 };
 
 window.addJadwalUpdateWithFile = async function() {
-    const title = document.getElementById('up-title').value; if(!title) return;
+    const title = document.getElementById('up-title').value; if (!title) return;
     dbData.jadwalUpdates.push(title); await saveCategoryData('jadwalUpdates'); document.getElementById('up-title').value = '';
 };
 
-window.toggleMaintenanceMode = async function() { dbData.maintenance = !dbData.maintenance; await saveCategoryData('config'); alert('Status diubah'); };
-window.openAdminSettingsModal = function() { document.getElementById('admin-settings-modal').style.display = 'flex'; };
-window.saveAdminSettings = async function() { dbData.globalAnnouncement = document.getElementById('cfg-global-msg').value; dbData.adminCode = document.getElementById('cfg-admin-code').value; await saveCategoryData('config'); window.closeModal('admin-settings-modal'); alert('Tersimpan'); };
+window.toggleMaintenanceMode = async function() {
+    dbData.maintenance = !dbData.maintenance;
+    await saveCategoryData('config');
+    alert('Status pemeliharaan: ' + (dbData.maintenance ? 'AKTIF' : 'NONAKTIF'));
+};
+
+window.openAdminSettingsModal = function() {
+    document.getElementById('cfg-global-msg').value = dbData.globalAnnouncement || '';
+    document.getElementById('cfg-admin-code').value = '';
+    document.getElementById('admin-settings-modal').style.display = 'flex';
+};
+
+window.saveAdminSettings = async function() {
+    dbData.globalAnnouncement = document.getElementById('cfg-global-msg').value;
+    const newCode = document.getElementById('cfg-admin-code').value.trim();
+    if (newCode) dbData.adminCode = newCode;               // kosong = kode lama tidak diubah
+    await saveCategoryData('config');
+    window.closeModal('admin-settings-modal');
+    alert('Tersimpan');
+};
+
 window.openPreviewModal = function(url) { document.getElementById('preview-frame').src = url; document.getElementById('preview-modal').style.display = 'flex'; };
 window.closePreviewModal = function() { document.getElementById('preview-modal').style.display = 'none'; document.getElementById('preview-frame').src = ''; };
+
+// ==========================================================================
+// LATIHAN SOAL ISIAN (DENGAN GAMBAR & PENILAIAN)
+// ==========================================================================
+
+// Samakan format jawaban: huruf kecil, tanpa tanda baca, tanpa awalan Os/M./N./Nervus/Musculus/Foramen
+function normAns(t) {
+    return String(t || '').toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\b(os|m|n|nervus|musculus|foramen)\b/g, ' ')
+        .replace(/\s+/g, ' ').trim();
+}
 
 window.startQuiz = function() {
     document.getElementById('quiz-start-card').style.display = 'none';
     document.getElementById('quiz-active-area').style.display = 'block';
-    document.getElementById('soal-cards-container').innerHTML = dbData.soal.map((s, i) => `<div class="card"><p>${i+1}. ${s.question}</p><input type="text" id="ans_${s.id}" class="modern-input" placeholder="Ketik jawaban..."></div>`).join('');
+    document.getElementById('quiz-result-card').style.display = 'none';
+    document.getElementById('submit-quiz-btn').style.display = 'inline-flex';
+    document.getElementById('reset-quiz-btn').style.display = 'none';
+
+    document.getElementById('soal-cards-container').innerHTML = dbData.soal.map((s, i) => `
+        <div class="card">
+            <p><strong>${i + 1}.</strong> ${cleanText(s.question)}</p>
+            ${s.image ? `<div class="cbt-image-container"><img src="${s.image}" class="cbt-image" alt="Ilustrasi soal" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'"><small style="display:block;color:var(--text-muted);margin-top:6px;font-size:11px;">${s.image_credit || ''}</small></div>` : ''}
+            <input type="text" id="ans_${s.id}" class="modern-input" placeholder="Ketik jawaban...">
+            <div id="fb_${s.id}" class="cbt-feedback" style="display:none;"></div>
+        </div>`).join('');
 };
-window.submitQuiz = function() { alert("Fitur evaluasi disederhanakan."); };
+
+window.submitQuiz = function() {
+    let benar = 0;
+    dbData.soal.forEach(s => {
+        const input = document.getElementById('ans_' + s.id);
+        if (!input) return;
+        const user = normAns(input.value);
+        const key = normAns(s.answer);
+        const ok = user !== '' && (key === '' ? user === String(s.answer).toLowerCase().trim() : (user === key || user.includes(key)));
+        if (ok) benar++;
+        input.disabled = true;
+
+        const fb = document.getElementById('fb_' + s.id);
+        fb.style.display = 'block';
+        fb.className = 'cbt-feedback ' + (ok ? 'feedback-success' : 'feedback-danger');
+        fb.innerHTML = (ok ? '<strong>✅ Benar!</strong>' : `<strong>❌ Salah.</strong> Jawaban: <strong>${s.answer}</strong>`)
+            + (s.explanation ? `<br><br><em>Pembahasan:</em> ${cleanText(s.explanation)}` : '');
+    });
+
+    const total = dbData.soal.length;
+    document.getElementById('quiz-score-text').innerText =
+        `Skor: ${benar} dari ${total} (${total ? Math.round(benar / total * 100) : 0}%)`;
+    document.getElementById('quiz-result-card').style.display = 'block';
+    document.getElementById('submit-quiz-btn').style.display = 'none';
+    document.getElementById('reset-quiz-btn').style.display = 'inline-flex';
+};
+
 window.resetQuiz = function() { window.startQuiz(); };
+
 window.openJadwalModal = function() { alert("Fitur edit jadwal via UI sedang dalam pengembangan. Menggunakan Supabase."); };
