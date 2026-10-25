@@ -668,3 +668,233 @@ window.submitQuiz = function() {
 window.resetQuiz = function() { window.startQuiz(); };
 
 window.openJadwalModal = function() { alert("Fitur edit jadwal via UI sedang dalam pengembangan. Menggunakan Supabase."); };
+
+
+// ==========================================================================
+// TAMPILAN TAMBAHAN (CSS disuntikkan otomatis, tidak perlu ubah style.css)
+// ==========================================================================
+(function () {
+    const st = document.createElement('style');
+    st.id = 'tambahan-css';
+    st.textContent = `/* ===== TAMBAHAN: tampilan lebih ramah & fitur baru ===== */
+html { scroll-behavior: smooth; }
+body { font-size: 16px; }
+:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.btn, .nav-pill, .btn-icon { min-height: 40px; }
+.card { border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); }
+.nav-pill { padding: 10px 20px; }
+.modern-input { font-size: 16px; }
+.modern-table tr:hover td { background: var(--primary-light); }
+.option-label { padding: 16px 20px; }
+@media (max-width: 768px) {
+    .main-content { padding: 0 12px; margin: 16px auto; }
+    .card { padding: 18px; }
+    .q-text { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* Notifikasi (menggantikan pop-up alert) */
+#toast-wrap { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 20000; display: flex; flex-direction: column; gap: 8px; align-items: center; width: min(92vw, 420px); pointer-events: none; }
+.toast { background: var(--text-main); color: var(--bg-card); padding: 12px 18px; border-radius: 12px; font-size: 14px; font-weight: 600; box-shadow: var(--shadow-lg); width: 100%; text-align: center; animation: toastIn .25s ease; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* Sapaan di beranda */
+.greeting { background: linear-gradient(135deg, var(--primary), var(--primary-hover)); color: #fff; border-radius: var(--radius-xl); padding: 22px 26px; margin-bottom: 25px; }
+.greeting h3 { font-size: 22px; margin-bottom: 2px; }
+.greeting p { opacity: .92; font-size: 14px; }
+
+/* Label deadline tugas & pencarian tabel */
+.dl-badge { display: inline-block; margin-left: 8px; padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+.dl-late { background: #fee2e2; color: #991b1b; }
+.dl-soon { background: #fef3c7; color: #92400e; }
+.dl-ok { background: var(--primary-light); color: var(--primary); }
+.search-box { margin-bottom: 15px; }
+
+/* Navigasi & progres CBT */
+.cbt-nav { position: sticky; bottom: 0; z-index: 700; background: var(--bg-card); border-top: 2px solid var(--primary); padding: 10px 20px; box-shadow: 0 -6px 16px rgba(0,0,0,.08); }
+.cbt-progress { height: 8px; border-radius: 8px; background: var(--border-color); overflow: hidden; margin-bottom: 8px; }
+#cbt-progress-fill { height: 100%; width: 0; background: var(--primary); transition: width .3s; }
+.cbt-nav summary { cursor: pointer; font-weight: 700; font-size: 14px; }
+.cbt-nav-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 6px; margin-top: 10px; max-height: 40vh; overflow-y: auto; }
+.cbt-nav-btn { padding: 6px 0; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-base); color: var(--text-main); font-weight: 600; font-size: 13px; cursor: pointer; }
+.cbt-nav-btn.done { background: var(--primary); color: #fff; border-color: var(--primary); }
+.cbt-nav-btn.flag { background: var(--warning); color: #fff; border-color: var(--warning); }
+.flag-btn { margin-left: 12px; background: transparent; border: 1px dashed var(--warning); color: var(--warning); border-radius: 20px; padding: 2px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.question-card.flagged .flag-btn { background: var(--warning); color: #fff; }
+.cbt-timer.cbt-timer-warn { background: var(--danger); animation: pulseCorrect 1s infinite; }
+
+/* Pembahasan & riwayat nilai */
+.review-box, .history-box { margin-top: 20px; }
+.review-box h5, .history-box h5 { font-size: 15px; margin-bottom: 10px; }
+.review-item { border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 8px; font-size: 14px; }
+.review-item summary { cursor: pointer; font-weight: 600; }
+.review-item p { margin-top: 8px; color: var(--text-muted); }
+
+/* Tombol kembali ke atas */
+#to-top { position: fixed; right: 18px; bottom: 90px; z-index: 650; width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--primary); color: #fff; font-size: 18px; cursor: pointer; box-shadow: var(--shadow-lg); display: none; }
+`;
+    document.head.appendChild(st);
+})();
+
+// ===== TAMBAHAN FITUR (dimuat SETELAH script.js) =====
+(function () {
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const $ = id => document.getElementById(id);
+
+    // 1. Notifikasi toast menggantikan pop-up alert
+    const wrap = document.createElement('div');
+    wrap.id = 'toast-wrap'; wrap.setAttribute('role', 'status'); wrap.setAttribute('aria-live', 'polite');
+    document.body.appendChild(wrap);
+    window.alert = function (msg) {
+        const t = document.createElement('div');
+        t.className = 'toast'; t.textContent = String(msg);
+        wrap.appendChild(t);
+        setTimeout(() => t.remove(), 3800);
+    };
+
+    // 2. Navigasi soal, progres, dan tanda ragu di CBT
+    function cards() { return [...document.querySelectorAll('#cbt-question-container .question-card')]; }
+
+    function buildNav() {
+        const cs = cards(), old = $('cbt-nav');
+        if (!cs.length) { if (old) old.remove(); return; }
+        if (old) old.remove();
+        const bar = document.createElement('div');
+        bar.id = 'cbt-nav'; bar.className = 'cbt-nav';
+        bar.innerHTML = `<div class="cbt-progress"><div id="cbt-progress-fill"></div></div>
+            <details><summary id="cbt-progress-text"></summary>
+            <div class="cbt-nav-grid">${cs.map((c, i) => `<button type="button" class="cbt-nav-btn" id="nav-${c.id}" data-card="${c.id}">${i + 1}</button>`).join('')}</div></details>`;
+        $('cbt-active-area').appendChild(bar);
+        cs.forEach(c => {
+            const h = c.querySelector('.q-header');
+            if (h && !h.querySelector('.flag-btn')) {
+                const b = document.createElement('button');
+                b.type = 'button'; b.className = 'flag-btn'; b.dataset.card = c.id; b.textContent = '🚩 Tandai ragu';
+                h.appendChild(b);
+            }
+        });
+        updateNav();
+    }
+
+    function updateNav() {
+        const cs = cards(); if (!cs.length) return;
+        let done = 0;
+        cs.forEach(c => {
+            const answered = !!c.querySelector('input:checked');
+            if (answered) done++;
+            const nb = $('nav-' + c.id);
+            if (nb) { nb.classList.toggle('done', answered); nb.classList.toggle('flag', c.classList.contains('flagged')); }
+        });
+        $('cbt-progress-fill').style.width = (done / cs.length * 100) + '%';
+        $('cbt-progress-text').textContent = `Terjawab ${done} dari ${cs.length} soal (klik untuk daftar soal)`;
+    }
+
+    new MutationObserver(buildNav).observe($('cbt-question-container'), { childList: true });
+
+    document.addEventListener('change', e => { if (e.target.closest('#cbt-question-container')) updateNav(); });
+    document.addEventListener('click', e => {
+        const nb = e.target.closest('.cbt-nav-btn');
+        if (nb) { const c = $(nb.dataset.card); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+        const fb = e.target.closest('.flag-btn');
+        if (fb) {
+            const c = $(fb.dataset.card); c.classList.toggle('flagged');
+            fb.textContent = c.classList.contains('flagged') ? '🚩 Ragu-ragu' : '🚩 Tandai ragu';
+            updateNav();
+        }
+    });
+
+    // 3. Timer memerah pada 10 menit terakhir (mode CBT)
+    setInterval(() => {
+        const t = $('cbt-timer'); if (!t) return;
+        let warn = false;
+        try { warn = cbtStarted && cbtMode === 'exam' && cbtTimeInSeconds <= 600; } catch (e) { }
+        t.classList.toggle('cbt-timer-warn', warn);
+    }, 1000);
+
+    // 4. Pembahasan soal salah + riwayat nilai setelah CBT selesai
+    const HKEY = 'a9_cbt_history';
+    function loadHistory() { try { return JSON.parse(localStorage.getItem(HKEY)) || []; } catch (e) { return []; } }
+    function saveHistory(item) {
+        try { const h = loadHistory(); h.unshift(item); localStorage.setItem(HKEY, JSON.stringify(h.slice(0, 20))); } catch (e) { }
+    }
+
+    const origFinalize = window.finalizeCBT;
+    window.finalizeCBT = function () {
+        const qs = currentCbtQuestions.slice(), ans = Object.assign({}, cbtAnswers), mode = cbtMode;
+        origFinalize();
+        try {
+            const salah = qs.filter(q => ans[q.id] !== q.answer);
+            const benar = qs.length - salah.length;
+            const score = qs.length ? Math.round(benar / qs.length * 100) : 0;
+            saveHistory({ tgl: new Date().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }), mode, score, benar, total: qs.length });
+
+            const box = $('cbt-report-content');
+            if (salah.length) {
+                box.insertAdjacentHTML('beforeend', `<div class="review-box"><h5>📖 Pembahasan soal yang salah/kosong (${salah.length})</h5>
+                    ${salah.map(q => `<details class="review-item"><summary>${esc(q.text)}</summary>
+                    <p>Jawabanmu: <strong>${esc(ans[q.id] || '(kosong)')}</strong></p>
+                    <p>Jawaban benar: <strong>${esc(q.answer)}</strong></p>
+                    <p>${esc(cleanText(q.explanation))}</p></details>`).join('')}</div>`);
+            }
+            const h = loadHistory().slice(0, 5);
+            box.insertAdjacentHTML('beforeend', `<div class="history-box"><h5>🕒 Riwayat nilai terakhir (di perangkat ini)</h5>
+                ${h.map(x => `<div class="report-row" style="font-size:14px"><span>${esc(x.tgl)} · ${x.mode === 'exam' ? 'CBT' : 'Latihan'}</span><strong>${x.score} (${x.benar}/${x.total})</strong></div>`).join('')}</div>`);
+        } catch (e) { console.error(e); }
+    };
+
+    // 5. Sapaan, label deadline tugas, dan kolom pencarian (dijalankan setiap renderAll)
+    function addSearch(bodyId, placeholder) {
+        const body = $(bodyId); if (!body || $('search-' + bodyId)) return;
+        const input = document.createElement('input');
+        input.type = 'search'; input.id = 'search-' + bodyId; input.className = 'modern-input search-box'; input.placeholder = placeholder;
+        input.addEventListener('input', () => applyFilter(bodyId));
+        body.closest('.table-responsive').before(input);
+    }
+    function applyFilter(bodyId) {
+        const input = $('search-' + bodyId), body = $(bodyId); if (!input || !body) return;
+        const q = input.value.toLowerCase();
+        body.querySelectorAll('tr').forEach(tr => { tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none'; });
+    }
+    function deadlineBadges() {
+        document.querySelectorAll('#tugas-table-body td[data-label="Deadline"]').forEach(td => {
+            if (td.querySelector('.dl-badge')) return;
+            const m = td.textContent.trim().match(/^\d{4}-\d{2}-\d{2}$/); if (!m) return;
+            const days = Math.ceil((new Date(m[0] + 'T23:59:59') - new Date()) / 86400000);
+            const b = document.createElement('span');
+            if (days < 0) { b.className = 'dl-badge dl-late'; b.textContent = 'Terlewat'; }
+            else if (days === 0) { b.className = 'dl-badge dl-soon'; b.textContent = 'Hari ini'; }
+            else { b.className = 'dl-badge ' + (days <= 3 ? 'dl-soon' : 'dl-ok'); b.textContent = days + ' hari lagi'; }
+            td.appendChild(b);
+        });
+    }
+    function greeting() {
+        if (typeof currentUser === 'undefined' || !currentUser || $('greeting')) return;
+        const home = $('tab-home'); if (!home) return;
+        const nama = (currentUser.name || '').split(' ')[0];
+        const jam = new Date().getHours();
+        const sapa = jam < 11 ? 'Selamat pagi' : jam < 15 ? 'Selamat siang' : jam < 18 ? 'Selamat sore' : 'Selamat malam';
+        const d = document.createElement('div');
+        d.id = 'greeting'; d.className = 'greeting';
+        d.innerHTML = `<h3>${sapa}, ${esc(nama.charAt(0) + nama.slice(1).toLowerCase())}! 👋</h3><p>Semangat belajarnya hari ini. Cek jadwal dan tugasmu di bawah.</p>`;
+        home.prepend(d);
+    }
+
+    const origRender = window.renderAll;
+    window.renderAll = function () {
+        origRender();
+        try {
+            addSearch('tugas-table-body', '🔎 Cari tugas...');
+            addSearch('materi-table-body', '🔎 Cari materi...');
+            deadlineBadges(); greeting();
+            applyFilter('tugas-table-body'); applyFilter('materi-table-body');
+        } catch (e) { console.error(e); }
+    };
+    window.renderAll();
+
+    // 6. Tombol kembali ke atas
+    const up = document.createElement('button');
+    up.id = 'to-top'; up.type = 'button'; up.setAttribute('aria-label', 'Kembali ke atas'); up.textContent = '▲';
+    up.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.body.appendChild(up);
+    window.addEventListener('scroll', () => { up.style.display = window.scrollY > 400 ? 'block' : 'none'; });
+})();
