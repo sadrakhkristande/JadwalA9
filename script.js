@@ -900,10 +900,9 @@ body { font-size: 16px; }
 })();
 
 // ==========================================================================
-// PANDUAN PENGGUNAAN & LAPOR KE ADMIN (via WhatsApp)
+// PANDUAN PENGGUNAAN & LAPOR KE ADMIN
 // ==========================================================================
 (function () {
-    const ADMIN_WA = '6285291834373'; // 0852-9183-4373 dalam format internasional
     const $ = id => document.getElementById(id);
 
     const st = document.createElement('style');
@@ -949,14 +948,14 @@ body { font-size: 16px; }
         <details><summary>7. Masalah yang sering terjadi</summary>
           <ul><li><strong>Gambar soal tidak muncul:</strong> cek koneksi internet, lalu refresh dengan Ctrl+Shift+R (di HP, tutup dan buka lagi tabnya). Kalau masih kosong, laporkan nomor soalnya.</li><li><strong>Soal atau jawaban terlihat keliru:</strong> catat nomor atau potongan soalnya, lalu kirim lewat menu Lapor Admin.</li><li><strong>Halaman tidak merespons:</strong> refresh halaman. Jawaban CBT yang belum diselesaikan tidak tersimpan.</li><li><strong>Portal maintenance:</strong> tunggu sampai admin selesai, mahasiswa tidak bisa masuk selama itu.</li></ul></details>
         <details><summary>8. Cara melapor ke admin</summary>
-          <ol><li>Buka tab <strong>Lapor Admin</strong>.</li><li>Pilih kategori, tulis bagian atau nomor soal, dan jelaskan masalahnya.</li><li>Klik <strong>Kirim lewat WhatsApp</strong>. Aplikasi WhatsApp akan terbuka dengan pesan yang sudah terisi, tinggal tekan kirim.</li></ol></details>
+          <ol><li>Buka tab <strong>Lapor Admin</strong>.</li><li>Pilih kategori, tulis bagian atau nomor soal, dan jelaskan masalahnya.</li><li>Klik <strong>Kirim Laporan</strong>. Laporan langsung masuk ke daftar laporan admin dan akan segera dicek.</li></ol></details>
       </div>
     </div>
 
     <div id="tab-lapor" class="tab-content" style="display:none;">
       <div class="card">
         <div class="card-header"><h3 class="card-title">📣 Lapor ke Admin</h3></div>
-        <p class="report-hint">Isi formulir di bawah. Setelah klik kirim, WhatsApp akan terbuka dengan pesan yang sudah tersusun ke admin.</p>
+        <p class="report-hint">Isi formulir di bawah. Laporan yang dikirim akan masuk ke daftar laporan admin di portal.</p>
         <div class="form-group"><label for="lap-nama">Nama</label><input type="text" id="lap-nama" class="modern-input" placeholder="Nama lengkap"></div>
         <div class="form-group"><label for="lap-nim">NIM</label><input type="text" id="lap-nim" class="modern-input" placeholder="NIM"></div>
         <div class="form-group"><label for="lap-kategori">Jenis laporan</label>
@@ -967,43 +966,144 @@ body { font-size: 16px; }
         <div class="form-group"><label for="lap-lokasi">Bagian atau nomor soal (kalau ada)</label><input type="text" id="lap-lokasi" class="modern-input" placeholder="Contoh: CBT soal 17, atau tab Tugas"></div>
         <div class="form-group"><label for="lap-isi">Penjelasan</label><textarea id="lap-isi" class="modern-input" style="height:120px;resize:vertical;" placeholder="Ceritakan apa yang terjadi, dan apa yang seharusnya tampil."></textarea></div>
         <div class="report-actions">
-          <button class="btn btn-primary btn-lg" id="lap-kirim">📲 Kirim lewat WhatsApp</button>
-          <button class="btn btn-outline btn-lg" id="lap-salin">📋 Salin laporan</button>
+          <button class="btn btn-primary btn-lg" id="lap-kirim">📨 Kirim Laporan</button>
         </div>
       </div>
     </div>`);
 
-    function buildReport() {
-        const v = id => $(id).value.trim();
-        if (v('lap-isi').length < 10) { alert('Tulis penjelasan minimal 10 karakter ya.'); return null; }
-        if (!v('lap-nama')) { alert('Nama wajib diisi.'); return null; }
-        return [
-            '*LAPORAN PORTAL A9*',
-            `Nama: ${v('lap-nama')}`,
-            `NIM: ${v('lap-nim') || '-'}`,
-            `Jenis: ${v('lap-kategori')}`,
-            `Bagian/No. soal: ${v('lap-lokasi') || '-'}`,
-            '',
-            'Penjelasan:',
-            v('lap-isi'),
-            '',
-            `Waktu: ${new Date().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}`,
-            `Perangkat: ${navigator.userAgent.slice(0, 90)}`
-        ].join('\n');
+    dbData.laporan = [];
+    const KEY = 'laporan';
+    const esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    async function fetchLaporan() {
+        const { data, error } = await supabaseClient.from('portal_db').select('value').eq('key', KEY).maybeSingle();
+        if (error) throw error;
+        let v = data && data.value;
+        if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { v = []; } }
+        return Array.isArray(v) ? v : [];
+    }
+    async function writeLaporan(list) {
+        const { error } = await supabaseClient.from('portal_db').upsert({ key: KEY, value: list }, { onConflict: 'key' });
+        if (error) throw error;
     }
 
-    $('lap-kirim').addEventListener('click', () => {
-        const txt = buildReport(); if (!txt) return;
-        window.open(`https://wa.me/${ADMIN_WA}?text=${encodeURIComponent(txt)}`, '_blank', 'noopener');
-        alert('WhatsApp dibuka. Tekan kirim di sana untuk menyelesaikan laporan.');
-        $('lap-isi').value = ''; $('lap-lokasi').value = '';
+    // Kirim laporan (mahasiswa & admin)
+    $('lap-kirim').addEventListener('click', async () => {
+        const v = id => $(id).value.trim();
+        if (!v('lap-nama')) { alert('Nama wajib diisi.'); return; }
+        if (v('lap-isi').length < 10) { alert('Tulis penjelasan minimal 10 karakter ya.'); return; }
+        if (!supabaseClient) { alert('Koneksi ke server belum siap. Coba lagi nanti.'); return; }
+        const btn = $('lap-kirim'); btn.disabled = true;
+        try {
+            const list = await fetchLaporan(); // ambil data terbaru dulu supaya laporan lain tidak tertimpa
+            list.unshift({ id: Date.now(), tgl: new Date().toISOString(), nama: v('lap-nama'), nim: v('lap-nim') || '-', kategori: v('lap-kategori'), lokasi: v('lap-lokasi') || '-', isi: v('lap-isi'), perangkat: navigator.userAgent.slice(0, 90), status: 'baru' });
+            await writeLaporan(list.slice(0, 200));
+            $('lap-isi').value = ''; $('lap-lokasi').value = '';
+            alert('Laporan terkirim ke admin. Terima kasih!');
+        } catch (e) { console.error(e); alert('Gagal mengirim laporan. Coba lagi sebentar lagi.'); }
+        btn.disabled = false;
     });
 
-    $('lap-salin').addEventListener('click', async () => {
-        const txt = buildReport(); if (!txt) return;
-        try { await navigator.clipboard.writeText(txt); alert('Laporan disalin. Tempel ke WhatsApp admin: 0852-9183-4373.'); }
-        catch (e) { alert('Gagal menyalin. Coba pakai tombol Kirim lewat WhatsApp.'); }
+    // ===== Sisi admin: daftar laporan + notifikasi =====
+    const st2 = document.createElement('style');
+    st2.textContent = `
+    #lap-badge { display: none; margin-left: 6px; background: var(--danger); color: #fff; border-radius: 20px; min-width: 20px; padding: 0 6px; font-size: 11px; font-weight: 800; line-height: 20px; }
+    .lap-item { border: 1px solid var(--border-color); border-left: 4px solid var(--danger); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 12px; background: var(--bg-base); }
+    .lap-item.done { border-left-color: var(--primary); opacity: .75; }
+    .lap-top { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+    .lap-cat { background: var(--primary-light); color: var(--primary); border-radius: 20px; padding: 2px 10px; font-weight: 700; font-size: 12px; }
+    .lap-body { white-space: pre-wrap; font-size: 14px; margin: 8px 0; }
+    .lap-acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .lap-filter.active { background: var(--primary); color: #fff; border-color: var(--primary); }`;
+    document.head.appendChild(st2);
+
+    const pill = document.createElement('button');
+    pill.className = 'nav-pill admin-only'; pill.id = 'nav-laporan-admin'; pill.style.display = 'none';
+    pill.setAttribute('onclick', "switchTab('laporan-admin', this)");
+    pill.innerHTML = '🛠️ Laporan<span id="lap-badge"></span>';
+    nav.appendChild(pill);
+
+    main.insertAdjacentHTML('beforeend', `
+    <div id="tab-laporan-admin" class="tab-content" style="display:none;">
+      <div class="card">
+        <div class="card-header flex-between"><h3 class="card-title">🛠️ Laporan dari Mahasiswa</h3><button class="btn btn-outline btn-sm" id="lap-refresh">🔄 Muat ulang</button></div>
+        <div class="report-actions" style="margin-bottom:15px;">
+          <button class="btn btn-outline btn-sm lap-filter active" data-f="baru">Belum selesai</button>
+          <button class="btn btn-outline btn-sm lap-filter" data-f="selesai">Selesai</button>
+          <button class="btn btn-outline btn-sm lap-filter" data-f="semua">Semua</button>
+        </div>
+        <div id="lap-list"></div>
+      </div>
+    </div>`);
+
+    let filter = 'baru', lastBaru = 0, pollTimer = null;
+    const isAdmin = () => typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin';
+
+    function renderLaporan() {
+        const all = dbData.laporan || [];
+        const baru = all.filter(x => x.status !== 'selesai').length;
+        const bd = $('lap-badge'); bd.textContent = baru; bd.style.display = baru ? 'inline-block' : 'none';
+        document.querySelectorAll('.lap-filter').forEach(b => b.classList.toggle('active', b.dataset.f === filter));
+        const shown = all.filter(x => filter === 'semua' || (filter === 'baru' ? x.status !== 'selesai' : x.status === 'selesai'));
+        $('lap-list').innerHTML = shown.length ? shown.map(x => `
+            <div class="lap-item ${x.status === 'selesai' ? 'done' : ''}">
+              <div class="lap-top"><span><span class="lap-cat">${esc(x.kategori)}</span> &nbsp;<strong>${esc(x.nama)}</strong> (${esc(x.nim)})</span>
+                <span>${esc(new Date(x.tgl).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }))}</span></div>
+              <div><small>Bagian: <strong>${esc(x.lokasi)}</strong></small></div>
+              <div class="lap-body">${esc(x.isi)}</div>
+              <small style="color:var(--text-muted)">${esc(x.perangkat)}</small>
+              <div class="lap-acts">
+                <button class="btn btn-sm ${x.status === 'selesai' ? 'btn-outline' : 'btn-primary'}" data-act="toggle" data-id="${x.id}">${x.status === 'selesai' ? '↩️ Buka lagi' : '✅ Tandai selesai'}</button>
+                <button class="btn btn-sm btn-danger" data-act="del" data-id="${x.id}">Hapus</button>
+              </div>
+            </div>`).join('') : '<p style="color:var(--text-muted);">Tidak ada laporan di kategori ini.</p>';
+    }
+
+    async function refreshLaporan(notify) {
+        if (!isAdmin() || !supabaseClient) return;
+        try {
+            dbData.laporan = await fetchLaporan();
+            const baru = dbData.laporan.filter(x => x.status !== 'selesai').length;
+            if (baru > 0 && (notify || baru > lastBaru)) alert(`🔔 Ada ${baru} laporan belum selesai dari mahasiswa. Buka menu 🛠️ Laporan.`);
+            lastBaru = baru;
+            renderLaporan();
+        } catch (e) { console.error('Gagal memuat laporan:', e); }
+    }
+
+    async function mutateLaporan(fn) {
+        try {
+            const list = await fetchLaporan();
+            const out = fn(list);
+            await writeLaporan(out);
+            dbData.laporan = out; lastBaru = out.filter(x => x.status !== 'selesai').length;
+            renderLaporan();
+        } catch (e) { console.error(e); alert('Gagal memperbarui laporan.'); }
+    }
+
+    $('lap-list').addEventListener('click', e => {
+        const b = e.target.closest('button[data-act]'); if (!b) return;
+        const id = +b.dataset.id;
+        if (b.dataset.act === 'del') {
+            if (!confirm('Hapus laporan ini secara permanen?')) return;
+            mutateLaporan(l => l.filter(x => x.id !== id));
+        } else {
+            mutateLaporan(l => l.map(x => x.id === id ? Object.assign({}, x, { status: x.status === 'selesai' ? 'baru' : 'selesai' }) : x));
+        }
     });
+    document.querySelectorAll('.lap-filter').forEach(b => b.addEventListener('click', () => { filter = b.dataset.f; renderLaporan(); }));
+    $('lap-refresh').addEventListener('click', () => refreshLaporan(false));
+
+    // Saat admin login: cek laporan baru, lalu cek berkala tiap 60 detik
+    const origLogin = window.finishLogin;
+    window.finishLogin = function () {
+        origLogin();
+        if (isAdmin()) {
+            refreshLaporan(true);
+            if (!pollTimer) pollTimer = setInterval(() => refreshLaporan(false), 60000);
+        }
+    };
+    const origSw = window.switchTab;
+    window.switchTab = function (tab, btn) { origSw(tab, btn); if (tab === 'laporan-admin') refreshLaporan(false); };
 
     // Isi otomatis nama & NIM saat tab Lapor dibuka
     const origSwitch = window.switchTab;
