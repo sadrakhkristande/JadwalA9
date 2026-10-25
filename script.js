@@ -898,3 +898,120 @@ body { font-size: 16px; }
     document.body.appendChild(up);
     window.addEventListener('scroll', () => { up.style.display = window.scrollY > 400 ? 'block' : 'none'; });
 })();
+
+// ==========================================================================
+// PANDUAN PENGGUNAAN & LAPOR KE ADMIN (via WhatsApp)
+// ==========================================================================
+(function () {
+    const ADMIN_WA = '6285291834373'; // 0852-9183-4373 dalam format internasional
+    const $ = id => document.getElementById(id);
+
+    const st = document.createElement('style');
+    st.textContent = `
+    .guide details { border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px 18px; margin-bottom: 10px; background: var(--bg-base); }
+    .guide summary { cursor: pointer; font-weight: 700; font-size: 15px; }
+    .guide details[open] { border-color: var(--primary); }
+    .guide ol, .guide ul { margin: 10px 0 0 22px; font-size: 14px; color: var(--text-muted); }
+    .guide li { margin-bottom: 6px; }
+    .guide p { font-size: 14px; color: var(--text-muted); margin-top: 8px; }
+    .report-hint { font-size: 13px; color: var(--text-muted); margin-bottom: 18px; }
+    .report-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    select.modern-input { appearance: auto; }`;
+    document.head.appendChild(st);
+
+    // Tombol menu
+    const nav = document.querySelector('.modern-nav');
+    [['panduan', '📖 Panduan'], ['lapor', '📣 Lapor Admin']].forEach(([t, label]) => {
+        const b = document.createElement('button');
+        b.className = 'nav-pill'; b.textContent = label;
+        b.setAttribute('onclick', `switchTab('${t}', this)`);
+        nav.appendChild(b);
+    });
+
+    // Isi tab
+    const main = document.querySelector('.main-content');
+    main.insertAdjacentHTML('beforeend', `
+    <div id="tab-panduan" class="tab-content" style="display:none;">
+      <div class="card guide">
+        <div class="card-header"><h3 class="card-title">📖 Panduan Penggunaan Portal</h3></div>
+        <details open><summary>1. Masuk ke portal</summary>
+          <ol><li>Pilih peran <strong>Mahasiswa</strong>, lalu isi NIM kamu.</li><li>Klik <strong>Masuk Portal</strong>. Kalau NIM tidak terdaftar, hubungi admin lewat menu Lapor Admin.</li><li>Sesi otomatis berakhir setelah 30 menit tanpa aktivitas, jadi masuk lagi kalau diminta.</li></ol></details>
+        <details><summary>2. Beranda, Jadwal, dan Tugas</summary>
+          <ul><li><strong>Beranda:</strong> pengumuman akademik, reminder, dan info update terbaru.</li><li><strong>Jadwal:</strong> kegiatan kuliah hari ini dan besok per sesi.</li><li><strong>Tugas:</strong> daftar tugas beserta deadline. Label warna menunjukkan sisa waktu (hijau aman, kuning mendekati, merah terlewat). Klik <em>Lihat</em> untuk membuka berkas. Gunakan kolom pencarian untuk mencari tugas.</li></ul></details>
+        <details><summary>3. Lab, Skills Lab, Tutorial, dan Materi</summary>
+          <p>Buka tab yang diinginkan lalu klik <strong>Buka Berkas</strong> atau <strong>Buka</strong> untuk melihat modul. Di tab Materi kamu bisa mencari berdasarkan mata kuliah atau topik lewat kolom pencarian.</p></details>
+        <details><summary>4. Latihan soal isian</summary>
+          <ol><li>Buka tab <strong>Latihan</strong> dan klik <strong>Mulai Latihan</strong>.</li><li>Ketik jawabanmu di kolom yang tersedia. Huruf besar-kecil dan awalan seperti "Os", "M.", atau "N." tidak berpengaruh.</li><li>Klik <strong>Submit Jawaban</strong> untuk melihat skor, jawaban benar, dan pembahasan.</li><li>Klik <strong>Ulangi</strong> untuk mencoba lagi.</li></ol></details>
+        <details><summary>5. Simulasi CBT</summary>
+          <ul><li><strong>Mode Latihan:</strong> tanpa batas waktu, jawaban langsung dikoreksi dan pembahasan muncul saat itu juga.</li><li><strong>Mode CBT:</strong> 100 soal acak dengan waktu 100 menit. Tidak ada koreksi sampai kamu selesai. Timer berubah merah di 10 menit terakhir.</li><li><strong>Bilah di bawah layar:</strong> menunjukkan jumlah soal terjawab. Klik untuk membuka daftar nomor soal dan loncat ke soal tertentu.</li><li><strong>🚩 Tandai ragu:</strong> menandai soal yang ingin kamu cek ulang. Nomornya berwarna oranye di daftar.</li><li>Klik <strong>Selesai &amp; Simpan Jawaban</strong> untuk melihat nilai, rekomendasi belajar, pembahasan soal yang salah, dan riwayat nilai.</li></ul></details>
+        <details><summary>6. Tema dan pengaturan</summary>
+          <p>Klik ikon 🌓 di pojok kanan atas untuk berganti antara tema terang dan gelap.</p></details>
+        <details><summary>7. Masalah yang sering terjadi</summary>
+          <ul><li><strong>Gambar soal tidak muncul:</strong> cek koneksi internet, lalu refresh dengan Ctrl+Shift+R (di HP, tutup dan buka lagi tabnya). Kalau masih kosong, laporkan nomor soalnya.</li><li><strong>Soal atau jawaban terlihat keliru:</strong> catat nomor atau potongan soalnya, lalu kirim lewat menu Lapor Admin.</li><li><strong>Halaman tidak merespons:</strong> refresh halaman. Jawaban CBT yang belum diselesaikan tidak tersimpan.</li><li><strong>Portal maintenance:</strong> tunggu sampai admin selesai, mahasiswa tidak bisa masuk selama itu.</li></ul></details>
+        <details><summary>8. Cara melapor ke admin</summary>
+          <ol><li>Buka tab <strong>Lapor Admin</strong>.</li><li>Pilih kategori, tulis bagian atau nomor soal, dan jelaskan masalahnya.</li><li>Klik <strong>Kirim lewat WhatsApp</strong>. Aplikasi WhatsApp akan terbuka dengan pesan yang sudah terisi, tinggal tekan kirim.</li></ol></details>
+      </div>
+    </div>
+
+    <div id="tab-lapor" class="tab-content" style="display:none;">
+      <div class="card">
+        <div class="card-header"><h3 class="card-title">📣 Lapor ke Admin</h3></div>
+        <p class="report-hint">Isi formulir di bawah. Setelah klik kirim, WhatsApp akan terbuka dengan pesan yang sudah tersusun ke admin.</p>
+        <div class="form-group"><label for="lap-nama">Nama</label><input type="text" id="lap-nama" class="modern-input" placeholder="Nama lengkap"></div>
+        <div class="form-group"><label for="lap-nim">NIM</label><input type="text" id="lap-nim" class="modern-input" placeholder="NIM"></div>
+        <div class="form-group"><label for="lap-kategori">Jenis laporan</label>
+          <select id="lap-kategori" class="modern-input">
+            <option>Soal atau jawaban keliru</option><option>Gambar tidak muncul</option><option>Error atau bug di portal</option>
+            <option>Jadwal, tugas, atau materi tidak sesuai</option><option>Tidak bisa masuk (NIM)</option><option>Saran fitur</option><option>Lainnya</option>
+          </select></div>
+        <div class="form-group"><label for="lap-lokasi">Bagian atau nomor soal (kalau ada)</label><input type="text" id="lap-lokasi" class="modern-input" placeholder="Contoh: CBT soal 17, atau tab Tugas"></div>
+        <div class="form-group"><label for="lap-isi">Penjelasan</label><textarea id="lap-isi" class="modern-input" style="height:120px;resize:vertical;" placeholder="Ceritakan apa yang terjadi, dan apa yang seharusnya tampil."></textarea></div>
+        <div class="report-actions">
+          <button class="btn btn-primary btn-lg" id="lap-kirim">📲 Kirim lewat WhatsApp</button>
+          <button class="btn btn-outline btn-lg" id="lap-salin">📋 Salin laporan</button>
+        </div>
+      </div>
+    </div>`);
+
+    function buildReport() {
+        const v = id => $(id).value.trim();
+        if (v('lap-isi').length < 10) { alert('Tulis penjelasan minimal 10 karakter ya.'); return null; }
+        if (!v('lap-nama')) { alert('Nama wajib diisi.'); return null; }
+        return [
+            '*LAPORAN PORTAL A9*',
+            `Nama: ${v('lap-nama')}`,
+            `NIM: ${v('lap-nim') || '-'}`,
+            `Jenis: ${v('lap-kategori')}`,
+            `Bagian/No. soal: ${v('lap-lokasi') || '-'}`,
+            '',
+            'Penjelasan:',
+            v('lap-isi'),
+            '',
+            `Waktu: ${new Date().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}`,
+            `Perangkat: ${navigator.userAgent.slice(0, 90)}`
+        ].join('\n');
+    }
+
+    $('lap-kirim').addEventListener('click', () => {
+        const txt = buildReport(); if (!txt) return;
+        window.open(`https://wa.me/${ADMIN_WA}?text=${encodeURIComponent(txt)}`, '_blank', 'noopener');
+        alert('WhatsApp dibuka. Tekan kirim di sana untuk menyelesaikan laporan.');
+        $('lap-isi').value = ''; $('lap-lokasi').value = '';
+    });
+
+    $('lap-salin').addEventListener('click', async () => {
+        const txt = buildReport(); if (!txt) return;
+        try { await navigator.clipboard.writeText(txt); alert('Laporan disalin. Tempel ke WhatsApp admin: 0852-9183-4373.'); }
+        catch (e) { alert('Gagal menyalin. Coba pakai tombol Kirim lewat WhatsApp.'); }
+    });
+
+    // Isi otomatis nama & NIM saat tab Lapor dibuka
+    const origSwitch = window.switchTab;
+    window.switchTab = function (tab, btn) {
+        origSwitch(tab, btn);
+        if (tab === 'lapor' && typeof currentUser !== 'undefined' && currentUser) {
+            if (!$('lap-nama').value) $('lap-nama').value = currentUser.name || '';
+            if (!$('lap-nim').value) $('lap-nim').value = currentUser.nim || '';
+        }
+    };
+})();
