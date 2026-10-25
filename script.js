@@ -1,5 +1,5 @@
 // ==========================================================================
-// KONFIGURASI PENGGUNA & KONEKSI SUPABASE
+// LOGIKA PORTAL AKADEMIK A9 (MODERN UI & SUPABASE)
 // ==========================================================================
 const allowedUsers = {
     "21105032610023": "ALICA MARATU SULHA", "21105032610047": "AYESHA LILIAN PUTRI",
@@ -30,7 +30,7 @@ let dbData = {
 };
 
 // ==========================================================================
-// INISIALISASI APLIKASI & LOGIN
+// INISIALISASI & LOGIN
 // ==========================================================================
 window.addEventListener('DOMContentLoaded', async () => {
     await fetchDatabaseFromCloud();
@@ -70,7 +70,6 @@ async function fetchDatabaseFromCloud() {
         }
     } catch (err) { console.error("Gagal memuat Supabase:", err); }
 
-    // Default data jika kosong
     if (!dbData.soal || dbData.soal.length === 0) {
         dbData.soal = [{ id: 1, category: "anatomi", question: "Sebutkan tulang selangka?", answer: "Clavicula", explanation: "Tulang penghubung sternum dan scapula." }];
     }
@@ -79,8 +78,7 @@ async function fetchDatabaseFromCloud() {
 
 window.handleLogin = function() {
     try {
-        const roleEl = document.getElementById('login-role');
-        const role = roleEl ? roleEl.value : 'guest';
+        const role = document.getElementById('login-role').value;
         
         if (role === 'admin') {
             const code = document.getElementById('login-admin-code').value.trim();
@@ -105,7 +103,7 @@ function finishLogin() {
     
     document.getElementById('login-page').style.display = 'none';
     document.getElementById('main-app').style.display = 'block';
-    document.getElementById('user-info').innerText = `${currentUser.name} — (${currentUser.role.toUpperCase()})`;
+    document.getElementById('user-info').innerText = `${currentUser.name} (${currentUser.role === 'admin' ? 'Admin' : 'Mahasiswa'})`;
     
     if (currentUser.role === 'admin') {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'inline-block');
@@ -127,7 +125,7 @@ function setupInactivityTracker() {
     setInterval(() => {
         const lastActive = sessionStorage.getItem('portal_last_active');
         if(currentUser && lastActive && (Date.now() - parseInt(lastActive) > INACTIVITY_LIMIT)) {
-            alert('Sesi berakhir.'); handleLogout();
+            alert('Sesi berakhir karena tidak ada aktivitas.'); handleLogout();
         }
     }, 60000);
 }
@@ -135,7 +133,7 @@ function setupInactivityTracker() {
 function startClock() {
     setInterval(() => {
         const el = document.getElementById('wib-clock');
-        if(el) el.innerText = `Waktu WIB: ${new Date().toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
+        if(el) el.innerText = `${new Date().toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', weekday: 'short', day: 'numeric', month: 'short' })}`;
     }, 1000);
 }
 
@@ -174,8 +172,8 @@ window.startCBT = function() {
             optionsHtml += `
                 <li>
                     <label class="option-label" id="label-cbt-${q.id}-${i}">
-                        <input type="radio" name="cbt-q${q.id}" value="${safeOpt}" onchange="checkCBTAnswer(${q.id}, '${safeOpt}', this, ${i})">
-                        <span class="option-text">${CBT_LETTERS[i]}. ${opt}</span>
+                        <input type="radio" name="cbt-q${q.id}" value="${safeOpt}" onchange="checkCBTAnswer(${q.id}, '${safeOpt}', this)">
+                        <span class="option-text"><strong>${CBT_LETTERS[i]}.</strong> ${opt}</span>
                     </label>
                 </li>`;
         });
@@ -184,7 +182,7 @@ window.startCBT = function() {
                 <div class="q-header">Soal ${q.id}</div>
                 <div class="q-text">${q.text}</div>
                 <ul class="options">${optionsHtml}</ul>
-                <div id="cbt-feedback-${q.id}" style="display:none; margin-top:12px; padding:12px; border-radius:8px; font-size:14px; line-height:1.5;"></div>
+                <div id="cbt-feedback-${q.id}" class="cbt-feedback" style="display:none;"></div>
             </div>`;
     });
     document.getElementById('cbt-question-container').innerHTML = html;
@@ -192,11 +190,11 @@ window.startCBT = function() {
     if (cbtTimerInterval) clearInterval(cbtTimerInterval);
     cbtTimerInterval = setInterval(() => {
         cbtTimeInSeconds++;
-        document.getElementById('cbt-timer').innerText = `Waktu: ${cbtFormatTime(cbtTimeInSeconds)}`;
+        document.getElementById('cbt-timer').innerText = cbtFormatTime(cbtTimeInSeconds);
     }, 1000);
 };
 
-window.checkCBTAnswer = function(qId, selectedOpt, inputEl, optIndex) {
+window.checkCBTAnswer = function(qId, selectedOpt, inputEl) {
     const q = dbData.cbt_soal.find(item => item.id === qId);
     if (!q) return;
 
@@ -208,29 +206,22 @@ window.checkCBTAnswer = function(qId, selectedOpt, inputEl, optIndex) {
 
     // Jika BENAR
     if (selectedOpt === q.answer) {
-        inputEl.closest('.option-label').style.background = '#d1fae5';
-        inputEl.closest('.option-label').style.borderColor = '#10b981';
-        feedbackEl.style.background = '#d1fae5';
-        feedbackEl.style.color = '#065f46';
-        feedbackEl.innerHTML = `<strong>✅ Benar!</strong><br>${q.explanation}`;
+        inputEl.closest('.option-label').classList.add('correct-answer');
+        feedbackEl.className = 'cbt-feedback feedback-success';
+        feedbackEl.innerHTML = `<strong>✅ Benar!</strong><br><br><em>Pembahasan:</em> ${q.explanation}`;
     } 
     // Jika SALAH
     else {
-        inputEl.closest('.option-label').style.background = '#fee2e2';
-        inputEl.closest('.option-label').style.borderColor = '#ef4444';
+        inputEl.closest('.option-label').classList.add('wrong-answer');
         
-        feedbackEl.style.background = '#fee2e2';
-        feedbackEl.style.color = '#991b1b';
-        feedbackEl.innerHTML = `<strong>❌ Salah!</strong> Jawaban yang benar adalah: <strong>${q.answer}</strong><br>${q.explanation}`;
+        feedbackEl.className = 'cbt-feedback feedback-danger';
+        feedbackEl.innerHTML = `<strong>❌ Salah!</strong> Jawaban yang benar adalah: <strong>${q.answer}</strong><br><br><em>Pembahasan:</em> ${q.explanation}`;
         
         // Sorot Jawaban yang Benar
         const correctIdx = q.options.indexOf(q.answer);
         if (correctIdx !== -1) {
             const correctLabel = document.getElementById(`label-cbt-${qId}-${correctIdx}`);
-            if (correctLabel) {
-                correctLabel.style.background = '#d1fae5';
-                correctLabel.style.borderColor = '#10b981';
-            }
+            if (correctLabel) correctLabel.classList.add('correct-answer');
         }
     }
 };
@@ -242,18 +233,19 @@ window.submitCBT = function() {
     });
 
     if (answered < dbData.cbt_soal.length) {
-        if (!confirm(`Baru menjawab ${answered} dari ${dbData.cbt_soal.length} soal. Yakin selesai?`)) return;
+        if (!confirm(`Baru menjawab ${answered} dari ${dbData.cbt_soal.length} soal. Yakin ingin menyelesaikan ujian?`)) return;
     }
     if (cbtTimerInterval) { clearInterval(cbtTimerInterval); cbtTimerInterval = null; }
     
     document.getElementById('cbt-active-area').style.display = 'none';
     document.getElementById('cbt-result-card').style.display = 'block';
-    document.getElementById('cbt-result-text').innerHTML = `Anda menjawab <strong>${answered}</strong> dari <strong>${dbData.cbt_soal.length}</strong> soal.<br>Waktu: <strong>${cbtFormatTime(cbtTimeInSeconds)}</strong>`;
+    document.getElementById('cbt-result-text').innerHTML = `Anda telah menjawab <strong>${answered}</strong> dari <strong>${dbData.cbt_soal.length}</strong> soal.<br>Waktu pengerjaan: <strong>${cbtFormatTime(cbtTimeInSeconds)}</strong>`;
 };
 
 window.resetCBT = function() {
     if (cbtTimerInterval) clearInterval(cbtTimerInterval);
     cbtStarted = false; cbtTimeInSeconds = 0;
+    document.getElementById('cbt-timer').innerText = "00:00:00";
     document.getElementById('cbt-start-card').style.display = 'block';
     document.getElementById('cbt-active-area').style.display = 'none';
     document.getElementById('cbt-result-card').style.display = 'none';
@@ -261,13 +253,14 @@ window.resetCBT = function() {
 };
 
 // ==========================================================================
-// FUNGSI UI LAINNYA
+// FUNGSI UI & TAB
 // ==========================================================================
 window.switchTab = function(tab, btn) {
     document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-    document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-pill').forEach(el => el.classList.remove('active'));
     document.getElementById(`tab-${tab}`).style.display = 'block';
     if(btn) btn.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
 window.toggleLoginFields = function() {
@@ -277,45 +270,65 @@ window.toggleLoginFields = function() {
 };
 
 window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; };
-function applyTheme(theme) { if(theme === 'dark') document.body.classList.add('theme-dark'); else document.body.classList.remove('theme-dark'); }
+function applyTheme(theme) { 
+    if(theme === 'dark') document.body.classList.add('theme-dark'); 
+    else document.body.classList.remove('theme-dark'); 
+}
 
 window.toggleThemeSwitch = async function() {
-    dbData.theme = document.getElementById('theme-toggle-checkbox').checked ? 'dark' : 'light';
+    dbData.theme = document.body.classList.contains('theme-dark') ? 'light' : 'dark';
     applyTheme(dbData.theme);
     if(supabaseClient) await supabaseClient.from('portal_db').update({ value: { ...dbData, maintenance: dbData.maintenance, theme: dbData.theme } }).eq('key', 'config');
 };
 
+// ==========================================================================
+// RENDER DATA
+// ==========================================================================
 function renderAll() {
+    // Render Pengumuman
     const pList = document.getElementById('pengumuman-list');
-    if(pList) pList.innerHTML = dbData.pengumuman.length === 0 ? '<p>Belum ada pengumuman.</p>' : dbData.pengumuman.map(p => `<div class="card" style="margin-bottom:10px; padding:15px; background:var(--bg-light);"><h4>${p.judul}</h4><p>${p.isi}</p><small>${p.deadline}</small></div>`).join('');
+    if(pList) pList.innerHTML = dbData.pengumuman.length === 0 ? '<p style="color:var(--text-muted);">Belum ada pengumuman.</p>' : dbData.pengumuman.map(p => `
+        <div style="background:var(--bg-base); border-radius:var(--radius-md); padding:20px; margin-bottom:15px; border-left:4px solid var(--primary);">
+            <h4 style="margin-bottom:8px; color:var(--text-main); font-size:16px;">${p.judul}</h4>
+            <p style="font-size:14px; color:var(--text-muted); margin-bottom:12px;">${p.isi}</p>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <small style="color:var(--primary); font-weight:600;">🗓️ s/d ${p.deadline}</small>
+                <a href="https://wa.me/?text=${encodeURIComponent(p.judul + ' - ' + p.isi)}" target="_blank" class="badge badge-wa">Bagikan</a>
+            </div>
+        </div>
+    `).join('');
+
+    // Render Tugas
     const tBody = document.getElementById('tugas-table-body');
-    if(tBody) tBody.innerHTML = dbData.tugas.map(t => `<tr><td>${t.nama}</td><td>${t.deadline}</td><td>${t.link !== '#' ? `<a href="${t.link}" target="_blank">Lihat</a>` : '-'}</td></tr>`).join('');
+    if(tBody) tBody.innerHTML = dbData.tugas.map(t => `<tr><td data-label="Tugas"><strong>${t.nama}</strong></td><td data-label="Deadline">${t.deadline}</td><td data-label="Aksi">${t.link !== '#' ? `<a href="${t.link}" target="_blank" class="btn btn-sm btn-primary">Lihat</a>` : '-'}</td></tr>`).join('');
+    
+    // Render Materi
     const mBody = document.getElementById('materi-table-body');
-    if(mBody) mBody.innerHTML = dbData.materi.map(m => `<tr><td>${m.kuliah}</td><td>${m.materi}</td><td><a href="${m.link}" target="_blank">Buka</a></td></tr>`).join('');
+    if(mBody) mBody.innerHTML = dbData.materi.map(m => `<tr><td data-label="Mata Kuliah"><strong>${m.kuliah}</strong></td><td data-label="Topik">${m.materi}</td><td data-label="Aksi"><a href="${m.link}" target="_blank" class="btn btn-sm btn-outline">Buka</a></td></tr>`).join('');
+    
+    // Render Jadwal
+    const jBody = document.getElementById('jadwal-table-body');
+    if(jBody) jBody.innerHTML = dbData.jadwalCustom.length === 0 ? '<tr><td colspan="5" style="text-align:center;">Tidak ada jadwal hari ini/besok.</td></tr>' : dbData.jadwalCustom.map(j => `
+        <tr>
+            <td data-label="Tanggal"><strong>${j.tgl}</strong></td>
+            <td data-label="Sesi 1">${j.sesi[0].jam}<br><small>${j.sesi[0].kegiatan}</small></td>
+            <td data-label="Sesi 2">${j.sesi[1].jam}<br><small>${j.sesi[1].kegiatan}</small></td>
+            <td data-label="Sesi 3">${j.sesi[2].jam}<br><small>${j.sesi[2].kegiatan}</small></td>
+            <td data-label="Sesi 4">${j.sesi[3].jam}<br><small>${j.sesi[3].kegiatan}</small></td>
+        </tr>
+    `).join('');
 }
 
+// Sederhanakan fungsi lainnya untuk mencegah error
 window.startQuiz = function() {
     document.getElementById('quiz-start-card').style.display = 'none';
     document.getElementById('quiz-active-area').style.display = 'block';
-    document.getElementById('soal-cards-container').innerHTML = dbData.soal.map((s, i) => `<div class="card"><p>${i+1}. ${s.question}</p><input type="text" id="ans_${s.id}" class="input-field"></div>`).join('');
+    document.getElementById('soal-cards-container').innerHTML = dbData.soal.map((s, i) => `<div class="card"><p>${i+1}. ${s.question}</p><input type="text" id="ans_${s.id}" class="modern-input" placeholder="Ketik jawaban..."></div>`).join('');
 };
 window.submitQuiz = function() { alert("Fitur evaluasi disederhanakan."); };
 window.resetQuiz = function() { window.startQuiz(); };
-window.toggleMaintenanceMode = async function() { dbData.maintenance = !dbData.maintenance; if(supabaseClient) await supabaseClient.from('portal_db').update({ value: { ...dbData } }).eq('key', 'config'); alert('Status diubah'); };
+window.toggleMaintenanceMode = async function() { dbData.maintenance = !dbData.maintenance; if(supabaseClient) await supabaseClient.from('portal_db').update({ value: { ...dbData } }).eq('key', 'config'); alert('Status Maintenance diubah'); };
 window.openAdminSettingsModal = function() { document.getElementById('admin-settings-modal').style.display = 'flex'; };
-window.saveAdminSettings = async function() { dbData.globalAnnouncement = document.getElementById('cfg-global-msg').value; dbData.adminCode = document.getElementById('cfg-admin-code').value; if(supabaseClient) await supabaseClient.from('portal_db').update({ value: { ...dbData } }).eq('key', 'config'); window.closeModal('admin-settings-modal'); alert('Tersimpan'); };
+window.saveAdminSettings = async function() { dbData.globalAnnouncement = document.getElementById('cfg-global-msg').value; dbData.adminCode = document.getElementById('cfg-admin-code').value; if(supabaseClient) await supabaseClient.from('portal_db').update({ value: { ...dbData } }).eq('key', 'config'); window.closeModal('admin-settings-modal'); alert('Pengaturan Tersimpan'); };
 window.openPreviewModal = function(url) { document.getElementById('preview-frame').src = url; document.getElementById('preview-modal').style.display = 'flex'; };
 window.closePreviewModal = function() { document.getElementById('preview-modal').style.display = 'none'; document.getElementById('preview-frame').src = ''; };
-
-// Placeholder agar tidak error
-window.addPengumuman = async () => alert('Fitur tambah pengumuman via UI disederhanakan.');
-window.addTugasItem = async () => alert('Fitur tambah tugas via UI disederhanakan.');
-window.addReminder = async () => alert('Fitur reminder disederhanakan.');
-window.addJadwalUpdateWithFile = async () => alert('Fitur update jadwal disederhanakan.');
-window.handlePraktikumUpload = async () => alert('Fitur upload disederhanakan.');
-window.handleMateriUpload = async () => alert('Fitur materi disederhanakan.');
-window.openJadwalModal = () => alert('Fitur edit jadwal disederhanakan.');
-window.saveJadwalItem = () => alert('Simpan jadwal disederhanakan.');
-window.openSoalModal = () => alert('Fitur edit soal disederhanakan.');
-window.saveSoalItem = () => alert('Simpan soal disederhanakan.');
-window.openEditMateriModal = () => alert('Fitur edit materi disederhanakan.');
