@@ -174,7 +174,7 @@ let cbtMode = 'practice';
 let currentCbtQuestions = [];
 let cbtAnswers = {}; 
 const CBT_LETTERS = ['A', 'B', 'C', 'D', 'E'];
-const EXAM_DURATION = 60 * 60; // 60 Menit
+const EXAM_DURATION = 100 * 60; // 100 Menit
 
 function cbtFormatTime(total) {
     const h = String(Math.floor(total / 3600)).padStart(2, '0');
@@ -194,12 +194,10 @@ window.startCBT = function(mode) {
     cbtStarted = true;
     cbtAnswers = {};
     
-    // --- LOGIKA PENGACAKAN 100 DARI 300 SOAL ---
+    // Acak Soal (Shuffle) & Ambil 100
     let allQuestions = [...dbData.cbt_soal];
-    // Acak seluruh array (Fisher-Yates Shuffle / Math.random)
     allQuestions.sort(() => Math.random() - 0.5);
-    // Ambil 100 soal pertama (atau semua jika bank soal < 100)
-    currentCbtQuestions = allQuestions.slice(0, 100);
+    currentCbtQuestions = allQuestions.slice(0, 100); // Ambil 100 soal acak
 
     // Set Timer Awal
     if (cbtMode === 'exam') {
@@ -216,6 +214,8 @@ window.startCBT = function(mode) {
     // Render Soal
     let html = '';
     currentCbtQuestions.forEach((q, idx) => {
+        let imgHtml = q.image ? `<div class="cbt-image-container"><img src="${q.image}" class="cbt-image" alt="Ilustrasi Soal"></div>` : '';
+        
         let optionsHtml = '';
         q.options.forEach((opt, i) => {
             const safeOpt = opt.replace(/'/g, "\\'");
@@ -231,6 +231,7 @@ window.startCBT = function(mode) {
             <div class="question-card" id="card-cbt-${q.id}">
                 <div class="q-header">Soal ${idx + 1}</div>
                 <div class="q-text">${q.text}</div>
+                ${imgHtml}
                 <ul class="options">${optionsHtml}</ul>
                 <div id="cbt-feedback-${q.id}" class="cbt-feedback" style="display:none;"></div>
             </div>`;
@@ -363,7 +364,7 @@ window.resetCBT = function() {
 };
 
 // ==========================================================================
-// FUNGSI UI & TAB LAINNYA
+// FUNGSI UI, TAB, & FITUR HAPUS (ADMIN)
 // ==========================================================================
 window.switchTab = function(tab, btn) {
     document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
@@ -391,27 +392,86 @@ window.toggleThemeSwitch = async function() {
     await saveCategoryData('config');
 };
 
+// FITUR HAPUS (ADMIN)
+window.deleteItem = async function(category, index) {
+    if (!confirm('Apakah Anda yakin ingin menghapus data ini secara permanen?')) return;
+    
+    // Hapus data berdasarkan index (atau ID jika menggunakan filter)
+    if (Array.isArray(dbData[category])) {
+        dbData[category].splice(index, 1);
+        await saveCategoryData(category);
+        alert('Data berhasil dihapus.');
+    }
+};
+
 function renderAll() {
+    const isAdmin = currentUser && currentUser.role === 'admin';
+
+    // Render Pengumuman
     const pList = document.getElementById('pengumuman-list');
-    if(pList) pList.innerHTML = dbData.pengumuman.length === 0 ? '<p style="color:var(--text-muted);">Belum ada pengumuman.</p>' : dbData.pengumuman.map(p => `
-        <div style="background:var(--bg-base); border-radius:var(--radius-md); padding:20px; margin-bottom:15px; border-left:4px solid var(--primary);">
-            <h4 style="margin-bottom:8px; color:var(--text-main); font-size:16px;">${p.judul}</h4>
+    if(pList) pList.innerHTML = dbData.pengumuman.length === 0 ? '<p style="color:var(--text-muted);">Belum ada pengumuman.</p>' : dbData.pengumuman.map((p, idx) => `
+        <div style="background:var(--bg-base); border-radius:var(--radius-md); padding:20px; margin-bottom:15px; border-left:4px solid var(--primary); position: relative;">
+            <h4 style="margin-bottom:8px; color:var(--text-main); font-size:16px; padding-right: 80px;">${p.judul}</h4>
             <p style="font-size:14px; color:var(--text-muted); margin-bottom:12px;">${p.isi}</p>
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <small style="color:var(--primary); font-weight:600;">🗓️ s/d ${p.deadline}</small>
                 <a href="https://wa.me/?text=${encodeURIComponent(p.judul + ' - ' + p.isi)}" target="_blank" class="badge badge-wa">Bagikan</a>
             </div>
+            ${isAdmin ? `<button class="btn btn-danger btn-sm" style="position: absolute; top: 15px; right: 15px;" onclick="deleteItem('pengumuman', ${idx})">Hapus</button>` : ''}
         </div>
     `).join('');
 
+    // Render Tugas
     const tBody = document.getElementById('tugas-table-body');
-    if(tBody) tBody.innerHTML = dbData.tugas.map(t => `<tr><td data-label="Tugas"><strong>${t.nama}</strong></td><td data-label="Deadline">${t.deadline}</td><td data-label="Aksi">${t.link !== '#' ? `<a href="${t.link}" target="_blank" class="btn btn-sm btn-primary">Lihat</a>` : '-'}</td></tr>`).join('');
+    if(tBody) tBody.innerHTML = dbData.tugas.map((t, idx) => `
+        <tr>
+            <td data-label="Tugas"><strong>${t.nama}</strong></td>
+            <td data-label="Deadline">${t.deadline}</td>
+            <td data-label="Aksi">${t.link !== '#' ? `<a href="${t.link}" target="_blank" class="btn btn-sm btn-primary">Lihat</a>` : '-'}</td>
+            ${isAdmin ? `<td class="admin-only" data-label="Aksi"><button class="btn btn-danger btn-sm" onclick="deleteItem('tugas', ${idx})">Hapus</button></td>` : ''}
+        </tr>
+    `).join('');
     
+    // Render Materi
     const mBody = document.getElementById('materi-table-body');
-    if(mBody) mBody.innerHTML = dbData.materi.map(m => `<tr><td data-label="Mata Kuliah"><strong>${m.kuliah}</strong></td><td data-label="Topik">${m.materi}</td><td data-label="Aksi"><a href="${m.link}" target="_blank" class="btn btn-sm btn-outline">Buka</a></td></tr>`).join('');
+    if(mBody) mBody.innerHTML = dbData.materi.map((m, idx) => `
+        <tr>
+            <td data-label="Mata Kuliah"><strong>${m.kuliah}</strong></td>
+            <td data-label="Topik">${m.materi}</td>
+            <td data-label="Aksi"><a href="${m.link}" target="_blank" class="btn btn-sm btn-outline">Buka</a></td>
+            ${isAdmin ? `<td class="admin-only" data-label="Aksi"><button class="btn btn-danger btn-sm" onclick="deleteItem('materi', ${idx})">Hapus</button></td>` : ''}
+        </tr>
+    `).join('');
+
+    // Render Lab, Skills, Tutorial
+    ['laboratorium', 'skills_lab', 'tutorial'].forEach(cat => {
+        const el = document.getElementById(cat === 'laboratorium' ? 'lab-list' : cat === 'skills_lab' ? 'skills-list' : 'tutorial-list');
+        if (el) {
+            el.innerHTML = dbData[cat].map((item, idx) => `
+                <div style="background: var(--bg-base); border: 1px solid var(--border-color); padding: 15px; border-radius: var(--radius-md); position: relative;">
+                    <h4 style="color: var(--text-main); margin-bottom: 5px; padding-right: 60px;">${item.nama}</h4>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">Modul: ${item.skenario || '-'}</p>
+                    ${item.link !== '#' ? `<a href="${item.link}" target="_blank" class="btn btn-sm btn-primary">Buka Berkas</a>` : ''}
+                    ${isAdmin ? `<button class="btn btn-danger btn-sm" style="position: absolute; top: 10px; right: 10px;" onclick="deleteItem('${cat}', ${idx})">Hapus</button>` : ''}
+                </div>
+            `).join('');
+        }
+    });
+
+    // Render Reminder & Jadwal Updates
+    const remList = document.getElementById('reminder-list');
+    if(remList) remList.innerHTML = dbData.reminder.map((r, idx) => `
+        <li><span>${r}</span> ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="deleteItem('reminder', ${idx})">Hapus</button>` : ''}</li>
+    `).join('');
+
+    const upList = document.getElementById('jadwal-update-list');
+    if(upList) upList.innerHTML = dbData.jadwalUpdates.map((u, idx) => `
+        <li><span>${u}</span> ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="deleteItem('jadwalUpdates', ${idx})">Hapus</button>` : ''}</li>
+    `).join('');
     
+    // Render Jadwal
     const jBody = document.getElementById('jadwal-table-body');
-    if(jBody) jBody.innerHTML = dbData.jadwalCustom.length === 0 ? '<tr><td colspan="5" style="text-align:center;">Tidak ada jadwal hari ini/besok.</td></tr>' : dbData.jadwalCustom.map(j => `
+    if(jBody) jBody.innerHTML = dbData.jadwalCustom.length === 0 ? '<tr><td colspan="5" style="text-align:center;">Tidak ada jadwal hari ini/besok.</td></tr>' : dbData.jadwalCustom.map((j, idx) => `
         <tr>
             <td data-label="Tanggal"><strong>${j.tgl}</strong></td>
             <td data-label="Sesi 1">${j.sesi[0].jam}<br><small>${j.sesi[0].kegiatan}</small></td>
@@ -422,6 +482,7 @@ function renderAll() {
     `).join('');
 }
 
+// Admin Form Handlers
 window.addPengumuman = async function() {
     const judul = document.getElementById('p-judul').value;
     const isi = document.getElementById('p-isi').value;
