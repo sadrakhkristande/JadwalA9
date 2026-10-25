@@ -30,13 +30,11 @@ let dbData = {
 };
 
 // ==========================================================================
-// INISIALISASI APLIKASI
+// INISIALISASI APLIKASI & LOGIN
 // ==========================================================================
 window.addEventListener('DOMContentLoaded', async () => {
     await fetchDatabaseFromCloud();
     applyTheme(dbData.theme || 'light');
-    checkMaintenanceStatus();
-    checkGlobalAnnouncement();
     
     const nimInput = document.getElementById('login-nim-input');
     const adminInput = document.getElementById('login-admin-code');
@@ -47,8 +45,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const lastActive = sessionStorage.getItem('portal_last_active');
     if (savedUser && lastActive && (Date.now() - parseInt(lastActive) < INACTIVITY_LIMIT)) {
         currentUser = JSON.parse(savedUser);
-        initApp();
-        setupInactivityTracker();
+        finishLogin();
     }
 });
 
@@ -73,23 +70,11 @@ async function fetchDatabaseFromCloud() {
         }
     } catch (err) { console.error("Gagal memuat Supabase:", err); }
 
+    // Default data jika kosong
     if (!dbData.soal || dbData.soal.length === 0) {
         dbData.soal = [{ id: 1, category: "anatomi", question: "Sebutkan tulang selangka?", answer: "Clavicula", explanation: "Tulang penghubung sternum dan scapula." }];
     }
     renderAll();
-}
-
-async function saveCategoryData(categoryKey) {
-    renderAll();
-    if (!supabaseClient) return;
-    try {
-        let payload = dbData[categoryKey];
-        if (categoryKey === 'config') payload = { maintenance: dbData.maintenance, theme: dbData.theme, globalAnnouncement: dbData.globalAnnouncement, adminCode: dbData.adminCode };
-        else if (categoryKey === 'jadwal') payload = dbData.jadwalCustom;
-        
-        const { error } = await supabaseClient.from('portal_db').update({ value: payload }).eq('key', categoryKey);
-        if (error) throw error;
-    } catch (err) { console.error(`Gagal simpan ${categoryKey}:`, err); }
 }
 
 window.handleLogin = function() {
@@ -134,10 +119,7 @@ function finishLogin() {
     startClock();
 }
 
-window.handleLogout = function() {
-    sessionStorage.clear();
-    location.reload();
-};
+window.handleLogout = function() { sessionStorage.clear(); location.reload(); };
 
 function setupInactivityTracker() {
     const update = () => { if(currentUser) sessionStorage.setItem('portal_last_active', Date.now().toString()); };
@@ -158,7 +140,7 @@ function startClock() {
 }
 
 // ==========================================================================
-// FUNGSI CBT (Mengambil Soal dari Supabase)
+// FUNGSI CBT (INSTANT FEEDBACK & PENJELASAN)
 // ==========================================================================
 let cbtTimeInSeconds = 0, cbtTimerInterval = null, cbtStarted = false;
 const CBT_LETTERS = ['A', 'B', 'C', 'D', 'E'];
@@ -188,9 +170,22 @@ window.startCBT = function() {
     dbData.cbt_soal.forEach(q => {
         let optionsHtml = '';
         q.options.forEach((opt, i) => {
-            optionsHtml += `<li><label class="option-label" onclick="cbtHighlightOption(this)"><input type="radio" name="cbt-q${q.id}" value="${CBT_LETTERS[i]}"><span class="option-text">${CBT_LETTERS[i]}. ${opt}</span></label></li>`;
+            const safeOpt = opt.replace(/'/g, "\\'");
+            optionsHtml += `
+                <li>
+                    <label class="option-label" id="label-cbt-${q.id}-${i}">
+                        <input type="radio" name="cbt-q${q.id}" value="${safeOpt}" onchange="checkCBTAnswer(${q.id}, '${safeOpt}', this, ${i})">
+                        <span class="option-text">${CBT_LETTERS[i]}. ${opt}</span>
+                    </label>
+                </li>`;
         });
-        html += `<div class="question-card"><div class="q-header">Soal ${q.id}</div><div class="q-text">${q.text}</div><ul class="options">${optionsHtml}</ul></div>`;
+        html += `
+            <div class="question-card" id="card-cbt-${q.id}">
+                <div class="q-header">Soal ${q.id}</div>
+                <div class="q-text">${q.text}</div>
+                <ul class="options">${optionsHtml}</ul>
+                <div id="cbt-feedback-${q.id}" style="display:none; margin-top:12px; padding:12px; border-radius:8px; font-size:14px; line-height:1.5;"></div>
+            </div>`;
     });
     document.getElementById('cbt-question-container').innerHTML = html;
 
@@ -201,16 +196,49 @@ window.startCBT = function() {
     }, 1000);
 };
 
-window.cbtHighlightOption = function(labelElement) {
-    const groupName = labelElement.querySelector('input').name;
-    document.querySelectorAll(`#tab-cbt input[name="${groupName}"]`).forEach(inp => inp.closest('.option-label').classList.remove('selected'));
-    labelElement.classList.add('selected');
+window.checkCBTAnswer = function(qId, selectedOpt, inputEl, optIndex) {
+    const q = dbData.cbt_soal.find(item => item.id === qId);
+    if (!q) return;
+
+    // Kunci semua opsi untuk soal ini
+    document.querySelectorAll(`input[name="cbt-q${qId}"]`).forEach(el => el.disabled = true);
+
+    const feedbackEl = document.getElementById(`cbt-feedback-${qId}`);
+    feedbackEl.style.display = 'block';
+
+    // Jika BENAR
+    if (selectedOpt === q.answer) {
+        inputEl.closest('.option-label').style.background = '#d1fae5';
+        inputEl.closest('.option-label').style.borderColor = '#10b981';
+        feedbackEl.style.background = '#d1fae5';
+        feedbackEl.style.color = '#065f46';
+        feedbackEl.innerHTML = `<strong>✅ Benar!</strong><br>${q.explanation}`;
+    } 
+    // Jika SALAH
+    else {
+        inputEl.closest('.option-label').style.background = '#fee2e2';
+        inputEl.closest('.option-label').style.borderColor = '#ef4444';
+        
+        feedbackEl.style.background = '#fee2e2';
+        feedbackEl.style.color = '#991b1b';
+        feedbackEl.innerHTML = `<strong>❌ Salah!</strong> Jawaban yang benar adalah: <strong>${q.answer}</strong><br>${q.explanation}`;
+        
+        // Sorot Jawaban yang Benar
+        const correctIdx = q.options.indexOf(q.answer);
+        if (correctIdx !== -1) {
+            const correctLabel = document.getElementById(`label-cbt-${qId}-${correctIdx}`);
+            if (correctLabel) {
+                correctLabel.style.background = '#d1fae5';
+                correctLabel.style.borderColor = '#10b981';
+            }
+        }
+    }
 };
 
 window.submitCBT = function() {
     let answered = 0;
     dbData.cbt_soal.forEach(q => {
-        if (document.querySelector(`#tab-cbt input[name="cbt-q${q.id}"]:checked`)) answered++;
+        if (document.querySelector(`input[name="cbt-q${q.id}"]:checked`)) answered++;
     });
 
     if (answered < dbData.cbt_soal.length) {
@@ -218,7 +246,6 @@ window.submitCBT = function() {
     }
     if (cbtTimerInterval) { clearInterval(cbtTimerInterval); cbtTimerInterval = null; }
     
-    document.querySelectorAll('#tab-cbt input[type="radio"]').forEach(i => i.disabled = true);
     document.getElementById('cbt-active-area').style.display = 'none';
     document.getElementById('cbt-result-card').style.display = 'block';
     document.getElementById('cbt-result-text').innerHTML = `Anda menjawab <strong>${answered}</strong> dari <strong>${dbData.cbt_soal.length}</strong> soal.<br>Waktu: <strong>${cbtFormatTime(cbtTimeInSeconds)}</strong>`;
@@ -234,7 +261,7 @@ window.resetCBT = function() {
 };
 
 // ==========================================================================
-// FUNGSI LAINNYA (Disederhanakan agar tidak error & memuat cepat)
+// FUNGSI UI LAINNYA
 // ==========================================================================
 window.switchTab = function(tab, btn) {
     document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
@@ -250,28 +277,19 @@ window.toggleLoginFields = function() {
 };
 
 window.closeModal = function(id) { document.getElementById(id).style.display = 'none'; };
-
-function applyTheme(theme) {
-    if(theme === 'dark') document.body.classList.add('theme-dark');
-    else document.body.classList.remove('theme-dark');
-}
+function applyTheme(theme) { if(theme === 'dark') document.body.classList.add('theme-dark'); else document.body.classList.remove('theme-dark'); }
 
 window.toggleThemeSwitch = async function() {
     dbData.theme = document.getElementById('theme-toggle-checkbox').checked ? 'dark' : 'light';
     applyTheme(dbData.theme);
-    await saveCategoryData('config');
+    if(supabaseClient) await supabaseClient.from('portal_db').update({ value: { ...dbData, maintenance: dbData.maintenance, theme: dbData.theme } }).eq('key', 'config');
 };
 
 function renderAll() {
-    // Render Pengumuman
     const pList = document.getElementById('pengumuman-list');
     if(pList) pList.innerHTML = dbData.pengumuman.length === 0 ? '<p>Belum ada pengumuman.</p>' : dbData.pengumuman.map(p => `<div class="card" style="margin-bottom:10px; padding:15px; background:var(--bg-light);"><h4>${p.judul}</h4><p>${p.isi}</p><small>${p.deadline}</small></div>`).join('');
-
-    // Render Tugas
     const tBody = document.getElementById('tugas-table-body');
     if(tBody) tBody.innerHTML = dbData.tugas.map(t => `<tr><td>${t.nama}</td><td>${t.deadline}</td><td>${t.link !== '#' ? `<a href="${t.link}" target="_blank">Lihat</a>` : '-'}</td></tr>`).join('');
-    
-    // Render Materi
     const mBody = document.getElementById('materi-table-body');
     if(mBody) mBody.innerHTML = dbData.materi.map(m => `<tr><td>${m.kuliah}</td><td>${m.materi}</td><td><a href="${m.link}" target="_blank">Buka</a></td></tr>`).join('');
 }
@@ -283,13 +301,13 @@ window.startQuiz = function() {
 };
 window.submitQuiz = function() { alert("Fitur evaluasi disederhanakan."); };
 window.resetQuiz = function() { window.startQuiz(); };
-window.toggleMaintenanceMode = async function() { dbData.maintenance = !dbData.maintenance; await saveCategoryData('config'); alert('Status diubah'); };
+window.toggleMaintenanceMode = async function() { dbData.maintenance = !dbData.maintenance; if(supabaseClient) await supabaseClient.from('portal_db').update({ value: { ...dbData } }).eq('key', 'config'); alert('Status diubah'); };
 window.openAdminSettingsModal = function() { document.getElementById('admin-settings-modal').style.display = 'flex'; };
-window.saveAdminSettings = async function() { dbData.globalAnnouncement = document.getElementById('cfg-global-msg').value; dbData.adminCode = document.getElementById('cfg-admin-code').value; await saveCategoryData('config'); window.closeModal('admin-settings-modal'); alert('Tersimpan'); };
+window.saveAdminSettings = async function() { dbData.globalAnnouncement = document.getElementById('cfg-global-msg').value; dbData.adminCode = document.getElementById('cfg-admin-code').value; if(supabaseClient) await supabaseClient.from('portal_db').update({ value: { ...dbData } }).eq('key', 'config'); window.closeModal('admin-settings-modal'); alert('Tersimpan'); };
 window.openPreviewModal = function(url) { document.getElementById('preview-frame').src = url; document.getElementById('preview-modal').style.display = 'flex'; };
 window.closePreviewModal = function() { document.getElementById('preview-modal').style.display = 'none'; document.getElementById('preview-frame').src = ''; };
 
-// Placeholder functions to prevent JS Errors
+// Placeholder agar tidak error
 window.addPengumuman = async () => alert('Fitur tambah pengumuman via UI disederhanakan.');
 window.addTugasItem = async () => alert('Fitur tambah tugas via UI disederhanakan.');
 window.addReminder = async () => alert('Fitur reminder disederhanakan.');
