@@ -76,10 +76,39 @@ async function fetchDatabaseFromCloud() {
     renderAll();
 }
 
+async function saveCategoryData(categoryKey) {
+    renderAll();
+    if (!supabaseClient) return;
+    try {
+        let payload = dbData[categoryKey];
+        if (categoryKey === 'config') {
+            payload = { maintenance: dbData.maintenance, theme: dbData.theme, globalAnnouncement: dbData.globalAnnouncement, adminCode: dbData.adminCode };
+        } else if (categoryKey === 'jadwal') {
+            payload = dbData.jadwalCustom;
+        }
+        const { error } = await supabaseClient.from('portal_db').update({ value: payload }).eq('key', categoryKey);
+        if (error) throw error;
+    } catch (err) { console.error(`Gagal simpan ${categoryKey}:`, err); }
+}
+
+async function uploadFileToSupabaseStorage(fileInputId) {
+    const fileInput = document.getElementById(fileInputId);
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) return null;
+    const file = fileInput.files[0];
+    if (file.size > 50 * 1024 * 1024) { alert("File melebihi 50MB"); return null; }
+    if (!supabaseClient) { alert("Supabase offline"); return null; }
+    try {
+        const filePath = `uploads/${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+        const { data, error } = await supabaseClient.storage.from('portal-files').upload(filePath, file);
+        if (error) throw error;
+        const { data: publicUrlData } = supabaseClient.storage.from('portal-files').getPublicUrl(filePath);
+        return publicUrlData.publicUrl;
+    } catch (err) { console.error(err); alert("Upload gagal"); return null; }
+}
+
 window.handleLogin = function() {
     try {
         const role = document.getElementById('login-role').value;
-        
         if (role === 'admin') {
             const code = document.getElementById('login-admin-code').value.trim();
             if (code === (dbData.adminCode || 'A9ACOR')) {
@@ -138,10 +167,14 @@ function startClock() {
 }
 
 // ==========================================================================
-// FUNGSI CBT (INSTANT FEEDBACK & PENJELASAN)
+// LOGIKA CBT (MODE LATIHAN / EXAM, ACAK, & LAPORAN)
 // ==========================================================================
 let cbtTimeInSeconds = 0, cbtTimerInterval = null, cbtStarted = false;
+let cbtMode = 'practice'; // 'practice' atau 'exam'
+let currentCbtQuestions = [];
+let cbtAnswers = {}; // Format: { qId: selectedOption }
 const CBT_LETTERS = ['A', 'B', 'C', 'D', 'E'];
+const EXAM_DURATION = 60 * 60; // 60 Menit dalam detik
 
 function cbtFormatTime(total) {
     const h = String(Math.floor(total / 3600)).padStart(2, '0');
@@ -150,36 +183,51 @@ function cbtFormatTime(total) {
     return `${h}:${m}:${s}`;
 }
 
-window.startCBT = function() {
+window.startCBT = function(mode) {
     if (cbtStarted) return;
     if (!dbData.cbt_soal || dbData.cbt_soal.length === 0) {
         alert("Soal CBT belum dimasukkan ke database Supabase (key: cbt_soal).");
         return;
     }
 
+    cbtMode = mode;
     cbtStarted = true;
-    cbtTimeInSeconds = 0;
+    cbtAnswers = {};
+    
+    // Acak Soal (Shuffle)
+    currentCbtQuestions = [...dbData.cbt_soal];
+    currentCbtQuestions.sort(() => Math.random() - 0.5);
+
+    // Set Timer Awal
+    if (cbtMode === 'exam') {
+        cbtTimeInSeconds = EXAM_DURATION;
+    } else {
+        cbtTimeInSeconds = 0;
+    }
+    
+    document.getElementById('cbt-timer').innerText = cbtFormatTime(cbtTimeInSeconds);
     document.getElementById('cbt-start-card').style.display = 'none';
     document.getElementById('cbt-active-area').style.display = 'block';
     document.getElementById('cbt-result-card').style.display = 'none';
-    document.getElementById('cbt-total-label').innerText = dbData.cbt_soal.length;
+    document.getElementById('cbt-total-label').innerText = currentCbtQuestions.length;
 
+    // Render Soal
     let html = '';
-    dbData.cbt_soal.forEach(q => {
+    currentCbtQuestions.forEach((q, idx) => {
         let optionsHtml = '';
         q.options.forEach((opt, i) => {
             const safeOpt = opt.replace(/'/g, "\\'");
             optionsHtml += `
                 <li>
                     <label class="option-label" id="label-cbt-${q.id}-${i}">
-                        <input type="radio" name="cbt-q${q.id}" value="${safeOpt}" onchange="checkCBTAnswer(${q.id}, '${safeOpt}', this)">
+                        <input type="radio" name="cbt-q${q.id}" value="${safeOpt}" onchange="selectCBTAnswer(${q.id}, '${safeOpt}', this)">
                         <span class="option-text"><strong>${CBT_LETTERS[i]}.</strong> ${opt}</span>
                     </label>
                 </li>`;
         });
         html += `
             <div class="question-card" id="card-cbt-${q.id}">
-                <div class="q-header">Soal ${q.id}</div>
+                <div class="q-header">Soal ${idx + 1}</div>
                 <div class="q-text">${q.text}</div>
                 <ul class="options">${optionsHtml}</ul>
                 <div id="cbt-feedback-${q.id}" class="cbt-feedback" style="display:none;"></div>
@@ -187,59 +235,125 @@ window.startCBT = function() {
     });
     document.getElementById('cbt-question-container').innerHTML = html;
 
+    // Jalankan Timer
     if (cbtTimerInterval) clearInterval(cbtTimerInterval);
     cbtTimerInterval = setInterval(() => {
-        cbtTimeInSeconds++;
-        document.getElementById('cbt-timer').innerText = cbtFormatTime(cbtTimeInSeconds);
+        if (cbtMode === 'exam') {
+            cbtTimeInSeconds--;
+            document.getElementById('cbt-timer').innerText = cbtFormatTime(cbtTimeInSeconds);
+            if (cbtTimeInSeconds <= 0) {
+                clearInterval(cbtTimerInterval);
+                alert("⏰ Waktu Ujian Habis! Jawaban otomatis disimpan.");
+                submitCBT();
+            }
+        } else {
+            cbtTimeInSeconds++;
+            document.getElementById('cbt-timer').innerText = cbtFormatTime(cbtTimeInSeconds);
+        }
     }, 1000);
 };
 
-window.checkCBTAnswer = function(qId, selectedOpt, inputEl) {
+window.selectCBTAnswer = function(qId, selectedOpt, inputEl) {
+    cbtAnswers[qId] = selectedOpt;
     const q = dbData.cbt_soal.find(item => item.id === qId);
-    if (!q) return;
 
-    // Kunci semua opsi untuk soal ini
-    document.querySelectorAll(`input[name="cbt-q${qId}"]`).forEach(el => el.disabled = true);
+    // Jika Mode Latihan, berikan feedback instan
+    if (cbtMode === 'practice') {
+        document.querySelectorAll(`input[name="cbt-q${qId}"]`).forEach(el => el.disabled = true);
+        const feedbackEl = document.getElementById(`cbt-feedback-${qId}`);
+        feedbackEl.style.display = 'block';
 
-    const feedbackEl = document.getElementById(`cbt-feedback-${qId}`);
-    feedbackEl.style.display = 'block';
-
-    // Jika BENAR
-    if (selectedOpt === q.answer) {
-        inputEl.closest('.option-label').classList.add('correct-answer');
-        feedbackEl.className = 'cbt-feedback feedback-success';
-        feedbackEl.innerHTML = `<strong>✅ Benar!</strong><br><br><em>Pembahasan:</em> ${q.explanation}`;
-    } 
-    // Jika SALAH
-    else {
-        inputEl.closest('.option-label').classList.add('wrong-answer');
-        
-        feedbackEl.className = 'cbt-feedback feedback-danger';
-        feedbackEl.innerHTML = `<strong>❌ Salah!</strong> Jawaban yang benar adalah: <strong>${q.answer}</strong><br><br><em>Pembahasan:</em> ${q.explanation}`;
-        
-        // Sorot Jawaban yang Benar
-        const correctIdx = q.options.indexOf(q.answer);
-        if (correctIdx !== -1) {
-            const correctLabel = document.getElementById(`label-cbt-${qId}-${correctIdx}`);
-            if (correctLabel) correctLabel.classList.add('correct-answer');
+        if (selectedOpt === q.answer) {
+            inputEl.closest('.option-label').classList.add('correct-answer');
+            feedbackEl.className = 'cbt-feedback feedback-success';
+            feedbackEl.innerHTML = `<strong>✅ Benar!</strong><br><br><em>Pembahasan:</em> ${q.explanation}`;
+        } else {
+            inputEl.closest('.option-label').classList.add('wrong-answer');
+            feedbackEl.className = 'cbt-feedback feedback-danger';
+            feedbackEl.innerHTML = `<strong>❌ Salah!</strong> Jawaban yang benar adalah: <strong>${q.answer}</strong><br><br><em>Pembahasan:</em> ${q.explanation}`;
+            
+            const correctIdx = q.options.indexOf(q.answer);
+            if (correctIdx !== -1) {
+                document.getElementById(`label-cbt-${qId}-${correctIdx}`).classList.add('correct-answer');
+            }
         }
+    } 
+    // Jika Mode Exam, beri highlight biru (hanya menandai dipilih)
+    else {
+        document.querySelectorAll(`input[name="cbt-q${qId}"]`).forEach(inp => inp.closest('.option-label').style.borderColor = 'var(--border-color)');
+        inputEl.closest('.option-label').style.borderColor = 'var(--primary)';
     }
 };
 
 window.submitCBT = function() {
-    let answered = 0;
-    dbData.cbt_soal.forEach(q => {
-        if (document.querySelector(`input[name="cbt-q${q.id}"]:checked`)) answered++;
-    });
-
-    if (answered < dbData.cbt_soal.length) {
-        if (!confirm(`Baru menjawab ${answered} dari ${dbData.cbt_soal.length} soal. Yakin ingin menyelesaikan ujian?`)) return;
+    let answeredCount = Object.keys(cbtAnswers).length;
+    
+    if (answeredCount < currentCbtQuestions.length) {
+        if (!confirm(`Anda baru menjawab ${answeredCount} dari ${currentCbtQuestions.length} soal. Yakin ingin menyelesaikan?`)) return;
     }
+    
     if (cbtTimerInterval) { clearInterval(cbtTimerInterval); cbtTimerInterval = null; }
     
+    // Hitung Skor
+    let correctCount = 0;
+    let wrongCount = 0;
+    let wrongTopics = {}; // Untuk deteksi kelemahan
+
+    currentCbtQuestions.forEach(q => {
+        const userAnswer = cbtAnswers[q.id];
+        if (userAnswer === q.answer) {
+            correctCount++;
+        } else if (userAnswer) {
+            wrongCount++;
+            if (q.topic) wrongTopics[q.topic] = (wrongTopics[q.topic] || 0) + 1;
+        } else {
+            wrongCount++; // Tidak dijawab dihitung salah
+        }
+    });
+
+    const total = currentCbtQuestions.length;
+    const score = Math.round((correctCount / total) * 100);
+
+    // Render Laporan
+    let reportHtml = `
+        <div class="report-score">
+            <h4>Nilai Akhir</h4>
+            <div class="score-number">${score}</div>
+            <small style="color: var(--text-muted);">Skala 0 - 100</small>
+        </div>
+        <div class="report-row">
+            <span>Jawaban Benar</span>
+            <span class="report-value report-correct">${correctCount} Soal</span>
+        </div>
+        <div class="report-row">
+            <span>Jawaban Salah / Kosong</span>
+            <span class="report-value report-wrong">${wrongCount} Soal</span>
+        </div>
+        <div class="report-row">
+            <span>Waktu Pengerjaan</span>
+            <span class="report-value">${cbtFormatTime(cbtMode === 'exam' ? EXAM_DURATION - cbtTimeInSeconds : cbtTimeInSeconds)}</span>
+        </div>
+    `;
+
+    // Analisis Rekomendasi Belajar
+    if (Object.keys(wrongTopics).length > 0) {
+        reportHtml += `<div class="report-recommendation">
+            <h5>📚 Rekomendasi Belajar (Fokus Tingkatkan):</h5>
+            <ul>`;
+        for (const [topic, count] of Object.entries(wrongTopics)) {
+            reportHtml += `<li><strong>${topic}</strong> (${count} kesalahan)</li>`;
+        }
+        reportHtml += `</ul></div>`;
+    } else {
+         reportHtml += `<div class="report-recommendation" style="background:#ecfdf5; border-color:#10b981;">
+            <h5 style="color:#065f46;">🌟 Luar Biasa!</h5>
+            <ul style="color:#065f46;"><li>Semua jawaban Anda benar. Tidak ada rekomendasi khusus.</li></ul>
+        </div>`;
+    }
+
+    document.getElementById('cbt-report-content').innerHTML = reportHtml;
     document.getElementById('cbt-active-area').style.display = 'none';
     document.getElementById('cbt-result-card').style.display = 'block';
-    document.getElementById('cbt-result-text').innerHTML = `Anda telah menjawab <strong>${answered}</strong> dari <strong>${dbData.cbt_soal.length}</strong> soal.<br>Waktu pengerjaan: <strong>${cbtFormatTime(cbtTimeInSeconds)}</strong>`;
 };
 
 window.resetCBT = function() {
@@ -253,7 +367,7 @@ window.resetCBT = function() {
 };
 
 // ==========================================================================
-// FUNGSI UI & TAB
+// FUNGSI UI & TAB LAINNYA
 // ==========================================================================
 window.switchTab = function(tab, btn) {
     document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
@@ -278,14 +392,13 @@ function applyTheme(theme) {
 window.toggleThemeSwitch = async function() {
     dbData.theme = document.body.classList.contains('theme-dark') ? 'light' : 'dark';
     applyTheme(dbData.theme);
-    if(supabaseClient) await supabaseClient.from('portal_db').update({ value: { ...dbData, maintenance: dbData.maintenance, theme: dbData.theme } }).eq('key', 'config');
+    await saveCategoryData('config');
 };
 
 // ==========================================================================
-// RENDER DATA
+// RENDER DATA & FITUR ADMIN
 // ==========================================================================
 function renderAll() {
-    // Render Pengumuman
     const pList = document.getElementById('pengumuman-list');
     if(pList) pList.innerHTML = dbData.pengumuman.length === 0 ? '<p style="color:var(--text-muted);">Belum ada pengumuman.</p>' : dbData.pengumuman.map(p => `
         <div style="background:var(--bg-base); border-radius:var(--radius-md); padding:20px; margin-bottom:15px; border-left:4px solid var(--primary);">
@@ -298,15 +411,12 @@ function renderAll() {
         </div>
     `).join('');
 
-    // Render Tugas
     const tBody = document.getElementById('tugas-table-body');
     if(tBody) tBody.innerHTML = dbData.tugas.map(t => `<tr><td data-label="Tugas"><strong>${t.nama}</strong></td><td data-label="Deadline">${t.deadline}</td><td data-label="Aksi">${t.link !== '#' ? `<a href="${t.link}" target="_blank" class="btn btn-sm btn-primary">Lihat</a>` : '-'}</td></tr>`).join('');
     
-    // Render Materi
     const mBody = document.getElementById('materi-table-body');
     if(mBody) mBody.innerHTML = dbData.materi.map(m => `<tr><td data-label="Mata Kuliah"><strong>${m.kuliah}</strong></td><td data-label="Topik">${m.materi}</td><td data-label="Aksi"><a href="${m.link}" target="_blank" class="btn btn-sm btn-outline">Buka</a></td></tr>`).join('');
     
-    // Render Jadwal
     const jBody = document.getElementById('jadwal-table-body');
     if(jBody) jBody.innerHTML = dbData.jadwalCustom.length === 0 ? '<tr><td colspan="5" style="text-align:center;">Tidak ada jadwal hari ini/besok.</td></tr>' : dbData.jadwalCustom.map(j => `
         <tr>
@@ -319,7 +429,85 @@ function renderAll() {
     `).join('');
 }
 
-// Sederhanakan fungsi lainnya untuk mencegah error
+// Fungsi Admin (Menggunakan logika orisinal + modern UI)
+window.addPengumuman = async function() {
+    const judul = document.getElementById('p-judul').value;
+    const isi = document.getElementById('p-isi').value;
+    const deadline = document.getElementById('p-deadline').value;
+    if(!judul || !isi || !deadline) return alert('Semua kolom wajib diisi!');
+    dbData.pengumuman.unshift({ id: Date.now(), judul, isi, deadline });
+    await saveCategoryData('pengumuman');
+    document.getElementById('p-judul').value = ''; document.getElementById('p-isi').value = ''; document.getElementById('p-deadline').value = '';
+    alert('Pengumuman ditambahkan!');
+};
+
+window.addTugasItem = async function() {
+    const nama = document.getElementById('t-nama').value;
+    const deadline = document.getElementById('t-deadline').value;
+    const ket = document.getElementById('t-ket').value;
+    const manualLink = document.getElementById('t-link-manual').value.trim();
+    if(!nama || !deadline) return alert('Nama dan Deadline wajib diisi!');
+    
+    let finalLink = manualLink || '#';
+    const uploadedUrl = await uploadFileToSupabaseStorage('t-file-pc');
+    if (uploadedUrl) { finalLink = uploadedUrl; }
+    
+    dbData.tugas.push({ id: Date.now(), nama, deadline, ket, link: finalLink });
+    await saveCategoryData('tugas');
+    document.getElementById('t-nama').value = ''; document.getElementById('t-deadline').value = ''; document.getElementById('t-ket').value = ''; 
+    document.getElementById('t-file-pc').value = ''; document.getElementById('t-link-manual').value = '';
+    alert('Tugas disimpan!');
+};
+
+window.handlePraktikumUpload = async function(category, idNama, idSkenario, idKet, idFilePc, idLink) {
+    const nama = document.getElementById(idNama).value; const skenario = document.getElementById(idSkenario).value;
+    const ket = document.getElementById(idKet).value; const manualLink = document.getElementById(idLink).value.trim();
+    if(!nama) return alert('Nama wajib diisi!');
+    
+    let finalLink = manualLink || '#';
+    const uploadedUrl = await uploadFileToSupabaseStorage(idFilePc);
+    if (uploadedUrl) { finalLink = uploadedUrl; }
+    
+    dbData[category].push({ id: Date.now(), nama, skenario, ket, link: finalLink });
+    await saveCategoryData(category);
+    document.getElementById(idNama).value = ''; document.getElementById(idSkenario).value = ''; document.getElementById(idKet).value = ''; 
+    document.getElementById(idFilePc).value = ''; document.getElementById(idLink).value = '';
+    alert('Berhasil disimpan!');
+};
+
+window.handleMateriUpload = async function() {
+    const kuliah = document.getElementById('m-kuliah').value; const materi = document.getElementById('m-materi').value;
+    const manualLink = document.getElementById('m-link-manual').value.trim();
+    if(!kuliah || !materi) return alert('Nama kuliah dan materi wajib diisi!');
+    
+    let finalLink = manualLink || '#';
+    const uploadedUrl = await uploadFileToSupabaseStorage('m-file-pc');
+    if (uploadedUrl) { finalLink = uploadedUrl; }
+    
+    dbData.materi.push({ id: Date.now(), kuliah, materi, link: finalLink });
+    await saveCategoryData('materi');
+    document.getElementById('m-kuliah').value = ''; document.getElementById('m-materi').value = ''; 
+    document.getElementById('m-file-pc').value = ''; document.getElementById('m-link-manual').value = '';
+    alert('Materi disimpan!');
+};
+
+window.addReminder = async function() {
+    const val = document.getElementById('rem-text').value; if(!val) return;
+    dbData.reminder.push(val); await saveCategoryData('reminder'); document.getElementById('rem-text').value = '';
+};
+
+window.addJadwalUpdateWithFile = async function() {
+    const title = document.getElementById('up-title').value; if(!title) return;
+    dbData.jadwalUpdates.push(title); await saveCategoryData('jadwalUpdates'); document.getElementById('up-title').value = '';
+};
+
+window.toggleMaintenanceMode = async function() { dbData.maintenance = !dbData.maintenance; await saveCategoryData('config'); alert('Status diubah'); };
+window.openAdminSettingsModal = function() { document.getElementById('admin-settings-modal').style.display = 'flex'; };
+window.saveAdminSettings = async function() { dbData.globalAnnouncement = document.getElementById('cfg-global-msg').value; dbData.adminCode = document.getElementById('cfg-admin-code').value; await saveCategoryData('config'); window.closeModal('admin-settings-modal'); alert('Tersimpan'); };
+window.openPreviewModal = function(url) { document.getElementById('preview-frame').src = url; document.getElementById('preview-modal').style.display = 'flex'; };
+window.closePreviewModal = function() { document.getElementById('preview-modal').style.display = 'none'; document.getElementById('preview-frame').src = ''; };
+
+// Sederhanakan fungsi Latihan Soal Isian (jika digunakan)
 window.startQuiz = function() {
     document.getElementById('quiz-start-card').style.display = 'none';
     document.getElementById('quiz-active-area').style.display = 'block';
@@ -327,8 +515,6 @@ window.startQuiz = function() {
 };
 window.submitQuiz = function() { alert("Fitur evaluasi disederhanakan."); };
 window.resetQuiz = function() { window.startQuiz(); };
-window.toggleMaintenanceMode = async function() { dbData.maintenance = !dbData.maintenance; if(supabaseClient) await supabaseClient.from('portal_db').update({ value: { ...dbData } }).eq('key', 'config'); alert('Status Maintenance diubah'); };
-window.openAdminSettingsModal = function() { document.getElementById('admin-settings-modal').style.display = 'flex'; };
-window.saveAdminSettings = async function() { dbData.globalAnnouncement = document.getElementById('cfg-global-msg').value; dbData.adminCode = document.getElementById('cfg-admin-code').value; if(supabaseClient) await supabaseClient.from('portal_db').update({ value: { ...dbData } }).eq('key', 'config'); window.closeModal('admin-settings-modal'); alert('Pengaturan Tersimpan'); };
-window.openPreviewModal = function(url) { document.getElementById('preview-frame').src = url; document.getElementById('preview-modal').style.display = 'flex'; };
-window.closePreviewModal = function() { document.getElementById('preview-modal').style.display = 'none'; document.getElementById('preview-frame').src = ''; };
+
+// Fungsi Jadwal Modal
+window.openJadwalModal = function() { alert("Fitur edit jadwal via UI sedang dalam pengembangan. Menggunakan Supabase."); };
