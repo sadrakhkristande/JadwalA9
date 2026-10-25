@@ -284,4 +284,57 @@
                     <div id="cbt-result-card" class="empty-state" style="display: none;">
                         <div class="empty-icon">📊</div>
                         <h3>Laporan Hasil CBT</h3>
-                        <div id="cbt-report-content" style="margin: 20px auto; max-width: 
+                        <div id="cbt-report-content" style="margin: 20px auto; max-width: 600px; text-align: left; background: var(--bg-base); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-color);"></div>
+                        <button class="btn btn-primary" onclick="resetCBT()">🔄 Ulangi Ujian</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODALS -->
+    <div id="preview-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="preview-title">Preview</h3>
+                <button class="btn-icon" onclick="closePreviewModal()">✕</button>
+            </div>
+            <iframe id="preview-frame" src=""></iframe>
+        </div>
+    </div>
+
+    <div id="jadwal-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3 id="jadwal-modal-title">Jadwal</h3>
+                <button class="btn-icon" onclick="closeModal('jadwal-modal')">✕</button>
+            </div>
+            <input type="hidden" id="edit-jadwal-index" value="-1">
+            <input type="text" id="j-tgl" class="modern-input" placeholder="Tanggal (Cth: Senin, 21-Sep-26)">
+            <div class="grid-2" style="margin-bottom: 10px;"><input type="text" id="j-jam1" class="modern-input" placeholder="Jam 1"><input type="text" id="j-keg1" class="modern-input" placeholder="Kegiatan 1"></div>
+            <div class="grid-2" style="margin-bottom: 10px;"><input type="text" id="j-jam2" class="modern-input" placeholder="Jam 2"><input type="text" id="j-keg2" class="modern-input" placeholder="Kegiatan 2"></div>
+            <div class="grid-2" style="margin-bottom: 10px;"><input type="text" id="j-jam3" class="modern-input" placeholder="Jam 3"><input type="text" id="j-keg3" class="modern-input" placeholder="Kegiatan 3"></div>
+            <div class="grid-2" style="margin-bottom: 15px;"><input type="text" id="j-jam4" class="modern-input" placeholder="Jam 4"><input type="text" id="j-keg4" class="modern-input" placeholder="Kegiatan 4"></div>
+            <button class="btn btn-primary btn-block" onclick="saveJadwalItem()">Simpan Jadwal</button>
+        </div>
+    </div>
+
+    <div id="admin-settings-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3>Pengaturan Web</h3>
+                <button class="btn-icon" onclick="closeModal('admin-settings-modal')">✕</button>
+            </div>
+            <div class="form-group">
+                <label>Status Pemeliharaan</label>
+                <button id="modal-maintenance-btn" class="btn btn-warning btn-block" onclick="toggleMaintenanceMode()">Ubah Status</button>
+            </div>
+            <div class="form-group"><label>Pengumuman Global</label><input type="text" id="cfg-global-msg" class="modern-input"></div>
+            <div class="form-group"><label>Kode Admin Baru</label><input type="password" id="cfg-admin-code" class="modern-input"></div>
+            <button class="btn btn-primary btn-block" onclick="saveAdminSettings()">Simpan Pengaturan</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
