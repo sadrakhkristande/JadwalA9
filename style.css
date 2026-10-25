@@ -330,7 +330,6 @@ th {
     padding: 20px;
     text-align: center;
     position: relative;
-    /* Sengaja pakai <div> bukan <header> agar tidak kena global sticky header */
 }
 
 #tab-cbt .cbt-header h1 {
