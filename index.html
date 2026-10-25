@@ -4,10 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal Akademik A9</title>
-    
-    <!-- PUSTAKA SUPABASE -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -83,7 +80,8 @@
             <button class="btn nav-btn" onclick="switchTab('skills', this)">🩺 Skills Lab</button>
             <button class="btn nav-btn" onclick="switchTab('tutorial', this)">💬 Tutorial</button>
             <button class="btn nav-btn" onclick="switchTab('materi', this)">📚 Materi</button>
-            <button class="btn nav-btn" onclick="switchTab('soal', this)">❓ Latihan Soal</button>
+            <button class="btn nav-btn" onclick="switchTab('soal', this)">❓ Latihan Isian</button>
+            <button class="btn nav-btn" onclick="switchTab('cbt', this)">📝 CBT</button>
         </nav>
 
         <main>
@@ -296,14 +294,12 @@
                         </div>
                     </div>
 
-                    <!-- TAMPILAN AWAL SEBELUM MULAI (START CARD) -->
                     <div id="quiz-start-card" style="background: var(--bg-light); border: 1px solid var(--border); padding: 30px; border-radius: 12px; text-align: center; margin-top: 10px;">
                         <h3 id="quiz-start-title" style="color: var(--accent); margin-bottom: 10px;">Latihan Soal Isian Sub-Bagian Anatomi</h3>
                         <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Uji pemahaman Anda dengan menjawab pertanyaan secara mandiri (dilengkapi ilustrasi gambar). Ketik jawaban singkat pada kolom yang tersedia, lalu tekan tombol <strong>Submit Jawaban</strong>.</p>
                         <button class="btn" onclick="startQuiz()" style="padding: 12px 28px; font-size: 16px; font-weight: bold; background: var(--accent);">▶️ Mulai Kuis Isian</button>
                     </div>
 
-                    <!-- TAMPILAN AREA KERJA KUIS ISIAN -->
                     <div id="quiz-active-area" style="display: none; margin-top: 15px;">
                         <div id="soal-cards-container"></div>
 
@@ -312,7 +308,6 @@
                             <button id="reset-quiz-btn" class="btn btn-warning" onclick="resetQuiz()" style="display: none; padding: 12px 24px; font-size: 15px;">🔄 Coba Lagi</button>
                         </div>
 
-                        <!-- KARTU HASIL SKOR AKHIR -->
                         <div id="quiz-result-card" style="display: none; margin-top: 20px; background: var(--bg-light); border: 2px solid var(--accent); padding: 20px; border-radius: 12px; text-align: center;">
                             <h3 style="color: var(--accent); margin-bottom: 8px;">🎉 Hasil Evaluasi Latihan Soal</h3>
                             <p id="quiz-score-text" style="font-size: 20px; font-weight: bold; color: var(--text);"></p>
@@ -320,10 +315,40 @@
                     </div>
                 </div>
             </div>
+
+            <!-- TAB CBT (BARU) -->
+            <div id="tab-cbt" class="tab-content" style="display: none;">
+                <div class="cbt-container">
+                    <header class="cbt-header">
+                        <h1>SIMULASI CBT BLOK 1.2</h1>
+                        <p>Sistem Integumen &amp; Muskuloskeletal | Total <span id="cbt-total-label">100</span> Soal</p>
+                        <div class="cbt-timer" id="cbt-timer">Waktu: 00:00:00</div>
+                    </header>
+
+                    <div id="cbt-start-card" style="padding: 30px; text-align: center;">
+                        <h3 style="color: var(--accent); margin-bottom: 10px;">Selamat Datang di Simulasi CBT</h3>
+                        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Kuis berisi 100 soal pilihan ganda. Timer akan berjalan otomatis saat Anda menekan tombol <strong>Mulai</strong> di bawah ini. Pastikan Anda mengerjakan dengan sungguh-sungguh.</p>
+                        <button class="btn-cbt-submit" onclick="startCBT()">▶️ Mulai Simulasi CBT</button>
+                    </div>
+
+                    <div id="cbt-active-area" style="display: none;">
+                        <div id="cbt-question-container"></div>
+                        <div class="submit-area">
+                            <button class="btn-cbt-submit" onclick="submitCBT()">Simpan &amp; Selesai</button>
+                        </div>
+                    </div>
+
+                    <div id="cbt-result-card" style="display: none; padding: 30px; text-align: center;">
+                        <h3 style="color: var(--accent); margin-bottom: 10px;">🎉 CBT Selesai!</h3>
+                        <p id="cbt-result-text" style="font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 15px;"></p>
+                        <button class="btn" style="padding: 10px 24px;" onclick="resetCBT()">🔄 Ulangi CBT</button>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
-    <!-- MODAL PREVIEW DOKUMEN / BERKAS -->
+    <!-- MODAL PREVIEW DOKUMEN -->
     <div id="preview-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:99999; justify-content:center; align-items:center; padding: 20px;">
         <div style="position:relative; width:100%; max-width:900px; height:85vh; background:var(--bg-card); padding:15px; border-radius:12px; display:flex; flex-direction:column;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
