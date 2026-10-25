@@ -131,6 +131,8 @@ body { background-color: var(--bg-base); color: var(--text-main); line-height: 1
 .question-card:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 .q-header { font-weight: 800; color: var(--primary); margin-bottom: 12px; font-size: 16px; }
 .q-text { font-size: 15px; line-height: 1.7; margin-bottom: 20px; color: var(--text-main); }
+.cbt-image-container { text-align: center; margin: 15px 0; padding: 10px; background: var(--bg-base); border-radius: var(--radius-md); border: 1px solid var(--border-color); }
+.cbt-image { max-width: 100%; max-height: 250px; border-radius: 8px; object-fit: contain; }
 .options { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
 .option-label { display: flex; align-items: flex-start; padding: 15px 20px; background: var(--bg-base); border: 2px solid var(--border-color); border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s; }
 .option-label:hover { border-color: var(--primary); background: var(--bg-card); }
