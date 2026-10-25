@@ -4,106 +4,125 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal Akademik A9</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="theme-light">
 
-    <div id="maintenance-banner" style="display: none; background: #ef4444; color: white; text-align: center; padding: 10px; font-weight: bold; position: sticky; top: 0; z-index: 9999; box-shadow: 0 2px 5px rgba(0,0,0,0.2); font-size: 13px;">⚠️ PORTAL SEDANG DALAM PEMELIHARAAN (MAINTENANCE) ⚠️</div>
-    <div id="global-announcement-banner" style="display: none; background: #047857; color: white; text-align: center; padding: 8px 12px; font-size: 12px; font-weight: 600; position: sticky; top: 0; z-index: 9998;"><span id="global-announcement-text"></span></div>
+    <!-- BANNER MAINTENANCE -->
+    <div id="maintenance-banner" class="banner banner-danger" style="display: none;">
+        ⚠️ PORTAL SEDANG DALAM PEMELIHARAAN (MAINTENANCE) ⚠️
+    </div>
 
-    <!-- HALAMAN LOGIN -->
+    <!-- BANNER PENGUMUMAN GLOBAL -->
+    <div id="global-announcement-banner" class="banner banner-info" style="display: none;">
+        <span id="global-announcement-text"></span>
+    </div>
+
+    <!-- ================= HALAMAN LOGIN ================= -->
     <div id="login-page">
-        <div class="card" style="margin: auto; width: 100%; max-width: 380px;">
-            <h2 style="text-align: center; margin-bottom: 16px; color: var(--accent); font-size: 22px;">Portal Akademik A9</h2>
+        <div class="login-bg-shapes"></div>
+        <div class="card glass-card login-card">
+            <div class="login-header">
+                <div class="login-icon">🎓</div>
+                <h2>Portal A9</h2>
+                <p>Silakan masuk ke akun Anda</p>
+            </div>
             
-            <div style="margin-bottom: 12px;">
-                <label style="display: block; margin-bottom: 4px; font-weight: 600; font-size: 13px;">Pilih Peran (Role):</label>
-                <select id="login-role" class="input-field" onchange="toggleLoginFields()" style="padding: 8px 12px; font-size: 13px;">
+            <div class="form-group">
+                <label>Pilih Peran (Role)</label>
+                <select id="login-role" class="modern-input" onchange="toggleLoginFields()">
                     <option value="guest">Mahasiswa</option>
                     <option value="admin">Administrator</option>
                 </select>
             </div>
 
-            <div id="guest-fields" style="margin-bottom: 12px;">
-                <label style="display: block; margin-bottom: 4px; font-weight: 600; font-size: 13px;">Masukkan Nomor Identitas:</label>
-                <input type="text" id="login-nim-input" class="input-field" placeholder="Contoh: 21105032610227" style="padding: 8px 12px; font-size: 13px;">
-                <small style="color: var(--text-muted); display: block; margin-top: 3px; font-size: 11px;">Tekan Enter untuk langsung masuk.</small>
+            <div id="guest-fields" class="form-group">
+                <label>Nomor Identitas (NIM)</label>
+                <input type="text" id="login-nim-input" class="modern-input" placeholder="Masukkan NIM Anda">
             </div>
 
-            <div id="admin-fields" style="margin-bottom: 12px; display: none;">
-                <label style="display: block; margin-bottom: 4px; font-weight: 600; font-size: 13px;">Kode Rahasia Admin:</label>
-                <input type="password" id="login-admin-code" class="input-field" placeholder="Masukkan kode admin..." style="padding: 8px 12px; font-size: 13px;">
+            <div id="admin-fields" class="form-group" style="display: none;">
+                <label>Kode Rahasia Admin</label>
+                <input type="password" id="login-admin-code" class="modern-input" placeholder="••••••••">
             </div>
 
-            <button class="btn" onclick="handleLogin()" style="width: 100%; padding: 10px; font-weight: bold; font-size: 14px; margin-top: 4px;">Masuk Portal</button>
+            <button class="btn btn-primary btn-block btn-lg" onclick="handleLogin()">Masuk Portal</button>
         </div>
     </div>
 
-    <!-- APLIKASI UTAMA -->
+    <!-- ================= APLIKASI UTAMA ================= -->
     <div id="main-app" style="display: none;">
-        <header>
-            <div>
-                <h2 style="margin: 0; color: var(--accent);">Portal Akademik A9</h2>
-                <small id="user-info" style="color: var(--text-muted);">Memuat pengguna...</small>
-            </div>
-            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                <span id="wib-clock" style="font-weight: 600; font-size: 13px;"></span>
-                <div style="display: flex; align-items: center; gap: 6px;">
-                    <span style="font-size: 12px; font-weight: 600;">🌙 Dark</span>
-                    <label class="switch"><input type="checkbox" id="theme-toggle-checkbox" onchange="toggleThemeSwitch()"><span class="slider round"></span></label>
+        
+        <!-- HEADER MODERN -->
+        <header class="modern-header">
+            <div class="header-brand">
+                <div class="brand-logo">A9</div>
+                <div>
+                    <h2>Portal Akademik</h2>
+                    <small id="user-info">Memuat...</small>
                 </div>
-                <button class="btn btn-warning admin-only" style="display: none; padding: 6px 12px; font-size: 12px;" onclick="openAdminSettingsModal()">⚙️ Pengaturan Web</button>
-                <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick="handleLogout()">Keluar</button>
+            </div>
+            
+            <div class="header-actions">
+                <span id="wib-clock" class="clock-badge"></span>
+                <button class="btn-icon" onclick="toggleThemeSwitch()" title="Ganti Tema">🌓</button>
+                <button class="btn btn-outline btn-sm admin-only" style="display: none;" onclick="openAdminSettingsModal()">⚙️ Setelan</button>
+                <button class="btn btn-danger btn-sm" onclick="handleLogout()">Keluar</button>
             </div>
         </header>
 
-        <nav>
-            <button class="btn nav-btn active" onclick="switchTab('home', this)">🏠 Beranda</button>
-            <button class="btn nav-btn" onclick="switchTab('jadwal', this)">📅 Jadwal</button>
-            <button class="btn nav-btn" onclick="switchTab('tugas', this)">📋 Tugas</button>
-            <button class="btn nav-btn" onclick="switchTab('lab', this)">🔬 Lab</button>
-            <button class="btn nav-btn" onclick="switchTab('skills', this)">🩺 Skills Lab</button>
-            <button class="btn nav-btn" onclick="switchTab('tutorial', this)">💬 Tutorial</button>
-            <button class="btn nav-btn" onclick="switchTab('materi', this)">📚 Materi</button>
-            <button class="btn nav-btn" onclick="switchTab('soal', this)">❓ Latihan Soal</button>
-            <button class="btn nav-btn" onclick="switchTab('cbt', this)">📝 CBT</button>
+        <!-- NAVIGASI PILL -->
+        <nav class="modern-nav">
+            <button class="nav-pill active" onclick="switchTab('home', this)">🏠 Beranda</button>
+            <button class="nav-pill" onclick="switchTab('jadwal', this)">📅 Jadwal</button>
+            <button class="nav-pill" onclick="switchTab('tugas', this)">📋 Tugas</button>
+            <button class="nav-pill" onclick="switchTab('lab', this)">🔬 Lab</button>
+            <button class="nav-pill" onclick="switchTab('skills', this)">🩺 Skills Lab</button>
+            <button class="nav-pill" onclick="switchTab('tutorial', this)">💬 Tutorial</button>
+            <button class="nav-pill" onclick="switchTab('materi', this)">📚 Materi</button>
+            <button class="nav-pill" onclick="switchTab('soal', this)">❓ Latihan</button>
+            <button class="nav-pill nav-pill-cbt" onclick="switchTab('cbt', this)">📝 CBT</button>
         </nav>
 
-        <main>
+        <main class="main-content">
             <!-- TAB BERANDA -->
-            <div id="tab-home" class="tab-content">
-                <div class="dashboard-grid">
-                    <div>
-                        <div class="card">
-                            <h3 style="margin-bottom: 15px; color: var(--accent);">📢 Pengumuman Akademik</h3>
-                            <div id="form-pengumuman" class="admin-form-box" style="display: none; background: var(--bg-light); padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px dashed var(--accent);">
-                                <h4 style="margin-bottom: 8px; color: var(--accent);">➕ Tambah Pengumuman Manual</h4>
-                                <input type="text" id="p-judul" class="input-field" placeholder="Judul Pengumuman" style="margin-bottom:8px;">
-                                <textarea id="p-isi" class="input-field" placeholder="Isi pengumuman..." style="margin-bottom:8px; height: 80px;"></textarea>
-                                <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Aktif Sampai Tanggal:</label>
-                                <input type="date" id="p-deadline" class="input-field" style="margin-bottom:10px;">
-                                <button class="btn" onclick="addPengumuman()">Simpan Pengumuman</button>
-                            </div>
-                            <div id="pengumuman-list">Memuat pengumuman...</div>
+            <div id="tab-home" class="tab-content active-tab">
+                <div class="grid-2-1">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">📢 Pengumuman Akademik</h3>
                         </div>
+                        <div id="form-pengumuman" class="admin-form-box" style="display: none;">
+                            <input type="text" id="p-judul" class="modern-input" placeholder="Judul Pengumuman">
+                            <textarea id="p-isi" class="modern-input" placeholder="Isi pengumuman..."></textarea>
+                            <input type="date" id="p-deadline" class="modern-input">
+                            <button class="btn btn-primary" onclick="addPengumuman()">Simpan</button>
+                        </div>
+                        <div id="pengumuman-list">Memuat pengumuman...</div>
                     </div>
-                    <div>
-                        <div class="card" style="margin-bottom: 20px;">
-                            <h3 style="margin-bottom: 15px; color: var(--accent);">⏰ Quick Reminder</h3>
-                            <div id="form-reminder" class="admin-form-box" style="display: none; margin-bottom: 12px; background: var(--bg-light); padding: 10px; border-radius: 6px;">
-                                <input type="text" id="rem-text" class="input-field" placeholder="Catatan cepat..." style="margin-bottom:6px;">
-                                <button class="btn" style="padding:6px 12px; font-size:12px;" onclick="addReminder()">Tambah Reminder</button>
+                    
+                    <div class="sidebar-stack">
+                        <div class="card">
+                            <div class="card-header"><h3 class="card-title">⏰ Reminder</h3></div>
+                            <div id="form-reminder" class="admin-form-box" style="display: none;">
+                                <input type="text" id="rem-text" class="modern-input" placeholder="Catatan...">
+                                <button class="btn btn-primary btn-block" onclick="addReminder()">Tambah</button>
                             </div>
-                            <ul id="reminder-list" style="padding-left: 20px;"></ul>
+                            <ul id="reminder-list" class="clean-list"></ul>
                         </div>
                         <div class="card">
-                            <h3 style="margin-bottom: 15px; color: var(--accent);">📌 Info Update Jadwal</h3>
-                            <div id="form-jadwal-update" class="admin-form-box" style="display: none; margin-bottom: 12px; background: var(--bg-light); padding: 10px; border-radius: 6px;">
-                                <input type="text" id="up-title" class="input-field" placeholder="Keterangan update..." style="margin-bottom:6px;">
-                                <button class="btn" style="padding:6px 12px; font-size:12px;" onclick="addJadwalUpdateWithFile()">Tambah Update</button>
+                            <div class="card-header"><h3 class="card-title">📌 Info Update</h3></div>
+                            <div id="form-jadwal-update" class="admin-form-box" style="display: none;">
+                                <input type="text" id="up-title" class="modern-input" placeholder="Info update...">
+                                <button class="btn btn-primary btn-block" onclick="addJadwalUpdateWithFile()">Tambah</button>
                             </div>
-                            <ul id="jadwal-update-list" style="padding-left: 20px;"></ul>
+                            <ul id="jadwal-update-list" class="clean-list"></ul>
                         </div>
                     </div>
                 </div>
@@ -112,106 +131,226 @@
             <!-- TAB JADWAL -->
             <div id="tab-jadwal" class="tab-content" style="display: none;">
                 <div class="card">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                        <h3 style="color: var(--accent);">📅 Agenda Jadwal Kuliah (Hari Ini & Besok)</h3>
-                        <button class="btn admin-only" style="display: none;" onclick="openJadwalModal(-1)">+ Tambah Agenda Jadwal Baru</button>
+                    <div class="card-header flex-between">
+                        <h3 class="card-title">📅 Jadwal Kuliah (Hari Ini & Besok)</h3>
+                        <button class="btn btn-primary btn-sm admin-only" style="display: none;" onclick="openJadwalModal(-1)">+ Tambah</button>
                     </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Tanggal</th><th>Sesi 1 (07.50-09.30)</th><th>Sesi 2 (09.50-11.30)</th><th>Sesi 3 (12.30-14.10)</th><th>Sesi 4 (14.15-15.55)</th><th class="admin-only" style="display: none;">Aksi Admin</th>
-                            </tr>
-                        </thead>
-                        <tbody id="jadwal-table-body"><tr><td colspan="6" style="text-align: center;">Memuat jadwal...</td></tr></tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>Tanggal</th><th>Sesi 1</th><th>Sesi 2</th><th>Sesi 3</th><th>Sesi 4</th><th class="admin-only" style="display:none;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jadwal-table-body"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
             <!-- TAB TUGAS -->
             <div id="tab-tugas" class="tab-content" style="display: none;">
                 <div class="card">
-                    <h3 style="margin-bottom: 15px; color: var(--accent);">📋 Daftar Tugas & Lembar Kerja</h3>
-                    <div id="form-tugas" class="admin-form-box" style="display: none; background: var(--bg-light); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px dashed var(--accent);">
-                        <h4 style="margin-bottom: 8px; color: var(--accent);">➕ Tambah Tugas Baru</h4>
-                        <input type="text" id="t-nama" class="input-field" placeholder="Nama Tugas" style="margin-bottom:8px;">
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Deadline:</label>
-                        <input type="date" id="t-deadline" class="input-field" style="margin-bottom:8px;">
-                        <textarea id="t-ket" class="input-field" placeholder="Keterangan instruksi tugas..." style="margin-bottom:8px; height: 70px;"></textarea>
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Pilih File dari PC (Maks 50MB):</label>
-                        <input type="file" id="t-file-pc" class="input-field" style="margin-bottom:8px; padding: 6px;">
-                        <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Atau Link URL:</label>
-                        <input type="text" id="t-link-manual" class="input-field" placeholder="https://..." style="margin-bottom:12px;">
-                        <button class="btn" onclick="addTugasItem()">Simpan Tugas</button>
+                    <div class="card-header"><h3 class="card-title">📋 Daftar Tugas</h3></div>
+                    <div id="form-tugas" class="admin-form-box" style="display: none;">
+                        <input type="text" id="t-nama" class="modern-input" placeholder="Nama Tugas">
+                        <input type="date" id="t-deadline" class="modern-input">
+                        <textarea id="t-ket" class="modern-input" placeholder="Instruksi..."></textarea>
+                        <input type="file" id="t-file-pc" class="modern-input">
+                        <input type="text" id="t-link-manual" class="modern-input" placeholder="Atau Link URL (https://...)">
+                        <button class="btn btn-primary" onclick="addTugasItem()">Simpan Tugas</button>
                     </div>
-                    <table>
-                        <thead><tr><th>Nama Tugas</th><th>Deadline</th><th>Aksi / Berkas</th></tr></thead>
-                        <tbody id="tugas-table-body"></tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="modern-table">
+                            <thead><tr><th>Tugas</th><th>Deadline</th><th>Berkas</th></tr></thead>
+                            <tbody id="tugas-table-body"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            <!-- TAB LAB, SKILLS, TUTORIAL, MATERI (Sama seperti sebelumnya) -->
-            <div id="tab-lab" class="tab-content" style="display: none;"><div class="card"><h3 style="color: var(--accent); margin-bottom: 15px;">🔬 Praktikum Laboratorium</h3><div id="form-lab" class="admin-form-box" style="display: none; background: var(--bg-light); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px dashed var(--accent);"><input type="text" id="lab-nama" class="input-field" placeholder="Nama Kegiatan" style="margin-bottom:8px;"><input type="text" id="lab-skenario" class="input-field" placeholder="Modul" style="margin-bottom:8px;"><textarea id="lab-ket" class="input-field" placeholder="Keterangan..." style="margin-bottom:8px; height: 70px;"></textarea><input type="file" id="lab-file-pc" class="input-field" style="margin-bottom:8px; padding: 6px;"><input type="text" id="lab-link-manual" class="input-field" placeholder="Link URL" style="margin-bottom:12px;"><button class="btn" onclick="handlePraktikumUpload('laboratorium', 'lab-nama', 'lab-skenario', 'lab-ket', 'lab-file-pc', 'lab-link-manual')">Simpan Lab</button></div><div id="lab-list"></div></div></div>
-            <div id="tab-skills" class="tab-content" style="display: none;"><div class="card"><h3 style="color: var(--accent); margin-bottom: 15px;">🩺 Panduan Skills Lab</h3><div id="form-skills" class="admin-form-box" style="display: none; background: var(--bg-light); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px dashed var(--accent);"><input type="text" id="skills-nama" class="input-field" placeholder="Nama Keterampilan" style="margin-bottom:8px;"><input type="text" id="skills-skenario" class="input-field" placeholder="Modul" style="margin-bottom:8px;"><textarea id="skills-ket" class="input-field" placeholder="Keterangan..." style="margin-bottom:8px; height: 70px;"></textarea><input type="file" id="skills-file-pc" class="input-field" style="margin-bottom:8px; padding: 6px;"><input type="text" id="skills-link-manual" class="input-field" placeholder="Link URL" style="margin-bottom:12px;"><button class="btn" onclick="handlePraktikumUpload('skills_lab', 'skills-nama', 'skills-skenario', 'skills-ket', 'skills-file-pc', 'skills-link-manual')">Simpan Skills Lab</button></div><div id="skills-list"></div></div></div>
-            <div id="tab-tutorial" class="tab-content" style="display: none;"><div class="card"><h3 style="color: var(--accent); margin-bottom: 15px;">💬 Diskusi & Skenario Tutorial</h3><div id="form-tutorial" class="admin-form-box" style="display: none; background: var(--bg-light); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px dashed var(--accent);"><input type="text" id="tut-nama" class="input-field" placeholder="Topik" style="margin-bottom:8px;"><input type="text" id="tut-skenario" class="input-field" placeholder="Skenario" style="margin-bottom:8px;"><textarea id="tut-ket" class="input-field" placeholder="Catatan..." style="margin-bottom:8px; height: 70px;"></textarea><input type="file" id="tut-file-pc" class="input-field" style="margin-bottom:8px; padding: 6px;"><input type="text" id="tut-link-manual" class="input-field" placeholder="Link URL" style="margin-bottom:12px;"><button class="btn" onclick="handlePraktikumUpload('tutorial', 'tut-nama', 'tut-skenario', 'tut-ket', 'tut-file-pc', 'tut-link-manual')">Simpan Tutorial</button></div><div id="tutorial-list"></div></div></div>
-            <div id="tab-materi" class="tab-content" style="display: none;"><div class="card"><h3 style="color: var(--accent); margin-bottom: 15px;">📚 Bank Materi Kuliah</h3><div id="form-materi" class="admin-form-box" style="display: none; background: var(--bg-light); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px dashed var(--accent);"><input type="text" id="m-kuliah" class="input-field" placeholder="Mata Kuliah" style="margin-bottom:8px;"><input type="text" id="m-materi" class="input-field" placeholder="Topik" style="margin-bottom:8px;"><input type="file" id="m-file-pc" class="input-field" style="margin-bottom:8px; padding: 6px;"><input type="text" id="m-link-manual" class="input-field" placeholder="Link URL" style="margin-bottom:12px;"><button class="btn" onclick="handleMateriUpload()">Simpan Materi</button></div><table><thead><tr><th>Mata Kuliah</th><th>Topik</th><th>Akses</th></tr></thead><tbody id="materi-table-body"></tbody></table></div></div>
+            <!-- TAB LAB, SKILLS, TUTORIAL, MATERI -->
+            <div id="tab-lab" class="tab-content" style="display: none;">
+                <div class="card">
+                    <div class="card-header"><h3 class="card-title">🔬 Praktikum Laboratorium</h3></div>
+                    <div id="form-lab" class="admin-form-box" style="display: none;">
+                        <input type="text" id="lab-nama" class="modern-input" placeholder="Nama Kegiatan">
+                        <input type="text" id="lab-skenario" class="modern-input" placeholder="Modul">
+                        <input type="file" id="lab-file-pc" class="modern-input">
+                        <input type="text" id="lab-link-manual" class="modern-input" placeholder="Link URL">
+                        <button class="btn btn-primary" onclick="handlePraktikumUpload('laboratorium', 'lab-nama', 'lab-skenario', 'lab-ket', 'lab-file-pc', 'lab-link-manual')">Simpan</button>
+                    </div>
+                    <div id="lab-list" class="grid-cards"></div>
+                </div>
+            </div>
 
-            <!-- TAB LATIHAN SOAL ISIAN -->
+            <div id="tab-skills" class="tab-content" style="display: none;">
+                <div class="card">
+                    <div class="card-header"><h3 class="card-title">🩺 Skills Lab</h3></div>
+                    <div id="form-skills" class="admin-form-box" style="display: none;">
+                        <input type="text" id="skills-nama" class="modern-input" placeholder="Keterampilan">
+                        <input type="text" id="skills-skenario" class="modern-input" placeholder="Modul">
+                        <input type="file" id="skills-file-pc" class="modern-input">
+                        <input type="text" id="skills-link-manual" class="modern-input" placeholder="Link URL">
+                        <button class="btn btn-primary" onclick="handlePraktikumUpload('skills_lab', 'skills-nama', 'skills-skenario', 'skills-ket', 'skills-file-pc', 'skills-link-manual')">Simpan</button>
+                    </div>
+                    <div id="skills-list" class="grid-cards"></div>
+                </div>
+            </div>
+
+            <div id="tab-tutorial" class="tab-content" style="display: none;">
+                <div class="card">
+                    <div class="card-header"><h3 class="card-title">💬 Tutorial</h3></div>
+                    <div id="form-tutorial" class="admin-form-box" style="display: none;">
+                        <input type="text" id="tut-nama" class="modern-input" placeholder="Topik">
+                        <input type="text" id="tut-skenario" class="modern-input" placeholder="Skenario">
+                        <input type="file" id="tut-file-pc" class="modern-input">
+                        <input type="text" id="tut-link-manual" class="modern-input" placeholder="Link URL">
+                        <button class="btn btn-primary" onclick="handlePraktikumUpload('tutorial', 'tut-nama', 'tut-skenario', 'tut-ket', 'tut-file-pc', 'tut-link-manual')">Simpan</button>
+                    </div>
+                    <div id="tutorial-list" class="grid-cards"></div>
+                </div>
+            </div>
+
+            <div id="tab-materi" class="tab-content" style="display: none;">
+                <div class="card">
+                    <div class="card-header"><h3 class="card-title">📚 Bank Materi Kuliah</h3></div>
+                    <div id="form-materi" class="admin-form-box" style="display: none;">
+                        <input type="text" id="m-kuliah" class="modern-input" placeholder="Mata Kuliah">
+                        <input type="text" id="m-materi" class="modern-input" placeholder="Topik">
+                        <input type="file" id="m-file-pc" class="modern-input">
+                        <input type="text" id="m-link-manual" class="modern-input" placeholder="Link URL">
+                        <button class="btn btn-primary" onclick="handleMateriUpload()">Simpan</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="modern-table">
+                            <thead><tr><th>Mata Kuliah</th><th>Topik</th><th>Akses</th></tr></thead>
+                            <tbody id="materi-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB LATIHAN SOAL -->
             <div id="tab-soal" class="tab-content" style="display: none;">
                 <div class="card">
-                    <h3 style="color: var(--accent); margin-bottom: 15px;">❓ Latihan Soal Isian</h3>
-                    <div id="quiz-start-card" style="background: var(--bg-light); border: 1px solid var(--border); padding: 30px; border-radius: 12px; text-align: center;">
-                        <h3 style="color: var(--accent); margin-bottom: 10px;">Latihan Soal Isian Sub-Bagian Anatomi</h3>
-                        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Uji pemahaman Anda dengan menjawab pertanyaan secara mandiri.</p>
-                        <button class="btn" onclick="startQuiz()" style="padding: 12px 28px; font-size: 16px; font-weight: bold; background: var(--accent);">▶️ Mulai Kuis Isian</button>
+                    <div class="card-header"><h3 class="card-title">❓ Latihan Soal Isian</h3></div>
+                    <div id="quiz-start-card" class="empty-state">
+                        <div class="empty-icon">✍️</div>
+                        <h3>Latihan Soal Isian</h3>
+                        <p>Uji pemahaman Anda dengan menjawab pertanyaan secara mandiri.</p>
+                        <button class="btn btn-primary btn-lg" onclick="startQuiz()">▶️ Mulai Latihan</button>
                     </div>
-                    <div id="quiz-active-area" style="display: none; margin-top: 15px;">
+                    <div id="quiz-active-area" style="display: none;">
                         <div id="soal-cards-container"></div>
-                        <div style="margin-top: 20px; display: flex; gap: 10px;">
-                            <button id="submit-quiz-btn" class="btn" onclick="submitQuiz()" style="padding: 12px 24px; background: var(--accent);">📩 Submit Jawaban</button>
-                            <button id="reset-quiz-btn" class="btn btn-warning" onclick="resetQuiz()" style="display: none; padding: 12px 24px;">🔄 Coba Lagi</button>
+                        <div class="flex-gap" style="margin-top: 20px;">
+                            <button id="submit-quiz-btn" class="btn btn-primary" onclick="submitQuiz()">📩 Submit Jawaban</button>
+                            <button id="reset-quiz-btn" class="btn btn-outline" onclick="resetQuiz()" style="display: none;">🔄 Ulangi</button>
                         </div>
-                        <div id="quiz-result-card" style="display: none; margin-top: 20px; background: var(--bg-light); border: 2px solid var(--accent); padding: 20px; border-radius: 12px; text-align: center;">
-                            <h3 style="color: var(--accent);">🎉 Hasil Evaluasi</h3>
-                            <p id="quiz-score-text" style="font-size: 20px; font-weight: bold;"></p>
+                        <div id="quiz-result-card" class="result-box" style="display: none;">
+                            <h3>🎉 Hasil Evaluasi</h3>
+                            <p id="quiz-score-text"></p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- TAB CBT (BARU) -->
+            <!-- TAB CBT -->
             <div id="tab-cbt" class="tab-content" style="display: none;">
-                <div class="cbt-container">
+                <div class="cbt-wrapper">
                     <div class="cbt-header">
-                        <h1>SIMULASI CBT BLOK 1.2</h1>
-                        <p>Sistem Integumen & Muskuloskeletal | Total <span id="cbt-total-label">100</span> Soal</p>
-                        <div class="cbt-timer" id="cbt-timer">Waktu: 00:00:00</div>
+                        <div>
+                            <h2>Simulasi CBT Blok 1.2</h2>
+                            <p>Sistem Integumen & Muskuloskeletal</p>
+                        </div>
+                        <div class="cbt-timer" id="cbt-timer">00:00:00</div>
                     </div>
-                    <div id="cbt-start-card" style="padding: 30px; text-align: center;">
-                        <h3 style="color: var(--accent); margin-bottom: 10px;">Selamat Datang di Simulasi CBT</h3>
-                        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Timer akan berjalan otomatis saat Anda menekan tombol Mulai.</p>
-                        <button class="btn-cbt-submit" onclick="startCBT()">▶️ Mulai Simulasi CBT</button>
+
+                    <div id="cbt-start-card" class="empty-state">
+                        <div class="empty-icon">📝</div>
+                        <h3>Ujian CBT Interaktif</h3>
+                        <p>Total <strong id="cbt-total-label">100</strong> soal pilihan ganda. Jawaban akan langsung dinilai dan pembahasan akan muncul setelah Anda memilih.</p>
+                        <button class="btn btn-primary btn-lg" onclick="startCBT()">▶️ Mulai Ujian</button>
                     </div>
+
                     <div id="cbt-active-area" style="display: none;">
-                        <div id="cbt-question-container"></div>
-                        <div class="submit-area"><button class="btn-cbt-submit" onclick="submitCBT()">Simpan & Selesai</button></div>
+                        <div id="cbt-question-container" class="cbt-questions"></div>
+                        <div class="cbt-footer">
+                            <button class="btn btn-primary btn-lg" onclick="submitCBT()">Selesai & Simpan</button>
+                        </div>
                     </div>
-                    <div id="cbt-result-card" style="display: none; padding: 30px; text-align: center;">
-                        <h3 style="color: var(--accent); margin-bottom: 10px;">🎉 CBT Selesai!</h3>
-                        <p id="cbt-result-text" style="font-size: 16px; font-weight: 600; margin-bottom: 15px;"></p>
-                        <button class="btn" style="padding: 10px 24px;" onclick="resetCBT()">🔄 Ulangi CBT</button>
+
+                    <div id="cbt-result-card" class="empty-state" style="display: none;">
+                        <div class="empty-icon">🎉</div>
+                        <h3>Ujian Selesai!</h3>
+                        <p id="cbt-result-text"></p>
+                        <button class="btn btn-primary" onclick="resetCBT()">🔄 Ulangi Ujian</button>
                     </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- MODALS (Disingkat untuk menghemat tempat, struktur ID sama seperti aslinya) -->
-    <div id="preview-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:99999; justify-content:center; align-items:center; padding: 20px;"><div style="position:relative; width:100%; max-width:900px; height:85vh; background:var(--bg-card); padding:15px; border-radius:12px; display:flex; flex-direction:column;"><div style="display:flex; justify-content:space-between; margin-bottom:10px;"><h3 id="preview-title" style="color:var(--accent);">Preview</h3><button class="btn btn-danger" onclick="closePreviewModal()">✕ Tutup</button></div><iframe id="preview-frame" src="" style="width:100%; flex:1; border:1px solid var(--border);"></iframe></div></div>
-    <div id="jadwal-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:9999; padding: 15px;"><div class="card" style="width:100%; max-width:600px;"><h3 id="jadwal-modal-title">Jadwal</h3><input type="hidden" id="edit-jadwal-index" value="-1"><input type="text" id="j-tgl" class="input-field" placeholder="Tanggal"><input type="text" id="j-jam1" class="input-field" placeholder="Jam 1"><input type="text" id="j-keg1" class="input-field" placeholder="Kegiatan 1"><input type="text" id="j-jam2" class="input-field" placeholder="Jam 2"><input type="text" id="j-keg2" class="input-field" placeholder="Kegiatan 2"><input type="text" id="j-jam3" class="input-field" placeholder="Jam 3"><input type="text" id="j-keg3" class="input-field" placeholder="Kegiatan 3"><input type="text" id="j-jam4" class="input-field" placeholder="Jam 4"><input type="text" id="j-keg4" class="input-field" placeholder="Kegiatan 4"><button class="btn" onclick="saveJadwalItem()">Simpan</button><button class="btn btn-danger" onclick="closeModal('jadwal-modal')">Batal</button></div></div>
-    <div id="admin-settings-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:9999; padding: 15px;"><div class="card" style="width:100%; max-width:550px;"><h3>Pengaturan</h3><button id="modal-maintenance-btn" class="btn" onclick="toggleMaintenanceMode()">Maintenance</button><input type="text" id="cfg-global-msg" class="input-field"><input type="password" id="cfg-admin-code" class="input-field"><button class="btn" onclick="saveAdminSettings()">Simpan</button><button class="btn btn-danger" onclick="closeModal('admin-settings-modal')">Tutup</button></div></div>
-    <div id="materi-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:9999;"><div class="card"><input type="hidden" id="edit-materi-index" value="-1"><input type="text" id="edit-m-kuliah" class="input-field"><input type="text" id="edit-m-materi" class="input-field"><input type="text" id="edit-m-link" class="input-field"><button class="btn" onclick="saveEditedMateri()">Simpan</button><button class="btn btn-danger" onclick="closeModal('materi-modal')">Batal</button></div></div>
-    <div id="soal-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:9999;"><div class="card"><input type="hidden" id="edit-soal-index" value="-1"><textarea id="s-question" class="input-field"></textarea><input type="text" id="s-image" class="input-field"><input type="text" id="s-answer" class="input-field"><textarea id="s-exp" class="input-field"></textarea><button class="btn" onclick="saveSoalItem()">Simpan</button><button class="btn btn-danger" onclick="closeModal('soal-modal')">Batal</button></div></div>
+    <!-- ================= MODALS ================= -->
+    <div id="preview-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="preview-title">Preview</h3>
+                <button class="btn-icon" onclick="closePreviewModal()">✕</button>
+            </div>
+            <iframe id="preview-frame" src=""></iframe>
+        </div>
+    </div>
+
+    <div id="jadwal-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3 id="jadwal-modal-title">Jadwal</h3>
+                <button class="btn-icon" onclick="closeModal('jadwal-modal')">✕</button>
+            </div>
+            <input type="hidden" id="edit-jadwal-index" value="-1">
+            <input type="text" id="j-tgl" class="modern-input" placeholder="Tanggal (Cth: Senin, 21-Sep-26)">
+            <div class="grid-2" style="margin-bottom: 10px;">
+                <input type="text" id="j-jam1" class="modern-input" placeholder="Jam 1">
+                <input type="text" id="j-keg1" class="modern-input" placeholder="Kegiatan 1">
+            </div>
+            <div class="grid-2" style="margin-bottom: 10px;">
+                <input type="text" id="j-jam2" class="modern-input" placeholder="Jam 2">
+                <input type="text" id="j-keg2" class="modern-input" placeholder="Kegiatan 2">
+            </div>
+            <div class="grid-2" style="margin-bottom: 10px;">
+                <input type="text" id="j-jam3" class="modern-input" placeholder="Jam 3">
+                <input type="text" id="j-keg3" class="modern-input" placeholder="Kegiatan 3">
+            </div>
+            <div class="grid-2" style="margin-bottom: 15px;">
+                <input type="text" id="j-jam4" class="modern-input" placeholder="Jam 4">
+                <input type="text" id="j-keg4" class="modern-input" placeholder="Kegiatan 4">
+            </div>
+            <button class="btn btn-primary btn-block" onclick="saveJadwalItem()">Simpan Jadwal</button>
+        </div>
+    </div>
+
+    <div id="admin-settings-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3>Pengaturan Web</h3>
+                <button class="btn-icon" onclick="closeModal('admin-settings-modal')">✕</button>
+            </div>
+            <div class="form-group">
+                <label>Status Pemeliharaan</label>
+                <button id="modal-maintenance-btn" class="btn btn-warning btn-block" onclick="toggleMaintenanceMode()">Ubah Status</button>
+            </div>
+            <div class="form-group">
+                <label>Pengumuman Global</label>
+                <input type="text" id="cfg-global-msg" class="modern-input">
+            </div>
+            <div class="form-group">
+                <label>Kode Admin Baru</label>
+                <input type="password" id="cfg-admin-code" class="modern-input">
+            </div>
+            <button class="btn btn-primary btn-block" onclick="saveAdminSettings()">Simpan Pengaturan</button>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>
