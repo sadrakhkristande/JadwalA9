@@ -22,6 +22,10 @@ const INACTIVITY_LIMIT = 30 * 60 * 1000;
 const SUPABASE_URL = "https://vqzklxbfrvmvcoeykias.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_-NTQ0VL2xQmIYJ_ieREXkg_WUcU3L0t";
 
+// URL Web App Google Apps Script milik kelompok.a9.2026@gmail.com (lihat drive-uploader.gs dan langkah pasang).
+// Kalau masih kosong, unggahan memakai penyimpanan Supabase seperti sebelumnya.
+const DRIVE_UPLOAD_URL = '';
+
 let supabaseClient = null;
 try {
     if (window.supabase && typeof window.supabase.createClient === 'function') {
@@ -31,7 +35,7 @@ try {
 
 let dbData = {
     pengumuman: [], reminder: [], jadwalUpdates: [], tugas: [], laboratorium: [],
-    skills_lab: [], tutorial: [], materi: [], jadwalCustom: [], soal: [], cbt_soal: [],
+    skills_lab: [], tutorial: [], materi: [], jadwalCustom: [], soal: [], cbt_soal: [], folders: {},
     maintenance: false, globalAnnouncement: '', adminCode: 'A9ACOR', theme: 'light'
 };
 
@@ -79,7 +83,7 @@ function applyKey(k, v) {
     } else if (k === 'jadwal') {
         dbData.jadwalCustom = Array.isArray(v) ? v : (v && Array.isArray(v.jadwal) ? v.jadwal : []);
     } else {
-        dbData[k] = v || [];
+        dbData[k] = v || (k === 'folders' ? {} : []);
     }
 }
 
@@ -92,7 +96,7 @@ async function fetchDatabaseFromCloud() {
     // 2) Ambil data terbaru dari server secara paralel
     try {
         if (supabaseClient) {
-            const keys = ['pengumuman', 'reminder', 'jadwalUpdates', 'tugas', 'laboratorium', 'skills_lab', 'tutorial', 'materi', 'jadwal', 'soal', 'config', 'cbt_soal'];
+            const keys = ['pengumuman', 'reminder', 'jadwalUpdates', 'tugas', 'laboratorium', 'skills_lab', 'tutorial', 'materi', 'jadwal', 'soal', 'config', 'cbt_soal', 'folders'];
             const results = await Promise.all(keys.map(k =>
                 supabaseClient.from('portal_db').select('value').eq('key', k).maybeSingle()
                     .then(r => [k, r]).catch(() => [k, null])));
@@ -141,20 +145,112 @@ async function saveCategoryData(categoryKey) {
     }
 }
 
-async function uploadFileToSupabaseStorage(fileInputId) {
-    const fileInput = document.getElementById(fileInputId);
-    if (!fileInput || !fileInput.files || fileInput.files.length === 0) return null;
-    const file = fileInput.files[0];
-    if (file.size > 50 * 1024 * 1024) { alert("File melebihi 50 MB. Gunakan link Google Drive."); return null; }
-    if (!supabaseClient) { alert("Server belum terhubung."); return null; }
+// ==========================================================================
+// UTILITAS: dialog, status sibuk, tanggal, pengumuman otomatis, unggah file
+// ==========================================================================
+function askDialog(title, fields, okText) {
+    return new Promise(resolve => {
+        const h = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const ov = document.createElement('div'); ov.className = 'fd-ov';
+        ov.innerHTML = `<div class="fd-modal" role="dialog" aria-modal="true" aria-label="${h(title)}"><h3>${h(title)}</h3>` +
+            fields.map(f => f.type === 'note' ? `<p class="hint">${h(f.text)}</p>` :
+                f.type === 'select' ? `<div class="form-group"><label>${h(f.label)}</label><select class="modern-input" data-k="${f.id}">${f.options.map(o => `<option value="${h(o.v)}"${o.v === f.value ? ' selected' : ''}>${h(o.t)}</option>`).join('')}</select></div>` :
+                    `<div class="form-group"><label>${h(f.label)}</label><input class="modern-input" data-k="${f.id}" type="${f.type || 'text'}" value="${h(f.value || '')}" placeholder="${h(f.placeholder || '')}"></div>`).join('') +
+            `<div class="fd-modal-acts"><button type="button" class="btn btn-outline" data-x>Batal</button><button type="button" class="btn btn-primary" data-ok>${h(okText || 'Simpan')}</button></div></div>`;
+        const collect = () => { const o = {}; ov.querySelectorAll('[data-k]').forEach(el => { o[el.dataset.k] = el.value; }); return o; };
+        const close = v => { document.removeEventListener('keydown', onKey, true); ov.remove(); resolve(v); };
+        const onKey = e => {
+            if (e.key === 'Escape') { e.stopPropagation(); close(null); }
+            else if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && ov.contains(e.target)) { e.preventDefault(); close(collect()); }
+        };
+        ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('[data-x]')) close(null); else if (e.target.closest('[data-ok]')) close(collect()); });
+        document.addEventListener('keydown', onKey, true);
+        document.body.appendChild(ov);
+        const first = ov.querySelector('[data-k]'); if (first) { first.focus(); if (first.select) first.select(); }
+    });
+}
+
+// Pesan "sedang bekerja" yang tetap tampil sampai fungsi pengembaliannya dipanggil
+function busy(msg) {
+    const wrap = document.getElementById('toast-wrap') || document.body;
+    const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; wrap.appendChild(t);
+    return () => t.remove();
+}
+
+const isoLocal = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+function tglIndo(iso) {
+    const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return String(iso || '');
+    return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+// Setiap pembaruan penting otomatis masuk ke Pengumuman (hanya admin yang memicu).
+// opt: { until:'YYYY-MM-DD' | days, key, merge(n) }. Dengan "key", beberapa pembaruan sejenis dalam 30 menit digabung.
+function postUpdate(kind, judul, isi, opt) {
+    opt = opt || {};
+    if (!currentUser || currentUser.role !== 'admin') return Promise.resolve(false);
+    const now = Date.now();
+    let until = opt.until;
+    if (!until) { const d = new Date(); d.setDate(d.getDate() + (opt.days || 7)); until = isoLocal(d); }
+    if (!Array.isArray(dbData.pengumuman)) dbData.pengumuman = [];
+    if (opt.key) {
+        const ex = dbData.pengumuman.find(p => p.auto && p.key === opt.key && now - (p.ts || 0) < 30 * 60000);
+        if (ex) {
+            ex.n = (ex.n || 1) + 1; if (opt.merge) ex.isi = opt.merge(ex.n);
+            ex.ts = now; ex.tgl = new Date(now).toISOString(); ex.deadline = until;
+            return saveCategoryData('pengumuman');
+        }
+    }
+    dbData.pengumuman.unshift({ id: now, kind: kind || 'info', auto: true, key: opt.key || null, n: 1, ts: now, tgl: new Date(now).toISOString(), judul, isi, deadline: until });
+    return saveCategoryData('pengumuman');
+}
+
+// Unggah ke Google Drive kelompok (lewat Apps Script). Mengembalikan tautan file, atau null bila gagal.
+const DRIVE_MAX = 20 * 1024 * 1024;
+async function uploadToDrive(file, path) {
+    if (file.size > DRIVE_MAX) { alert('File ' + file.name + ' lebih dari 20 MB. Unggah manual ke Drive lalu tempel tautannya.'); return null; }
+    let key = '';
+    try { key = localStorage.getItem('a9_drive_key') || ''; } catch (e) { }
+    if (!key) {
+        const r = await askDialog('Kunci unggah ke Drive', [
+            { type: 'note', text: 'Masukkan kunci unggah (UPLOAD_KEY) yang kamu atur di Apps Script. Cukup sekali di perangkat ini.' },
+            { id: 'k', label: 'Kunci unggah', type: 'password' }], 'Simpan');
+        if (!r || !r.k.trim()) return null;
+        key = r.k.trim();
+        try { localStorage.setItem('a9_drive_key', key); } catch (e) { }
+    }
+    const done = busy('Mengunggah ' + file.name + ' ke Drive...');
+    try {
+        const data = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = rej; fr.readAsDataURL(file); });
+        const r = await fetch(DRIVE_UPLOAD_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key, name: file.name, mime: file.type, path, data }) });
+        const j = await r.json();
+        if (!j.ok) { if (/kunci/i.test(j.error || '')) { try { localStorage.removeItem('a9_drive_key'); } catch (e) { } } throw new Error(j.error || 'tidak diketahui'); }
+        return j.url;
+    } catch (e) {
+        console.error(e); alert('Unggah ke Drive gagal: ' + (e.message || e)); return null;
+    } finally { done(); }
+}
+
+// Satu pintu unggah: Drive bila sudah diatur, selain itu Supabase Storage
+async function uploadFileObj(file, path) {
+    if (!file) return null;
+    if (DRIVE_UPLOAD_URL) return await uploadToDrive(file, path || 'Umum');
+    if (file.size > 50 * 1024 * 1024) { alert('File melebihi 50 MB. Gunakan link Google Drive.'); return null; }
+    if (!supabaseClient) { alert('Server belum terhubung.'); return null; }
+    const done = busy('Mengunggah ' + file.name + '...');
     try {
         // Hanya huruf, angka, titik, minus, dan garis bawah (Supabase menolak karakter lain)
         const filePath = `uploads/${Date.now()}_${file.name.replace(/[^\w.\-]+/g, '_')}`;
         const { error } = await supabaseClient.storage.from('portal-files').upload(filePath, file);
         if (error) throw error;
-        const { data: publicUrlData } = supabaseClient.storage.from('portal-files').getPublicUrl(filePath);
-        return publicUrlData.publicUrl;
-    } catch (err) { console.error(err); alert("Upload gagal. Coba lagi atau pakai link Google Drive."); return null; }
+        return supabaseClient.storage.from('portal-files').getPublicUrl(filePath).data.publicUrl;
+    } catch (err) { console.error(err); alert('Upload gagal. Coba lagi atau pakai link Google Drive.'); return null; }
+    finally { done(); }
+}
+
+async function uploadFileToSupabaseStorage(fileInputId, path) {
+    const input = document.getElementById(fileInputId);
+    if (!input || !input.files || input.files.length === 0) return null;
+    return await uploadFileObj(input.files[0], path);
 }
 
 window.handleLogin = async function () {
@@ -308,6 +404,9 @@ function applyBanners() {
     }
 }
 
+const escH = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const ANN_TAG = { info: '📢 Pengumuman', tugas: '📝 Tugas', materi: '📚 Materi', file: '📚 Berkas baru', jadwal: '🗓️ Jadwal', ujian: '📌 Ujian / Kegiatan', penting: '⚠️ Penting' };
+
 function renderAll() {
     const isAdmin = currentUser && currentUser.role === 'admin';
     applyBanners();
@@ -316,8 +415,9 @@ function renderAll() {
     const pList = document.getElementById('pengumuman-list');
     if (pList) pList.innerHTML = dbData.pengumuman.length === 0 ? '<p style="color:var(--text-muted);">Belum ada pengumuman.</p>' : dbData.pengumuman.map((p, idx) => `
         <div style="background:var(--bg-base); border-radius:var(--radius-md); padding:20px; margin-bottom:15px; border-left:4px solid var(--primary); position: relative;">
-            <h4 style="margin-bottom:8px; color:var(--text-main); font-size:16px; padding-right: 80px;">${p.judul}</h4>
-            <p style="font-size:14px; color:var(--text-muted); margin-bottom:12px;">${p.isi}</p>
+            <small style="display:block; color:var(--text-muted); margin-bottom:4px;">${ANN_TAG[p.kind] || ANN_TAG.info}${p.tgl ? ' · ' + new Date(p.tgl).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</small>
+            <h4 style="margin-bottom:8px; color:var(--text-main); font-size:16px; padding-right: 80px;">${escH(p.judul)}</h4>
+            <p style="font-size:14px; color:var(--text-muted); margin-bottom:12px; white-space:pre-line;">${escH(p.isi)}</p>
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <small style="color:var(--primary); font-weight:600;">🗓️ s/d ${p.deadline}</small>
                 <a href="https://wa.me/?text=${encodeURIComponent(p.judul + ' - ' + p.isi)}" target="_blank" class="badge badge-wa">Bagikan</a>
@@ -383,9 +483,11 @@ window.addPengumuman = async function () {
     const isi = document.getElementById('p-isi').value;
     const deadline = document.getElementById('p-deadline').value;
     if (!judul || !isi || !deadline) return alert('Semua kolom wajib diisi!');
-    dbData.pengumuman.unshift({ id: Date.now(), judul, isi, deadline });
+    const kind = document.getElementById('p-judul').dataset.kind || 'info';
+    dbData.pengumuman.unshift({ id: Date.now(), kind, tgl: new Date().toISOString(), judul, isi, deadline });
     if (!(await saveCategoryData('pengumuman'))) return;
     document.getElementById('p-judul').value = ''; document.getElementById('p-isi').value = ''; document.getElementById('p-deadline').value = '';
+    delete document.getElementById('p-judul').dataset.kind;
     alert('Pengumuman ditambahkan!');
 };
 
@@ -397,7 +499,7 @@ window.addTugasItem = async function () {
     if (!nama || !deadline) return alert('Nama dan Deadline wajib diisi!');
 
     let finalLink = manualLink || '#';
-    const uploadedUrl = await uploadFileToSupabaseStorage('t-file-pc');
+    const uploadedUrl = await uploadFileToSupabaseStorage('t-file-pc', 'Tugas');
     if (uploadedUrl) { finalLink = uploadedUrl; }
 
     dbData.tugas.push({ id: Date.now(), nama, deadline, ket, link: finalLink });
@@ -405,6 +507,7 @@ window.addTugasItem = async function () {
     document.getElementById('t-nama').value = ''; document.getElementById('t-deadline').value = ''; document.getElementById('t-ket').value = '';
     document.getElementById('t-file-pc').value = ''; document.getElementById('t-link-manual').value = '';
     alert('Tugas disimpan!');
+    postUpdate('tugas', '📝 Tugas baru: ' + nama, nama + (ket ? ' — ' + ket : '') + '. Deadline ' + tglIndo(deadline) + '.', { until: deadline });
 };
 
 window.handlePraktikumUpload = async function (category, idNama, idSkenario, idKet, idFilePc, idLink) {
@@ -416,7 +519,7 @@ window.handlePraktikumUpload = async function (category, idNama, idSkenario, idK
     if (!nama) return alert('Nama wajib diisi!');
 
     let finalLink = manualLink || '#';
-    const uploadedUrl = await uploadFileToSupabaseStorage(idFilePc);
+    const uploadedUrl = await uploadFileToSupabaseStorage(idFilePc, ({ laboratorium: 'Lab', skills_lab: 'Skills Lab', tutorial: 'Tutorial' }[category] || category) + '/' + (skenario || 'Umum'));
     if (uploadedUrl) { finalLink = uploadedUrl; }
 
     dbData[category].push({ id: Date.now(), nama, skenario, ket, link: finalLink });
@@ -425,6 +528,8 @@ window.handlePraktikumUpload = async function (category, idNama, idSkenario, idK
     if (ketEl) ketEl.value = '';
     document.getElementById(idFilePc).value = ''; document.getElementById(idLink).value = '';
     alert('Berhasil disimpan!');
+    const lbl = { laboratorium: 'Lab', skills_lab: 'Skills Lab', tutorial: 'Tutorial' }[category] || category;
+    postUpdate('file', '📚 Berkas baru di ' + lbl, nama + (skenario ? ' (' + skenario + ')' : '') + ' telah ditambahkan.', { key: 'file:' + category, merge: n => n + ' berkas baru ditambahkan ke ' + lbl + '.' });
 };
 
 window.handleMateriUpload = async function () {
@@ -434,7 +539,7 @@ window.handleMateriUpload = async function () {
     if (!kuliah || !materi) return alert('Nama kuliah dan materi wajib diisi!');
 
     let finalLink = manualLink || '#';
-    const uploadedUrl = await uploadFileToSupabaseStorage('m-file-pc');
+    const uploadedUrl = await uploadFileToSupabaseStorage('m-file-pc', 'Materi/' + kuliah);
     if (uploadedUrl) { finalLink = uploadedUrl; }
 
     dbData.materi.push({ id: Date.now(), kuliah, materi, link: finalLink });
@@ -442,6 +547,7 @@ window.handleMateriUpload = async function () {
     document.getElementById('m-kuliah').value = ''; document.getElementById('m-materi').value = '';
     document.getElementById('m-file-pc').value = ''; document.getElementById('m-link-manual').value = '';
     alert('Materi disimpan!');
+    postUpdate('materi', '📚 Materi baru: ' + materi, kuliah + ': ' + materi + ' telah ditambahkan di menu Kuliah › Materi.', { key: 'materi', merge: n => n + ' materi baru ditambahkan di menu Kuliah › Materi.' });
 };
 
 window.addReminder = async function () {
@@ -452,6 +558,7 @@ window.addReminder = async function () {
 window.addJadwalUpdateWithFile = async function () {
     const title = document.getElementById('up-title').value; if (!title) return;
     dbData.jadwalUpdates.push(title); await saveCategoryData('jadwalUpdates'); document.getElementById('up-title').value = '';
+    postUpdate('jadwal', '🗓️ Update jadwal', title);
 };
 
 window.toggleMaintenanceMode = async function () {
@@ -564,6 +671,8 @@ body { font-size: 16px; }
 .greeting { background: var(--primary); color: #fff; border-radius: var(--radius-xl); padding: 22px 26px; margin-bottom: 25px; }
 .greeting h3 { font-size: 22px; margin-bottom: 2px; }
 .greeting p { opacity: .92; font-size: 14px; }
+.greeting .quote { font-size: 16px; font-weight: 600; opacity: 1; margin-top: 8px; line-height: 1.5; }
+.greeting .sub { margin-top: 10px; }
 
 /* Label deadline tugas & pencarian tabel */
 .dl-badge { display: inline-block; margin-left: 8px; padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
@@ -630,6 +739,41 @@ body { font-size: 16px; }
             td.appendChild(b);
         });
     }
+    // Kata penyemangat: berganti tiap hari, sama untuk semua orang pada hari yang sama
+    const QUOTES = [
+        'Satu halaman hari ini lebih baik daripada seribu rencana besok.',
+        'Dokter hebat dibentuk dari rasa ingin tahu yang tidak pernah selesai.',
+        'Lelahmu hari ini adalah kompetensimu di masa depan.',
+        'Jangan bandingkan bab satumu dengan bab sepuluh orang lain.',
+        'Pelan tidak apa-apa, asal tidak berhenti.',
+        'Setiap pasien kelak akan berterima kasih pada malam-malam belajarmu.',
+        'Kamu tidak harus sempurna, cukup lebih paham dari kemarin.',
+        'Konsisten kecil mengalahkan semangat besar yang sebentar.',
+        'Istirahat itu bagian dari belajar, bukan lawannya.',
+        'Kalau hari ini berat, ingat: kamu sudah sampai sejauh ini.',
+        'Ilmu yang kamu pelajari hari ini mungkin menolong nyawa suatu hari nanti.',
+        'Bertanya bukan tanda lemah, tapi tanda sedang bertumbuh.',
+        'Satu soal salah hari ini adalah satu kesalahan yang tidak terulang di ujian.',
+        'A9 kuat karena saling menguatkan.',
+        'Fokus 25 menit, istirahat 5 menit, ulangi. Kamu bisa.',
+        'Mimpi besar dimulai dari jadwal belajar yang dipatuhi.',
+        'Hari ini kamu belajar, besok kamu melayani.',
+        'Tidak ada jalan pintas menuju paham, tapi ada banyak teman seperjalanan.',
+        'Banggalah pada prosesmu, bukan hanya nilaimu.',
+        'Tarik napas dalam, kerjakan satu hal, lalu satu hal berikutnya.',
+        'Setiap istilah medis yang kamu hafal adalah bahasa baru untuk menolong.',
+        'Ujian hanya mengukur persiapan, dan persiapan bisa dimulai sekarang.',
+        'Tetap rendah hati, tetap haus belajar.',
+        'Gagal sekali bukan akhir. Itu bahan belajar.',
+        'Hari baru, halaman baru, peluang baru.',
+        'Yang sulit sekarang akan terasa ringan setelah dipahami.',
+        'Kamu ada di jalan ini bukan tanpa alasan.',
+        'Rapikan jadwal, rapikan hati, mulai dari yang paling mudah.',
+        'Teman belajar yang baik membuat bab tersulit terasa lebih pendek.',
+        'Semangat, calon dokter hebat!'
+    ];
+    window.a9Quote = () => QUOTES[Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000) % QUOTES.length];
+
     function greeting() {
         if (typeof currentUser === 'undefined' || !currentUser || $('greeting')) return;
         const home = $('tab-home'); if (!home) return;
@@ -638,7 +782,7 @@ body { font-size: 16px; }
         const sapa = jam < 11 ? 'Selamat pagi' : jam < 15 ? 'Selamat siang' : jam < 18 ? 'Selamat sore' : 'Selamat malam';
         const d = document.createElement('div');
         d.id = 'greeting'; d.className = 'greeting';
-        d.innerHTML = `<h3>${sapa}, ${esc(nama.charAt(0) + nama.slice(1).toLowerCase())}! 👋</h3><p>Semangat belajarnya hari ini. Cek jadwal dan tugasmu di bawah.</p>`;
+        d.innerHTML = `<h3>${sapa}, ${esc(nama.charAt(0) + nama.slice(1).toLowerCase())}! 👋</h3><p class="quote">“${esc(window.a9Quote())}”</p><p class="sub">Cek pengingat, jadwal, dan tugasmu di bawah.</p>`;
         home.prepend(d);
     }
 
@@ -1462,53 +1606,8 @@ body { font-size: 16px; }
         if (!Array.isArray(arr) || !arr.length || arr.some(j => !j || !j.tgl || !Array.isArray(j.sesi))) { alert('Format salah. Tiap hari harus punya "tgl" dan daftar "sesi".'); return; }
         if (!confirm(`Ganti seluruh jadwal dengan ${arr.length} hari dari JSON ini?`)) return;
         dbData.jadwalCustom = arr;
-        if (await saveCategoryData('jadwal')) { $('jd-json').value = ''; alert('Jadwal tersimpan.'); }
+        if (await saveCategoryData('jadwal')) { $('jd-json').value = ''; alert('Jadwal tersimpan.'); postUpdate('jadwal', '🗓️ Jadwal diperbarui', 'Jadwal kuliah telah diperbarui. Cek menu Kuliah › Jadwal.', { key: 'jadwal' }); }
     });
-
-    // ======================= FOLDER MATERI & PRAKTIKUM =======================
-    const iconOf = u => /drive\.google\.com\/drive\/.*folders/.test(u) ? '📁' : /\.pdf($|\?)/i.test(u) ? '📕' : /\.(pptx?|key)($|\?)/i.test(u) ? '📊' : /\.(docx?|txt)($|\?)/i.test(u) ? '📝' : /\.(mp4|mov|mkv|webm)($|\?)/i.test(u) || /youtu/.test(u) ? '🎬' : /\.(xlsx?|csv)($|\?)/i.test(u) ? '📈' : /\.(png|jpe?g|gif|webp)($|\?)/i.test(u) ? '🖼️' : '📄';
-    const mounts = [];
-    function mount(cfg) {
-        const host = cfg.el || $(cfg.hide), box = document.createElement('div');
-        box.className = 'fv'; box.id = 'fv-' + cfg.id;
-        box.innerHTML = `<div class="fv-bar"><input type="search" class="modern-input" placeholder="${cfg.ph}" aria-label="Cari"><select class="modern-input" aria-label="Pilih folder"></select></div><div class="fv-crumb"></div><div class="fv-body"></div>`;
-        host.style.display = 'none'; host.after(box);
-        const m = { cfg, box, folder: '', q: '' };
-        const input = box.querySelector('input'), sel = box.querySelector('select');
-        input.addEventListener('input', () => { m.q = input.value.trim().toLowerCase(); draw(m); });
-        sel.addEventListener('change', () => { m.folder = sel.value; draw(m); });
-        box.addEventListener('click', e => {
-            const f = e.target.closest('[data-folder]'); if (f) { m.folder = f.dataset.folder; draw(m); return; }
-            if (e.target.closest('[data-back]')) { m.folder = ''; input.value = ''; m.q = ''; draw(m); return; }
-            const d = e.target.closest('[data-del]'); if (d) window.deleteItem(cfg.cat, +d.dataset.del);
-        });
-        mounts.push(m); draw(m);
-    }
-    function draw(m) {
-        const c = m.cfg, list = (dbData[c.cat] || []).map((it, idx) => ({ it, idx, g: (c.group(it) || 'Lainnya').trim() }));
-        const names = [...new Set(list.map(x => x.g))].sort((a, b) => a.localeCompare(b, 'id'));
-        if (m.folder && !names.includes(m.folder)) m.folder = '';
-        const sel = m.box.querySelector('select');
-        sel.innerHTML = '<option value="">📂 Semua folder</option>' + names.map(n => `<option value="${esc(n)}"${n === m.folder ? ' selected' : ''}>${esc(n)}</option>`).join('');
-        const crumb = m.box.querySelector('.fv-crumb'), body = m.box.querySelector('.fv-body');
-        if (!list.length) { crumb.innerHTML = ''; body.innerHTML = '<p style="color:var(--text-muted);">Belum ada berkas.</p>'; return; }
-        if (!m.folder && !m.q) {
-            crumb.innerHTML = `📂 Semua folder (${names.length})`;
-            body.innerHTML = '<div class="fv-grid">' + names.map(n => `<button type="button" class="fv-folder" data-folder="${esc(n)}"><span class="ico">📁</span><strong>${esc(n)}</strong><small>${list.filter(x => x.g === n).length} berkas</small></button>`).join('') + '</div>';
-            return;
-        }
-        const res = list.filter(x => (!m.folder || x.g === m.folder) && (!m.q || (c.title(x.it) + ' ' + x.g + ' ' + (c.sub(x.it) || '')).toLowerCase().includes(m.q)));
-        crumb.innerHTML = `<a data-back="1">📂 Semua folder</a>${m.folder ? ' › 📁 <strong>' + esc(m.folder) + '</strong>' : ''} · ${res.length} berkas`;
-        body.innerHTML = res.length ? res.map(({ it, idx, g }) => `
-          <div class="fv-file"><span class="ico">${iconOf(it.link || '')}</span>
-            <div class="fv-meta"><strong>${esc(c.title(it))}</strong><small>${m.folder ? esc(c.sub(it) || '') : '📁 ' + esc(g)}</small></div>
-            ${it.link && it.link !== '#' ? `<a class="btn btn-sm btn-primary" href="${esc(it.link)}" target="_blank" rel="noopener">Buka</a>` : ''}
-            ${isAdmin() ? `<button class="btn btn-danger btn-sm" data-del="${idx}">Hapus</button>` : ''}</div>`).join('') : '<p style="color:var(--text-muted);">Tidak ada berkas yang cocok.</p>';
-    }
-    mount({ id: 'materi', el: document.querySelector('#tab-materi .table-responsive'), cat: 'materi', ph: '🔎 Cari materi atau mata kuliah...', group: it => it.kuliah, title: it => it.materi, sub: it => '' });
-    mount({ id: 'lab', hide: 'lab-list', cat: 'laboratorium', ph: '🔎 Cari kegiatan lab...', group: it => it.skenario, title: it => it.nama, sub: it => '' });
-    mount({ id: 'skills', hide: 'skills-list', cat: 'skills_lab', ph: '🔎 Cari keterampilan...', group: it => it.skenario, title: it => it.nama, sub: it => '' });
-    mount({ id: 'tut', hide: 'tutorial-list', cat: 'tutorial', ph: '🔎 Cari topik tutorial...', group: it => it.skenario, title: it => it.nama, sub: it => '' });
 
     // ======================= FILTER TUGAS =======================
     let tF = 'semua';
@@ -1607,7 +1706,7 @@ body { font-size: 16px; }
     window.renderAll = function () {
         orr();
         try {
-            renderJadwal(); mounts.forEach(draw);
+            renderJadwal(); if (window.finderRender) window.finderRender();
             if (!tHooked && $('search-tugas-table-body')) { $('search-tugas-table-body').addEventListener('input', tugasFilter); tHooked = true; }
             tugasFilter();
             document.querySelectorAll('#tab-jadwal .admin-form-box').forEach(el => { el.style.display = isAdmin() ? 'block' : 'none'; });
@@ -1615,6 +1714,359 @@ body { font-size: 16px; }
         } catch (e) { console.error(e); }
     };
     window.renderAll();
+})();
+
+// ==========================================================================
+// BAGIAN 5B — FINDER: folder bersarang untuk Materi, Lab, Skills Lab, Tutorial
+//   Mahasiswa: telusuri folder, cari, tampilan ikon/daftar.
+//   Admin    : folder baru, ganti nama, pindahkan, hapus, seret-lepas, klik kanan,
+//              unggah file (langsung ke Google Drive bila sudah diatur), tambah tautan.
+// ==========================================================================
+(function () {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const isAdmin = () => !!currentUser && currentUser.role === 'admin';
+    const uid = () => 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const lc = s => String(s || '').toLowerCase();
+
+    const css = document.createElement('style');
+    css.textContent = `
+    .fd-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+    .fd-bar .fd-search { margin: 0; flex: 1; }
+    .fd-views { display: flex; border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; flex: none; }
+    .fd-vbtn { border: none; background: var(--bg-card); color: var(--text-muted); width: 42px; min-height: 42px; cursor: pointer; font-size: 16px; }
+    .fd-vbtn.active { background: var(--primary-light); color: var(--primary); }
+    .fd-admin { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .fd-crumb { display: flex; flex-wrap: wrap; gap: 2px 4px; align-items: center; font-size: 14px; color: var(--text-muted); margin: 6px 0 12px; min-height: 28px; }
+    .fd-crumb a { color: var(--primary); cursor: pointer; font-weight: 600; padding: 3px 8px; border-radius: 8px; }
+    .fd-crumb a:hover, .fd-crumb a.over { background: var(--primary-light); }
+    .fd-body { min-height: 150px; border-radius: var(--radius-lg); padding: 4px; border: 2px dashed transparent; }
+    .fd-body.over { border-color: var(--primary); background: var(--primary-light); }
+    .fd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+    .fd-tile { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 18px 10px 12px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--bg-card); cursor: pointer; user-select: none; -webkit-user-select: none; }
+    .fd-tile:hover { border-color: var(--primary); background: var(--primary-light); }
+    .fd-tile.dragging { opacity: .4; }
+    .fd-tile.over { outline: 3px solid var(--primary); }
+    .fd-ico { font-size: 42px; line-height: 1; }
+    .fd-name { font-weight: 600; font-size: 14px; word-break: break-word; max-width: 100%; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .fd-tile small { color: var(--text-muted); font-size: 12px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fd-open { position: absolute; inset: 0; border-radius: 14px; z-index: 1; }
+    .fd-more { position: absolute; top: 6px; right: 6px; z-index: 2; width: 30px; height: 30px; border-radius: 8px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 18px; line-height: 1; }
+    .fd-more:hover { background: var(--bg-base); color: var(--text-main); }
+    .fd-list .fd-grid { grid-template-columns: 1fr; gap: 6px; }
+    .fd-list .fd-tile { flex-direction: row; text-align: left; padding: 10px 14px; gap: 12px; }
+    .fd-list .fd-ico { font-size: 26px; }
+    .fd-list .fd-name { flex: 1; -webkit-line-clamp: 1; }
+    .fd-list .fd-more { position: relative; top: 0; right: 0; }
+    .fd-empty { text-align: center; color: var(--text-muted); padding: 36px 12px; }
+    #fd-menu { position: fixed; z-index: 30000; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 16px 40px -12px rgba(15,23,42,.35); padding: 6px; min-width: 200px; }
+    #fd-menu button { display: block; width: 100%; text-align: left; padding: 10px 12px; border: none; background: none; border-radius: 8px; color: var(--text-main); cursor: pointer; font-size: 14px; }
+    #fd-menu button:hover { background: var(--primary-light); }
+    #fd-menu button.danger { color: var(--danger); }
+    .fd-ov { position: fixed; inset: 0; z-index: 31000; background: rgba(15,23,42,.5); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .fd-modal { background: var(--bg-card); color: var(--text-main); border-radius: 18px; padding: 22px; width: min(440px, 100%); max-height: 90vh; overflow: auto; box-shadow: 0 24px 60px -16px rgba(0,0,0,.5); }
+    .fd-modal h3 { margin-bottom: 14px; }
+    .fd-modal-acts { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+    @media (max-width: 480px) { .fd-grid { grid-template-columns: repeat(2, 1fr); } .fd-list .fd-grid { grid-template-columns: 1fr; } }`;
+    document.head.appendChild(css);
+
+    const CATS = [
+        { id: 'materi', cat: 'materi', label: 'Materi', group: 'kuliah', title: 'materi', host: () => document.querySelector('#tab-materi .table-responsive') },
+        { id: 'lab', cat: 'laboratorium', label: 'Lab', group: 'skenario', title: 'nama', host: () => $('lab-list') },
+        { id: 'skills', cat: 'skills_lab', label: 'Skills Lab', group: 'skenario', title: 'nama', host: () => $('skills-list') },
+        { id: 'tut', cat: 'tutorial', label: 'Tutorial', group: 'skenario', title: 'nama', host: () => $('tutorial-list') }
+    ];
+    let savedView = 'grid';
+    try { savedView = localStorage.getItem('a9_fd_view') || 'grid'; } catch (e) { }
+    CATS.forEach(c => { c.st = { cwd: null, view: savedView, q: '' }; c.root = null; });
+
+    const iconOf = u => /drive\.google\.com\/drive\/.*folders/.test(u) ? '📁' : /\.pdf($|\?)/i.test(u) ? '📕' : /\.(pptx?|key)($|\?)/i.test(u) ? '📊' : /\.(docx?|txt)($|\?)/i.test(u) ? '📝' : /\.(mp4|mov|mkv|webm)($|\?)/i.test(u) || /youtu/.test(u) ? '🎬' : /\.(xlsx?|csv)($|\?)/i.test(u) ? '📈' : /\.(png|jpe?g|gif|webp)($|\?)/i.test(u) ? '🖼️' : '📄';
+
+    // ---------- model data ----------
+    // Folder tersimpan di dbData.folders[kategori] = [{id, name, parent}]. Berkas lama (yang hanya punya
+    // kolom kuliah/skenario) otomatis dibaca sebagai folder tingkat atas sampai admin mengubah sesuatu.
+    function reg(c) {
+        if (!dbData.folders || Array.isArray(dbData.folders)) dbData.folders = {};
+        if (!Array.isArray(dbData.folders[c.cat])) dbData.folders[c.cat] = [];
+        return dbData.folders[c.cat];
+    }
+    function model(c) {
+        const stored = reg(c).filter(f => f && f.id), folders = stored.slice(), synth = {};
+        const items = (dbData[c.cat] || []).map((it, idx) => {
+            let fid;
+            if (it.fid !== undefined) fid = it.fid;
+            else {
+                const nm = String(it[c.group] || '').trim();
+                if (!nm) fid = null;
+                else {
+                    let f = stored.find(x => x.parent == null && lc(x.name) === lc(nm));
+                    if (!f) { f = synth[lc(nm)]; if (!f) { f = synth[lc(nm)] = { id: 'g:' + nm, name: nm, parent: null }; folders.push(f); } }
+                    fid = f.id;
+                }
+            }
+            if (fid != null && !folders.some(x => x.id === fid)) fid = null;
+            return { it, idx, fid: fid == null ? null : fid };
+        });
+        return { folders, items };
+    }
+    const kids = (m, id) => m.folders.filter(f => (f.parent == null ? null : f.parent) === id).sort((a, b) => a.name.localeCompare(b.name, 'id'));
+    function descendants(m, id) { const out = [id]; kids(m, id).forEach(k => out.push(...descendants(m, k.id))); return out; }
+    function pathOf(m, id) {
+        const p = [], seen = new Set(); let cur = id;
+        while (cur != null && !seen.has(cur)) { seen.add(cur); const f = m.folders.find(x => x.id === cur); if (!f) break; p.unshift(f); cur = f.parent == null ? null : f.parent; }
+        return p;
+    }
+    const countIn = (m, id) => m.items.filter(x => x.fid === id).length + kids(m, id).length;
+
+    // Simpan: materialisasikan folder bawaan + penempatan berkas, jalankan perubahan, lalu simpan ke server
+    async function commit(c, fn) {
+        reg(c);
+        const m = model(c);
+        const X = { folders: m.folders.map(f => ({ id: f.id, name: f.name, parent: f.parent == null ? null : f.parent })), items: dbData[c.cat] };
+        m.items.forEach(x => { x.it.fid = x.fid; });
+        fn(X);
+        dbData.folders[c.cat] = X.folders;
+        dbData[c.cat] = X.items;
+        if (!(await saveCategoryData('folders'))) return false;
+        return await saveCategoryData(c.cat);
+    }
+
+    // ---------- tampilan ----------
+    function mountOne(c) {
+        const host = c.host(); if (!host || c.root) return;
+        const root = document.createElement('div');
+        root.className = 'fd'; root.id = 'fd-' + c.id;
+        root.innerHTML = `
+          <div class="fd-bar"><input type="search" class="modern-input fd-search" placeholder="🔎 Cari di ${esc(c.label)}..." aria-label="Cari">
+            <div class="fd-views" role="group" aria-label="Tampilan"><button type="button" class="fd-vbtn" data-view="grid" title="Ikon" aria-label="Tampilan ikon">▦</button><button type="button" class="fd-vbtn" data-view="list" title="Daftar" aria-label="Tampilan daftar">☰</button></div></div>
+          <div class="fd-admin" style="display:none;"><button type="button" class="btn btn-outline btn-sm" data-a="newfolder">📁 Folder baru</button><button type="button" class="btn btn-outline btn-sm" data-a="upload">⬆️ Unggah ke sini</button><button type="button" class="btn btn-outline btn-sm" data-a="newlink">🔗 Tambah tautan</button><input type="file" multiple hidden class="fd-file"></div>
+          <div class="fd-crumb"></div><div class="fd-body"></div>`;
+        host.style.display = 'none'; host.after(root); c.root = root;
+        wire(c);
+    }
+
+    function draw(c) {
+        if (!c.root) mountOne(c);
+        const root = c.root; if (!root) return;
+        const st = c.st, m = model(c), admin = isAdmin();
+        if (st.cwd && !m.folders.some(f => f.id === st.cwd)) st.cwd = null;
+        root.classList.toggle('fd-list', st.view === 'list');
+        root.querySelectorAll('.fd-vbtn').forEach(b => b.classList.toggle('active', b.dataset.view === st.view));
+        root.querySelector('.fd-admin').style.display = admin ? 'flex' : 'none';
+
+        const path = pathOf(m, st.cwd);
+        root.querySelector('.fd-crumb').innerHTML =
+            `<a data-go="" data-drop="">🏠 ${esc(c.label)}</a>` + path.map(f => ` <span>›</span> <a data-go="${esc(f.id)}" data-drop="${esc(f.id)}">${esc(f.name)}</a>`).join('') +
+            (st.q ? ' <span>· hasil pencarian</span>' : '');
+
+        let fs, its;
+        if (st.q) {
+            fs = m.folders.filter(f => lc(f.name).includes(st.q)).sort((a, b) => a.name.localeCompare(b.name, 'id'));
+            its = m.items.filter(x => lc(x.it[c.title]).includes(st.q) || lc(pathOf(m, x.fid).map(f => f.name).join(' ')).includes(st.q));
+        } else { fs = kids(m, st.cwd); its = m.items.filter(x => x.fid === st.cwd); }
+        its = its.slice().sort((a, b) => String(a.it[c.title]).localeCompare(String(b.it[c.title]), 'id', { numeric: true }));
+
+        const more = '<button type="button" class="fd-more" data-more aria-label="Menu">⋯</button>';
+        const fT = f => `<div class="fd-tile fd-folder" data-fid="${esc(f.id)}" data-drop="${esc(f.id)}" tabindex="0"${admin ? ' draggable="true"' : ''}><span class="fd-ico">📁</span><span class="fd-name">${esc(f.name)}</span><small>${countIn(m, f.id)} item</small>${admin ? more : ''}</div>`;
+        const iT = x => {
+            const link = x.it.link && x.it.link !== '#' ? x.it.link : '';
+            const where = st.q ? '📁 ' + (pathOf(m, x.fid).map(f => f.name).join(' › ') || c.label) : '';
+            return `<div class="fd-tile fd-file" data-idx="${x.idx}"${admin ? ' draggable="true"' : ''}>${link ? `<a class="fd-open" href="${esc(link)}" target="_blank" rel="noopener" draggable="false" aria-label="Buka ${esc(x.it[c.title])}"></a>` : ''}<span class="fd-ico">${iconOf(link)}</span><span class="fd-name">${esc(x.it[c.title])}</span><small>${esc(where)}</small>${admin ? more : ''}</div>`;
+        };
+        const body = root.querySelector('.fd-body');
+        body.innerHTML = (fs.length || its.length) ? `<div class="fd-grid">${fs.map(fT).join('')}${its.map(iT).join('')}</div>`
+            : `<div class="fd-empty">${st.q ? 'Tidak ada yang cocok.' : (st.cwd ? 'Folder ini masih kosong.' : 'Belum ada berkas.')}${admin && !st.q ? '<br><small>Klik kanan atau pakai tombol di atas untuk menambah folder dan berkas.</small>' : ''}</div>`;
+        if (typeof wireDriveAll === 'function') wireDriveAll();
+    }
+
+    // ---------- menu klik kanan / ⋯ ----------
+    let menuCtx = null;
+    function closeMenu() { const m = $('fd-menu'); if (m) m.remove(); menuCtx = null; }
+    function openMenu(c, kind, id, x, y) {
+        closeMenu();
+        const defs = kind === 'folder' ? [['open', '📂 Buka'], ['rename', '✏️ Ganti nama'], ['move', '📥 Pindahkan ke…'], ['del', '🗑️ Hapus folder', 1]]
+            : kind === 'file' ? [['openf', '↗ Buka'], ['edit', '✏️ Ubah judul / tautan'], ['move', '📥 Pindahkan ke…'], ['del', '🗑️ Hapus berkas', 1]]
+                : [['newfolder', '📁 Folder baru'], ['upload', '⬆️ Unggah file'], ['newlink', '🔗 Tambah tautan']];
+        const el = document.createElement('div'); el.id = 'fd-menu'; el.setAttribute('role', 'menu');
+        el.innerHTML = defs.map(d => `<button type="button" role="menuitem" data-m="${d[0]}"${d[2] ? ' class="danger"' : ''}>${d[1]}</button>`).join('');
+        document.body.appendChild(el);
+        const w = el.offsetWidth, h = el.offsetHeight;
+        el.style.left = Math.max(8, Math.min(x, window.innerWidth - w - 8)) + 'px';
+        el.style.top = Math.max(8, Math.min(y, window.innerHeight - h - 8)) + 'px';
+        menuCtx = { c, kind, id };
+        el.addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (!b) return; const ctx = menuCtx; closeMenu(); if (ctx) act(ctx.c, ctx.kind, ctx.id, b.dataset.m); });
+    }
+    document.addEventListener('click', e => { if (!e.target.closest('#fd-menu') && !e.target.closest('[data-more]')) closeMenu(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+    window.addEventListener('scroll', closeMenu, { passive: true });
+
+    // ---------- aksi ----------
+    function folderOptions(m, exclude) {
+        const out = [{ v: '', t: '🏠 Letak utama' }];
+        (function walk(parent, depth) {
+            kids(m, parent).forEach(f => {
+                if (exclude && exclude.includes(f.id)) return;
+                out.push({ v: f.id, t: '\u2003'.repeat(depth) + '📁 ' + f.name });
+                walk(f.id, depth + 1);
+            });
+        })(null, 0);
+        return out;
+    }
+    const siblingExists = (m, parent, name, exceptId) => m.folders.some(f => f.id !== exceptId && (f.parent == null ? null : f.parent) === (parent == null ? null : parent) && lc(f.name) === lc(name));
+
+    async function act(c, kind, id, a) {
+        const st = c.st;
+        if (a === 'open') { st.cwd = id; st.q = ''; c.root.querySelector('.fd-search').value = ''; draw(c); return; }
+        if (a === 'openf') { const t = c.root.querySelector(`.fd-file[data-idx="${id}"] .fd-open`); if (t) t.click(); return; }
+        if (!isAdmin()) return;
+        const m = model(c);
+
+        if (a === 'newfolder') {
+            const r = await askDialog('Folder baru', [{ id: 'n', label: 'Nama folder', value: '', placeholder: 'Contoh: Blok 5 - Sistem Saraf' }], 'Buat');
+            const name = r && r.n.trim(); if (!name) return;
+            if (siblingExists(m, st.cwd, name)) { alert('Sudah ada folder dengan nama itu di sini.'); return; }
+            if (await commit(c, X => X.folders.push({ id: uid(), name, parent: st.cwd }))) alert('Folder dibuat.');
+        } else if (a === 'rename' && kind === 'folder') {
+            const f = m.folders.find(x => x.id === id); if (!f) return;
+            const r = await askDialog('Ganti nama folder', [{ id: 'n', label: 'Nama baru', value: f.name }], 'Simpan');
+            const name = r && r.n.trim(); if (!name || name === f.name) return;
+            if (siblingExists(m, f.parent, name, id)) { alert('Sudah ada folder dengan nama itu di sini.'); return; }
+            if (await commit(c, X => { X.folders.find(x => x.id === id).name = name; })) alert('Nama folder diganti.');
+        } else if (a === 'edit' && kind === 'file') {
+            const x = m.items.find(y => String(y.idx) === String(id)); if (!x) return;
+            const r = await askDialog('Ubah berkas', [{ id: 't', label: 'Judul', value: x.it[c.title] }, { id: 'l', label: 'Tautan', value: x.it.link && x.it.link !== '#' ? x.it.link : '' }], 'Simpan');
+            if (!r || !r.t.trim()) return;
+            const it = x.it;
+            if (await commit(c, () => { it[c.title] = r.t.trim(); it.link = r.l.trim() || '#'; })) alert('Berkas diperbarui.');
+        } else if (a === 'move') {
+            let exclude = null, curParent = null, label = '';
+            if (kind === 'folder') { const f = m.folders.find(x => x.id === id); if (!f) return; exclude = descendants(m, id); curParent = f.parent == null ? null : f.parent; label = f.name; }
+            else { const x = m.items.find(y => String(y.idx) === String(id)); if (!x) return; curParent = x.fid; label = x.it[c.title]; }
+            const r = await askDialog('Pindahkan "' + label + '"', [{ id: 'to', label: 'Ke folder', type: 'select', options: folderOptions(m, exclude), value: curParent || '' }], 'Pindahkan');
+            if (!r) return;
+            await moveTo(c, kind, id, r.to || null);
+        } else if (a === 'del') {
+            if (kind === 'folder') {
+                const ids = descendants(m, id), nFiles = m.items.filter(x => ids.includes(x.fid)).length;
+                if (!confirm(`Hapus folder ini beserta ${ids.length - 1} sub-folder dan ${nFiles} berkas di dalamnya? Tidak bisa dibatalkan. (File di Google Drive tidak ikut terhapus.)`)) return;
+                const gone = new Set(ids);
+                if (await commit(c, X => { X.folders = X.folders.filter(f => !gone.has(f.id)); X.items = X.items.filter(it => !gone.has(it.fid)); })) { if (gone.has(st.cwd)) st.cwd = null; draw(c); alert('Folder dihapus.'); }
+            } else {
+                const x = m.items.find(y => String(y.idx) === String(id)); if (!x) return;
+                if (!confirm(`Hapus "${x.it[c.title]}"? (File di Google Drive tidak ikut terhapus.)`)) return;
+                const it = x.it;
+                if (await commit(c, X => { X.items = X.items.filter(i => i !== it); })) alert('Berkas dihapus.');
+            }
+        } else if (a === 'upload') {
+            const inp = c.root.querySelector('.fd-file'); inp.dataset.target = st.cwd == null ? '' : st.cwd; inp.value = ''; inp.click();
+        } else if (a === 'newlink') {
+            const r = await askDialog('Tambah tautan', [{ id: 't', label: 'Judul', value: '' }, { id: 'l', label: 'Tautan (Google Drive / URL)', value: '', placeholder: 'https://' }], 'Tambah');
+            if (!r || !r.t.trim() || !r.l.trim()) { if (r) alert('Judul dan tautan wajib diisi.'); return; }
+            await addItems(c, st.cwd, [{ title: r.t.trim(), link: r.l.trim() }]);
+        }
+    }
+
+    async function moveTo(c, kind, id, target) {
+        const m = model(c);
+        if (kind === 'folder') {
+            const f = m.folders.find(x => x.id === id); if (!f) return;
+            if (descendants(m, id).includes(target)) { alert('Folder tidak bisa dipindahkan ke dalam dirinya sendiri.'); return; }
+            if ((f.parent == null ? null : f.parent) === target) return;
+            if (siblingExists(m, target, f.name, id)) { alert('Di tujuan sudah ada folder dengan nama yang sama.'); return; }
+            if (await commit(c, X => { X.folders.find(x => x.id === id).parent = target; })) alert('Folder dipindahkan.');
+        } else {
+            const x = m.items.find(y => String(y.idx) === String(id)); if (!x || x.fid === target) return;
+            const it = x.it, nm = target == null ? '' : (m.folders.find(f => f.id === target) || {}).name || '';
+            if (await commit(c, () => { it.fid = target; it[c.group] = nm; })) alert('Berkas dipindahkan.');
+        }
+    }
+
+    // Tambah berkas/tautan ke folder tujuan, lalu umumkan otomatis
+    async function addItems(c, folderId, list) {
+        const m = model(c), p = pathOf(m, folderId), folderName = p.length ? p[p.length - 1].name : '';
+        const now = Date.now();
+        const news = list.map((x, i) => ({ id: now + i, [c.title]: x.title, [c.group]: folderName, ket: '', link: x.link, fid: folderId }));
+        if (!(await commit(c, X => { news.forEach(n => X.items.push(n)); }))) return false;
+        const where = [c.label].concat(p.map(f => f.name)).join(' › ');
+        const titles = list.map(x => x.title).join(', ');
+        postUpdate('file', '📚 Berkas baru di ' + c.label, `${list.length} berkas ditambahkan ke ${where}: ${titles}.`, {
+            key: 'file:' + c.cat + ':' + (folderId || 'root'),
+            merge: n => `${n} berkas baru ditambahkan ke ${where}.`
+        });
+        alert(list.length > 1 ? list.length + ' berkas ditambahkan.' : 'Berkas ditambahkan.');
+        return true;
+    }
+
+    async function uploadFiles(c, files, folderId) {
+        if (!isAdmin() || !files.length) return;
+        const m = model(c), p = pathOf(m, folderId), drivePath = [c.label].concat(p.map(f => f.name)).join('/');
+        const ok = [];
+        for (const f of files) {
+            const url = await uploadFileObj(f, drivePath);
+            if (url) ok.push({ title: f.name.replace(/\.[^.]+$/, ''), link: url });
+            else break;   // berhenti bila gagal supaya admin bisa memperbaiki dulu
+        }
+        if (ok.length) await addItems(c, folderId, ok);
+    }
+
+    // ---------- event ----------
+    function wire(c) {
+        const root = c.root, st = c.st;
+        root.querySelector('.fd-search').addEventListener('input', e => { st.q = lc(e.target.value.trim()); draw(c); });
+        root.querySelector('.fd-file').addEventListener('change', e => {
+            const t = e.target.dataset.target; const files = [...e.target.files]; e.target.value = '';
+            uploadFiles(c, files, t === '' || t === undefined ? null : t);
+        });
+        root.addEventListener('click', e => {
+            const more = e.target.closest('[data-more]');
+            if (more) { e.preventDefault(); e.stopPropagation(); const t = more.closest('.fd-tile'), r = more.getBoundingClientRect(); const kind = t.dataset.fid !== undefined ? 'folder' : 'file'; openMenu(c, kind, kind === 'folder' ? t.dataset.fid : t.dataset.idx, r.left, r.bottom + 4); return; }
+            const v = e.target.closest('[data-view]');
+            if (v) { st.view = v.dataset.view; try { localStorage.setItem('a9_fd_view', st.view); } catch (er) { } CATS.forEach(x => { x.st.view = st.view; if (x.root) draw(x); }); return; }
+            const go = e.target.closest('[data-go]');
+            if (go) { st.cwd = go.dataset.go || null; st.q = ''; root.querySelector('.fd-search').value = ''; draw(c); return; }
+            const a = e.target.closest('[data-a]'); if (a) { act(c, null, null, a.dataset.a); return; }
+            const f = e.target.closest('.fd-folder'); if (f) { st.cwd = f.dataset.fid; st.q = ''; root.querySelector('.fd-search').value = ''; draw(c); }
+        });
+        root.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('fd-folder')) { st.cwd = e.target.dataset.fid; st.q = ''; draw(c); }
+        });
+        root.addEventListener('contextmenu', e => {
+            if (!isAdmin()) return;
+            const t = e.target.closest('.fd-tile');
+            if (t) { e.preventDefault(); const kind = t.dataset.fid !== undefined ? 'folder' : 'file'; openMenu(c, kind, kind === 'folder' ? t.dataset.fid : t.dataset.idx, e.clientX, e.clientY); }
+            else if (e.target.closest('.fd-body')) { e.preventDefault(); openMenu(c, null, null, e.clientX, e.clientY); }
+        });
+        // seret & lepas (hanya admin, desktop)
+        root.addEventListener('dragstart', e => {
+            if (!isAdmin()) return;
+            const t = e.target.closest && e.target.closest('.fd-tile'); if (!t) return;
+            e.dataTransfer.setData('text/plain', 'fd:' + (t.dataset.fid !== undefined ? 'folder:' + t.dataset.fid : 'file:' + t.dataset.idx));
+            e.dataTransfer.effectAllowed = 'move'; t.classList.add('dragging');
+        });
+        root.addEventListener('dragend', () => root.querySelectorAll('.dragging,.over').forEach(x => x.classList.remove('dragging', 'over')));
+        root.addEventListener('dragover', e => {
+            if (!isAdmin()) return;
+            const dz = e.target.closest('.fd-folder,[data-drop]'), hasFiles = e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+            root.querySelectorAll('.over').forEach(x => x.classList.remove('over'));
+            if (dz) { e.preventDefault(); dz.classList.add('over'); }
+            else if (hasFiles || e.target.closest('.fd-body')) { e.preventDefault(); root.querySelector('.fd-body').classList.add('over'); }
+        });
+        root.addEventListener('dragleave', e => { if (!root.contains(e.relatedTarget)) root.querySelectorAll('.over').forEach(x => x.classList.remove('over')); });
+        root.addEventListener('drop', e => {
+            if (!isAdmin()) return;
+            e.preventDefault(); root.querySelectorAll('.over').forEach(x => x.classList.remove('over'));
+            const dz = e.target.closest('.fd-folder,[data-drop]');
+            const target = dz ? (dz.dataset.fid !== undefined ? dz.dataset.fid : (dz.dataset.drop || null)) : st.cwd;
+            const files = e.dataTransfer.files && [...e.dataTransfer.files];
+            if (files && files.length) { uploadFiles(c, files, target); return; }
+            const txt = e.dataTransfer.getData('text/plain') || ''; const mm = txt.match(/^fd:(folder|file):(.+)$/);
+            if (mm) moveTo(c, mm[1], mm[2], target);
+        });
+    }
+
+    window.finderRender = () => CATS.forEach(draw);
+    window.finderRender();
 })();
 
 // ==========================================================================
@@ -1810,65 +2262,9 @@ body { font-size: 16px; }
             if (jd.some(d => !String(d.tgl).trim())) { alert('Ada hari yang tanggalnya masih kosong.'); return; }
             jd.sort((x, y) => { const a1 = parseTgl(x.tgl), b1 = parseTgl(y.tgl); return (a1 && b1) ? a1 - b1 : 0; });
             dbData.jadwalCustom = clone(jd);
-            if (await saveCategoryData('jadwal')) { jd = null; drawJde(); alert('Jadwal tersimpan.'); }
+            if (await saveCategoryData('jadwal')) { jd = null; drawJde(); alert('Jadwal tersimpan.'); postUpdate('jadwal', '🗓️ Jadwal diperbarui', 'Jadwal kuliah telah diperbarui. Cek menu Kuliah › Jadwal.', { key: 'jadwal' }); }
         }
     });
-
-    // ======================================================================
-    // 3) Admin: kelola folder & berkas (Materi, Lab, Skills Lab, Tutorial)
-    // ======================================================================
-    const CF = [
-        { tab: 'tab-materi', cat: 'materi', g: 'kuliah', t: 'materi', lg: 'Mata kuliah' },
-        { tab: 'tab-lab', cat: 'laboratorium', g: 'skenario', t: 'nama', lg: 'Folder (modul)' },
-        { tab: 'tab-skills', cat: 'skills_lab', g: 'skenario', t: 'nama', lg: 'Folder (modul)' },
-        { tab: 'tab-tutorial', cat: 'tutorial', g: 'skenario', t: 'nama', lg: 'Folder (modul)' }
-    ];
-    const grp = (c, it) => String(it[c.g] || 'Lainnya').trim();
-    CF.forEach(c => {
-        const box = document.createElement('details');
-        box.className = 'admin-form-box'; box.style.cssText = 'display:none;margin-top:20px;'; c.box = box;
-        box.innerHTML = '<summary>🗂️ Admin: kelola folder &amp; berkas</summary><div class="mg-body"></div>';
-        $(c.tab).appendChild(box);
-        box.addEventListener('toggle', () => { if (box.open) drawMgr(c); });
-        box.addEventListener('click', async e => {
-            const b = e.target.closest('[data-m]'); if (!b) return;
-            const a = b.dataset.m, list = dbData[c.cat] || [];
-            if (a === 'ren') {
-                const old = b.dataset.f, nv = (b.parentElement.querySelector('input').value || '').trim();
-                if (!nv || nv === old) return;
-                list.forEach(it => { if (grp(c, it) === old) it[c.g] = nv; });
-                if (await saveCategoryData(c.cat)) { drawMgr(c); alert('Folder diganti nama.'); }
-            } else if (a === 'delf') {
-                const old = b.dataset.f, n = list.filter(it => grp(c, it) === old).length;
-                if (!confirm(`Hapus folder "${old}" beserta ${n} berkas di dalamnya? Tidak bisa dibatalkan.`)) return;
-                dbData[c.cat] = list.filter(it => grp(c, it) !== old);
-                if (await saveCategoryData(c.cat)) { drawMgr(c); alert('Folder dihapus.'); }
-            } else if (a === 'save') {
-                const row = b.closest('.mg-row'), it = list[+b.dataset.i]; if (!it) return;
-                const ti = row.querySelector('[data-f="t"]').value.trim(), fo = row.querySelector('[data-f="g"]').value.trim(), li = row.querySelector('[data-f="l"]').value.trim();
-                if (!ti) { alert('Judul tidak boleh kosong.'); return; }
-                it[c.t] = ti; it[c.g] = fo || 'Lainnya'; it.link = li || '#';
-                if (await saveCategoryData(c.cat)) { drawMgr(c); alert('Berkas diperbarui.'); }
-            } else if (a === 'del') {
-                if (!confirm('Hapus berkas ini?')) return;
-                list.splice(+b.dataset.i, 1); if (await saveCategoryData(c.cat)) drawMgr(c);
-            }
-        });
-    });
-    function drawMgr(c) {
-        const list = dbData[c.cat] || [], body = c.box.querySelector('.mg-body');
-        const names = [...new Set(list.map(it => grp(c, it)))].sort((a, b) => a.localeCompare(b, 'id'));
-        body.innerHTML = `<datalist id="dl-${c.cat}">${names.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
-          <p class="hint">Ganti nama folder akan memindahkan semua isinya. Untuk membuat folder baru, ketik nama folder baru pada kolom "${c.lg}" milik sebuah berkas (atau saat menambah berkas baru).</p>
-          <h4>Folder (${names.length})</h4>
-          <div class="mg-folders">${names.map(n => `<div class="mg-f"><input class="modern-input" value="${esc(n)}" aria-label="Nama folder"><button class="btn btn-outline btn-sm" data-m="ren" data-f="${esc(n)}">Ganti nama</button><button class="btn btn-danger btn-sm" data-m="delf" data-f="${esc(n)}">Hapus folder</button></div>`).join('') || '<p class="hint">Belum ada folder.</p>'}</div>
-          <h4>Berkas (${list.length})</h4>
-          ${list.map((it, i) => `<div class="mg-row">
-            <input class="modern-input" data-f="t" value="${esc(it[c.t])}" aria-label="Judul">
-            <input class="modern-input" data-f="g" list="dl-${c.cat}" value="${esc(grp(c, it))}" aria-label="${c.lg}">
-            <input class="modern-input" data-f="l" value="${esc(it.link && it.link !== '#' ? it.link : '')}" placeholder="Link" aria-label="Link">
-            <button class="btn btn-primary btn-sm" data-m="save" data-i="${i}">Simpan</button><button class="btn btn-danger btn-sm" data-m="del" data-i="${i}">Hapus</button></div>`).join('') || '<p class="hint">Belum ada berkas.</p>'}`;
-    }
 
     // ======================================================================
     // 4) OSCE
@@ -1879,27 +2275,47 @@ body { font-size: 16px; }
     let draftOpen = false;   // admin membuka form setup setelah sesi selesai
     let curTab = 'home', lastBanner = null, firstLoad = true, guestPoll = null;
     const fired = {};
-    const blank = () => ({ v: 1, status: 'setup', judul: 'OSCE', stase: [1, 2, 3, 4].map(i => ({ id: i, nama: 'Stase ' + i, durasi: 10, kasus: { judul: '', skenario: '', instruksi: '', tugas: '', checklist: '' } })), peserta: [], round: 0, roundStart: 0, startedAt: 0, warnSec: 60, autoGeser: false, sound: true });
+    const blank = () => ({ v: 1, status: 'setup', judul: 'OSCE', stase: [1, 2, 3, 4].map(i => ({ id: i, nama: 'Stase ' + i, durasi: 10, kasus: { judul: '', skenario: '', instruksi: '', tugas: '', checklist: '' } })), peserta: [], round: 0, roundStart: 0, startedAt: 0, warnSec: 60, autoGeser: false, sound: true, soundTheme: 'lonceng' });
 
     const main = document.querySelector('.main-content');
     main.insertAdjacentHTML('beforeend', '<div id="tab-osce" class="tab-content" style="display:none;"><div id="osce-root"></div></div>');
 
-    // ---- suara ----
+    // ---- suara: lonceng lembut (bukan bunyi beep tajam), 3 pilihan gaya ----
     let AC = null;
     function ctx() { if (!AC) { const C = window.AudioContext || window.webkitAudioContext; if (C) AC = new C(); } if (AC && AC.state === 'suspended') AC.resume(); return AC; }
     document.addEventListener('click', () => ctx());
-    function beep(freq, ms, delay) {
-        const a = ctx(); if (!a) return; const t = a.currentTime + (delay || 0);
-        const o = a.createOscillator(), g = a.createGain(); o.type = 'square'; o.frequency.value = freq;
-        g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.35, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + ms / 1000);
-        o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + ms / 1000 + .05);
+    // satu nada: beberapa harmonik sinus dengan peluruhan halus
+    function bell(freq, dur, delay, vol, partials) {
+        const a = ctx(); if (!a) return;
+        const t = a.currentTime + (delay || 0), master = a.createGain();
+        master.gain.value = vol == null ? .5 : vol; master.connect(a.destination);
+        (partials || [[1, 1], [2.01, .35], [3.0, .15], [4.2, .08]]).forEach(([r, g], i) => {
+            const o = a.createOscillator(), e = a.createGain();
+            o.type = 'sine'; o.frequency.value = freq * r;
+            e.gain.setValueAtTime(.0001, t);
+            e.gain.exponentialRampToValueAtTime(g, t + .012);
+            e.gain.exponentialRampToValueAtTime(.0001, t + dur / (1 + i * .55));
+            o.connect(e); e.connect(master); o.start(t); o.stop(t + dur + .1);
+        });
     }
+    const GONG = [[1, 1], [1.52, .6], [2.0, .45], [2.76, .3], [4.07, .15]];
+    const ping = (f, dur, delay) => bell(f, dur, delay, .4, [[1, 1], [2, .12]]);
+    const SOUNDS = {
+        lonceng: { warn: () => { bell(784, 1.4, 0, .45); bell(988, 1.4, .28, .4); }, end: () => bell(523, 2.6, 0, .6), geser: () => [523, 659, 784, 1047].forEach((f, i) => bell(f, 1.8, i * .32, .5)) },
+        gong: { warn: () => bell(196, 2.2, 0, .6, GONG), end: () => bell(130, 3.4, 0, .75, GONG), geser: () => { bell(130, 3.4, 0, .7, GONG); bell(196, 3, .9, .6, GONG); } },
+        digital: { warn: () => { ping(880, .25, 0); ping(880, .25, .3); }, end: () => ping(660, .8, 0), geser: () => [0, .45, .9].forEach(d => ping(1175, .35, d)) }
+    };
     const vib = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) { } };
-    function cue(kind) {
-        if (!S || S.sound === false) return;
-        if (kind === 'warn') { beep(880, 170, 0); beep(880, 170, .3); vib([150, 100, 150]); }
-        else if (kind === 'end') { beep(520, 700, 0); vib([500]); }
-        else { [0, .55, 1.1].forEach(d => beep(1040, 380, d)); vib([300, 150, 300, 150, 300]); }
+    function cue(kind, o) {
+        if (!(o && o.force) && (!S || S.sound === false)) return;
+        const th = (o && o.theme) || (S && S.soundTheme) || 'lonceng';
+        const set = SOUNDS[th] || SOUNDS.lonceng;
+        (set[kind] || set.geser)();
+        if (kind === 'warn') vib([150, 100, 150]); else if (kind === 'end') vib([500]); else vib([300, 150, 300, 150, 300]);
+    }
+    function testSound() {
+        const o = { force: true, theme: (draft && draft.soundTheme) || (S && S.soundTheme) || 'lonceng' };
+        cue('warn', o); setTimeout(() => cue('end', o), 2000); setTimeout(() => cue('geser', o), 5000);
     }
     function paintBanner() {
         const el = $('osce-banner'); if (!el) return;
@@ -1978,6 +2394,7 @@ body { font-size: 16px; }
             <div class="form-group"><label>Peringatan geser (detik sebelum habis)</label><input type="number" min="5" class="modern-input" data-g="warnSec" value="${d.warnSec}"></div>
             <div class="form-group"><label>Geser otomatis</label><select class="modern-input" data-g="autoGeser"><option value="0"${d.autoGeser ? '' : ' selected'}>Tidak, admin menekan tombol</option><option value="1"${d.autoGeser ? ' selected' : ''}>Ya, 5 detik setelah semua habis</option></select></div>
             <div class="form-group"><label>Bunyi notifikasi</label><select class="modern-input" data-g="sound"><option value="1"${d.sound !== false ? ' selected' : ''}>Aktif</option><option value="0"${d.sound === false ? ' selected' : ''}>Mati</option></select></div>
+            <div class="form-group"><label>Jenis suara</label><select class="modern-input" data-g="soundTheme"><option value="lonceng"${(d.soundTheme || 'lonceng') === 'lonceng' ? ' selected' : ''}>Lonceng lembut</option><option value="gong"${d.soundTheme === 'gong' ? ' selected' : ''}>Gong</option><option value="digital"${d.soundTheme === 'digital' ? ' selected' : ''}>Digital halus</option></select></div>
           </div></div>
 
         <div class="card"><div class="card-header flex-between"><h3 class="card-title">🧩 Stase (${N})</h3><button class="btn btn-outline btn-sm" data-oact="addStase">+ Tambah stase</button></div>
@@ -2157,7 +2574,7 @@ body { font-size: 16px; }
     const tabO = $('tab-osce');
     function onField(t) {
         if (!isAdmin() || !draft) return;
-        if (t.dataset.g) { const g = t.dataset.g; draft[g] = (t.tagName === 'SELECT') ? t.value === '1' : t.type === 'number' ? (+t.value || 0) : t.value; return; }
+        if (t.dataset.g) { const g = t.dataset.g; if (g === 'soundTheme') { draft.soundTheme = t.value; return; } draft[g] = (t.tagName === 'SELECT') ? t.value === '1' : t.type === 'number' ? (+t.value || 0) : t.value; return; }
         if (t.dataset.s !== undefined && t.dataset.f) {
             const s = draft.stase[+t.dataset.s], f = t.dataset.f;
             if (f === 'nama') s.nama = t.value; else if (f === 'durasi') s.durasi = Math.max(1, +t.value || 1); else s.kasus[f] = t.value;
@@ -2174,7 +2591,7 @@ body { font-size: 16px; }
     });
     tabO.addEventListener('click', async e => {
         const b = e.target.closest('[data-oact]'); if (!b) return; const a = b.dataset.oact; ctx();
-        if (a === 'sound') { const was = S; if (!S) S = { sound: true }; cue('warn'); if (!was) S = null; return; }
+        if (a === 'sound') { testSound(); return; }
         if (!isAdmin()) return;
         if (a === 'geser') geser(false);
         else if (a === 'stop') { if (confirm('Batalkan sesi OSCE yang sedang berjalan? Peserta tidak melihat soal lagi.')) { const nx = Object.assign({}, S, { status: 'setup', round: 0, updated: Date.now() }); lastBanner = null; if (await persist(nx)) { initDraft(); injectPill(); renderOsce(); } } }
@@ -2211,7 +2628,6 @@ body { font-size: 16px; }
     const prevLogin = window.finishLogin;
     window.finishLogin = function () {
         prevLogin(); curTab = 'home'; firstLoad = true;
-        CF.forEach(c => { c.box.style.display = isAdmin() ? 'block' : 'none'; });
         jdBox.style.display = isAdmin() ? 'block' : 'none';
         loadOsce().then(() => { injectPill(); firstLoad = false; });
         if (guestPoll) { clearInterval(guestPoll); guestPoll = null; }
@@ -2225,7 +2641,6 @@ body { font-size: 16px; }
         const ch = purgeLocal();
         prevRender();
         try {
-            CF.forEach(c => { c.box.style.display = isAdmin() ? 'block' : 'none'; if (c.box.open && !c.box.contains(document.activeElement)) drawMgr(c); });
             jdBox.style.display = isAdmin() ? 'block' : 'none';
         } catch (e) { console.error(e); }
         if (ch.length && isAdmin()) purgeRemote();
@@ -2234,12 +2649,260 @@ body { font-size: 16px; }
 })();
 
 // ==========================================================================
+// BAGIAN 8 — BERANDA CERDAS: PENGINGAT (tugas mepet + jadwal besok paling krusial)
+//            & TEMPLATE PENGUMUMAN UNTUK ADMIN
+// ==========================================================================
+(function () {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const isAdmin = () => !!currentUser && currentUser.role === 'admin';
+
+    const css = document.createElement('style');
+    css.textContent = `
+    .smart-rem h3 { font-size: 18px; margin-bottom: 4px; }
+    .rem-sec { margin-top: 16px; }
+    .rem-sec h4 { font-size: 14px; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; }
+    .rem-top { border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 8px; border: 1.5px solid var(--border-color); background: var(--bg-base); }
+    .rem-top b { display: block; font-size: 16px; margin: 2px 0; }
+    .rem-top small { color: var(--text-muted); }
+    .rem-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 2px; border-top: 1px solid var(--border-color); font-size: 14px; }
+    .rem-row:first-of-type { border-top: none; }
+    .rem-pill { flex: none; border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 700; background: var(--primary-light); color: var(--primary); white-space: nowrap; }
+    .lv5 { border-color: #ef4444; background: rgba(239,68,68,.08); } .lv5 .rem-pill, .rem-pill.lv5 { background: #ef4444; color: #fff; }
+    .lv4 { border-color: #f97316; background: rgba(249,115,22,.08); } .lv4 .rem-pill, .rem-pill.lv4 { background: #f97316; color: #fff; }
+    .lv3 { border-color: #f59e0b; background: rgba(245,158,11,.09); } .lv3 .rem-pill, .rem-pill.lv3 { background: #f59e0b; color: #fff; }
+    .rem-pill.late { background: #ef4444; color: #fff; } .rem-pill.today { background: #ef4444; color: #fff; } .rem-pill.soon { background: #f59e0b; color: #fff; }
+    .rem-empty { color: var(--text-muted); font-size: 14px; }
+    .tpl-box { border: 1.5px dashed var(--primary); border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 16px; background: var(--primary-light); }
+    .tpl-box > label { font-weight: 700; display: block; margin-bottom: 8px; }
+    .tpl-row { display: grid; grid-template-columns: 1fr 160px; gap: 8px; }
+    .tpl-box .modern-input { margin-bottom: 8px; }
+    #tpl-fields .form-group { margin-bottom: 0; }
+    @media (max-width: 560px) { .tpl-row { grid-template-columns: 1fr; } }`;
+    document.head.appendChild(css);
+
+    // ======================== PENGINGAT ========================
+    const MON = { jan: 0, feb: 1, mar: 2, apr: 3, mei: 4, may: 4, jun: 5, jul: 6, agu: 7, aug: 7, sep: 8, okt: 9, oct: 9, nov: 10, des: 11, dec: 11 };
+    function parseTgl(t) {
+        const m = String(t).match(/(\d{1,2})[-\s]([A-Za-z]{3})[a-z]*[-\s](\d{2,4})/); if (!m) return null;
+        const mo = MON[m[2].toLowerCase()]; if (mo === undefined) return null;
+        let y = +m[3]; if (y < 100) y += 2000; return new Date(y, mo, +m[1]);
+    }
+    const sod = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+
+    // Urutan kepentingan: UB > Responsi > Praktikum/Ujian/OSCE > Tutorial > Kelas > lainnya
+    const RANK = [
+        [/\bUB\b|ujian\s*blok/i, 5, 'UB'],
+        [/responsi/i, 4, 'Responsi'],
+        [/osce|ujian|praktikum|skills?\s*lab|\blab(oratorium)?\b|kuis|quiz|\btes\b/i, 3, 'Praktikum / Ujian'],
+        [/tutor/i, 2, 'Tutorial'],
+        [/kuliah|kelas|pleno|ceramah|diskusi|\bdr\.|prof/i, 1, 'Kelas']
+    ];
+    function rank(txt) { for (const [re, sc, lb] of RANK) if (re.test(txt)) return { sc, lb }; return { sc: 0, lb: 'Kegiatan' }; }
+
+    function dayItems(J, d) {
+        const e = J.find(x => x.d.getTime() === d.getTime()); if (!e) return null;
+        return e.j.sesi.filter(s => s && s.kegiatan && s.kegiatan.trim() !== '-')
+            .map(s => Object.assign({ jam: s.jam, kegiatan: s.kegiatan }, rank(s.kegiatan)))
+            .sort((a, b) => b.sc - a.sc || String(a.jam).localeCompare(String(b.jam)));
+    }
+
+    function reminderData() {
+        const today = sod(new Date()), tmr = addDays(today, 1);
+        const J = (dbData.jadwalCustom || []).filter(j => j && Array.isArray(j.sesi)).map(j => ({ j, d: parseTgl(j.tgl) })).filter(x => x.d);
+        const besok = dayItems(J, tmr);
+        const tugas = (dbData.tugas || []).map(t => {
+            const m = String(t.deadline || '').match(/^\d{4}-\d{2}-\d{2}/); if (!m) return null;
+            return { nama: t.nama, days: Math.round((new Date(m[0] + 'T00:00:00') - today) / 86400000) };
+        }).filter(t => t && t.days <= 3).sort((a, b) => a.days - b.days);
+        const next = [];
+        for (let o = 2; o <= 7; o++) {
+            const it = dayItems(J, addDays(today, o)); if (!it) continue;
+            it.filter(x => x.sc >= 3).forEach(x => next.push(Object.assign({ off: o, d: addDays(today, o) }, x)));
+        }
+        next.sort((a, b) => a.off - b.off || b.sc - a.sc);
+        return { tmr, besok, tugas, next: next.slice(0, 5) };
+    }
+
+    const pillDays = n => n < 0 ? ['Terlewat', 'late'] : n === 0 ? ['Hari ini', 'today'] : n === 1 ? ['Besok', 'soon'] : [n + ' hari lagi', ''];
+    const dm = d => d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short' });
+
+    function reminderHtml(R) {
+        let h = '<h3>🔔 Pengingat</h3>';
+        h += `<div class="rem-sec"><h4>Besok · ${esc(dm(R.tmr))}</h4>`;
+        if (R.besok === null) h += '<p class="rem-empty">Jadwal besok belum diisi.</p>';
+        else if (!R.besok.length) h += '<p class="rem-empty">Tidak ada kegiatan terjadwal besok. Waktu yang pas untuk mengulang materi. 📖</p>';
+        else {
+            const top = R.besok[0];
+            h += `<div class="rem-top ${top.sc >= 3 ? 'lv' + top.sc : ''}"><small>${top.sc >= 3 ? '⭐ Paling krusial besok' : 'Kegiatan pertama besok'} · <span class="rem-pill ${top.sc >= 3 ? 'lv' + top.sc : ''}">${esc(top.lb)}</span></small><b>${esc(top.kegiatan)}</b><small>🕒 ${esc(top.jam)}</small></div>`;
+            h += R.besok.slice(1).map(x => `<div class="rem-row"><span>${esc(x.kegiatan)}<br><small style="color:var(--text-muted)">🕒 ${esc(x.jam)}</small></span><span class="rem-pill ${x.sc >= 3 ? 'lv' + x.sc : ''}">${esc(x.lb)}</span></div>`).join('');
+        }
+        h += '</div>';
+        h += '<div class="rem-sec"><h4>Tugas yang deadline-nya mepet</h4>';
+        h += R.tugas.length ? R.tugas.map(t => { const [lb, cl] = pillDays(t.days); return `<div class="rem-row"><span>${esc(t.nama)}</span><span class="rem-pill ${cl}">${lb}</span></div>`; }).join('') : '<p class="rem-empty">Tidak ada tugas yang mepet. 🎉</p>';
+        h += '</div>';
+        if (R.next.length) {
+            h += '<div class="rem-sec"><h4>Segera (7 hari ke depan)</h4>' + R.next.map(x => `<div class="rem-row"><span>${esc(x.kegiatan)}<br><small style="color:var(--text-muted)">${esc(dm(x.d))} · ${esc(x.jam)}</small></span><span class="rem-pill lv${x.sc}">${esc(x.lb)} · ${x.off} hari</span></div>`).join('') + '</div>';
+        }
+        return h;
+    }
+
+    function renderReminder() {
+        const home = $('tab-home'); if (!home || !currentUser) return;
+        let c = $('smart-rem');
+        if (!c) {
+            c = document.createElement('div'); c.id = 'smart-rem'; c.className = 'card smart-rem';
+            const g = $('greeting'); if (g) g.after(c); else home.prepend(c);
+        }
+        const html = reminderHtml(reminderData());
+        if (c.dataset.h !== html) { c.innerHTML = html; c.dataset.h = html; }
+    }
+
+    function loginToast() {
+        try { if (sessionStorage.getItem('a9_rem_shown')) return; sessionStorage.setItem('a9_rem_shown', '1'); } catch (e) { }
+        const R = reminderData(), parts = [];
+        if (R.besok && R.besok.length) { const t = R.besok[0]; parts.push(`Besok: ${t.lb} ${t.jam}`); }
+        if (R.tugas.length) parts.push(`${R.tugas.length} tugas mepet`);
+        if (parts.length) alert('🔔 ' + parts.join(' · '));
+    }
+
+    const prevRender = window.renderAll;
+    window.renderAll = function () {
+        prevRender();
+        try { renderReminder(); } catch (e) { console.error(e); }
+    };
+    // hari berganti saat halaman terbuka: perbarui pengingat
+    let lastDay = new Date().toDateString();
+    setInterval(() => { const d = new Date().toDateString(); if (d !== lastDay) { lastDay = d; window.renderAll(); } }, 5 * 60 * 1000);
+
+    const prevLogin = window.finishLogin;
+    window.finishLogin = function () {
+        prevLogin();
+        try { renderReminder(); } catch (e) { }
+        (typeof dbReady !== 'undefined' ? dbReady : Promise.resolve()).then(() => setTimeout(() => { try { renderReminder(); loginToast(); } catch (e) { } }, 900));
+    };
+    window.renderAll();
+
+    // ======================== TEMPLATE PENGUMUMAN ========================
+    const JENIS = ['UB (Ujian Blok)', 'Responsi', 'Praktikum', 'Skills Lab', 'OSCE', 'Tutorial', 'Kuis / Tes', 'Kuliah / Kelas'];
+    const opt = (s, k) => s ? `\n${k}${s}` : '';
+    const TPL = {
+        tugas: {
+            label: '📝 Tugas baru', kind: 'tugas',
+            fields: [['mk', 'Mata kuliah / blok'], ['nama', 'Nama tugas'], ['dl', 'Deadline', 'date'], ['cara', 'Cara mengumpulkan (opsional)'], ['cat', 'Catatan (opsional)']],
+            need: ['mk', 'nama', 'dl'],
+            build: (f, t) => ({
+                judul: `📝 Tugas ${f.mk}: ${f.nama}`, until: f.dl,
+                isi: t === 'santai'
+                    ? `Halo A9! 👋 Ada tugas ${f.mk}: "${f.nama}". Deadline ${tglIndo(f.dl)}.${f.cara ? ' Kumpulkan lewat ' + f.cara + '.' : ''}${opt(f.cat, 'Catatan: ')}\nJangan ditunda ya, semangat! 💪`
+                    : `Diberitahukan kepada seluruh mahasiswa A9 bahwa terdapat tugas ${f.mk} berjudul "${f.nama}". Batas pengumpulan: ${tglIndo(f.dl)}.${f.cara ? ' Pengumpulan melalui ' + f.cara + '.' : ''}${opt(f.cat, 'Catatan: ')}\nMohon dikerjakan dan dikumpulkan tepat waktu. Terima kasih.`
+            })
+        },
+        ujian: {
+            label: '📌 UB / Responsi / Praktikum / Ujian', kind: 'ujian',
+            fields: [['jenis', 'Jenis kegiatan', 'select', JENIS], ['materi', 'Materi / cakupan (opsional)'], ['tgl', 'Tanggal', 'date'], ['jam', 'Jam (contoh 07.50-09.30)'], ['tempat', 'Tempat (opsional)'], ['bawa', 'Yang perlu dibawa (opsional)'], ['cat', 'Catatan (opsional)']],
+            need: ['jenis', 'tgl'],
+            build: (f, t) => ({
+                judul: `📌 ${f.jenis} · ${tglIndo(f.tgl)}`, until: f.tgl,
+                isi: t === 'santai'
+                    ? `Heads up A9! 📣 ${f.jenis} pada ${tglIndo(f.tgl)}${f.jam ? ', jam ' + f.jam : ''}${f.tempat ? ', di ' + f.tempat : ''}.${opt(f.materi, 'Materi: ')}${opt(f.bawa, 'Bawa: ')}${opt(f.cat, 'Catatan: ')}\nYuk siap-siap dari sekarang, kamu pasti bisa! 🔥`
+                    : `${f.jenis} akan dilaksanakan pada ${tglIndo(f.tgl)}${f.jam ? ', pukul ' + f.jam : ''}${f.tempat ? ', bertempat di ' + f.tempat : ''}.${opt(f.materi, 'Materi: ')}${opt(f.bawa, 'Yang perlu dibawa/disiapkan: ')}${opt(f.cat, 'Catatan: ')}\nMohon hadir tepat waktu dan mempersiapkan diri dengan baik.`
+            })
+        },
+        jadwal: {
+            label: '🗓️ Perubahan jadwal', kind: 'jadwal',
+            fields: [['keg', 'Kegiatan'], ['lama', 'Jadwal lama (opsional)'], ['tgl', 'Tanggal baru', 'date'], ['jam', 'Jam baru'], ['tempat', 'Tempat (opsional)'], ['alasan', 'Alasan (opsional)']],
+            need: ['keg', 'tgl'],
+            build: (f, t) => ({
+                judul: `🗓️ Perubahan jadwal: ${f.keg}`, until: f.tgl,
+                isi: t === 'santai'
+                    ? `Info perubahan jadwal ya, A9! 🔄 ${f.keg}${f.lama ? ' (sebelumnya ' + f.lama + ')' : ''} dipindah ke ${tglIndo(f.tgl)}${f.jam ? ', jam ' + f.jam : ''}${f.tempat ? ', di ' + f.tempat : ''}.${opt(f.alasan, 'Alasan: ')}\nMohon dicatat ulang, ya!`
+                    : `Diinformasikan bahwa jadwal ${f.keg}${f.lama ? ', yang semula ' + f.lama + ',' : ''} diubah menjadi ${tglIndo(f.tgl)}${f.jam ? ', pukul ' + f.jam : ''}${f.tempat ? ', bertempat di ' + f.tempat : ''}.${opt(f.alasan, 'Alasan: ')}\nMohon menyesuaikan jadwal masing-masing.`
+            })
+        },
+        tiada: {
+            label: '🚫 Kelas ditiadakan / diganti', kind: 'jadwal',
+            fields: [['keg', 'Kegiatan'], ['tgl', 'Tanggal', 'date'], ['ganti', 'Pengganti / tindak lanjut (opsional)'], ['alasan', 'Alasan (opsional)']],
+            need: ['keg', 'tgl'],
+            build: (f, t) => ({
+                judul: `🚫 ${f.keg} ditiadakan (${tglIndo(f.tgl)})`, until: f.tgl,
+                isi: t === 'santai'
+                    ? `Kabar baik/buruk, A9! ${f.keg} pada ${tglIndo(f.tgl)} ditiadakan.${opt(f.alasan, 'Alasan: ')}${opt(f.ganti, 'Gantinya: ')}\nManfaatkan waktunya untuk belajar mandiri ya! 📚`
+                    : `Diberitahukan bahwa ${f.keg} pada ${tglIndo(f.tgl)} ditiadakan.${opt(f.alasan, 'Alasan: ')}${opt(f.ganti, 'Pengganti/tindak lanjut: ')}\nTerima kasih atas perhatiannya.`
+            })
+        },
+        materi: {
+            label: '📚 Materi baru', kind: 'materi',
+            fields: [['mk', 'Mata kuliah / blok'], ['topik', 'Topik materi'], ['lokasi', 'Lokasi di portal (opsional)']],
+            need: ['mk', 'topik'],
+            build: (f, t) => ({
+                judul: `📚 Materi baru: ${f.topik}`, until: '',
+                isi: t === 'santai'
+                    ? `Materi baru sudah naik, A9! 📚 ${f.mk}: ${f.topik}. Cek di ${f.lokasi || 'menu Kuliah › Materi'}. Selamat belajar! ✨`
+                    : `Materi ${f.mk} dengan topik "${f.topik}" telah diunggah dan dapat diakses di ${f.lokasi || 'menu Kuliah › Materi'}. Silakan dipelajari. Terima kasih.`
+            })
+        },
+        penting: {
+            label: '⚠️ Penting / mendesak', kind: 'penting',
+            fields: [['isi', 'Isi informasi'], ['tgl', 'Berlaku sampai (opsional)', 'date']],
+            need: ['isi'],
+            build: (f, t) => ({
+                judul: '⚠️ PENTING: mohon dibaca', until: f.tgl || '',
+                isi: t === 'santai' ? `Perhatian A9! ⚠️\n${f.isi}\nMohon segera ditindaklanjuti ya. Terima kasih!` : `Perhatian kepada seluruh mahasiswa.\n${f.isi}\nMohon segera ditindaklanjuti. Terima kasih.`
+            })
+        },
+        umum: {
+            label: '📢 Pengumuman umum', kind: 'info',
+            fields: [['judul', 'Judul'], ['isi', 'Isi pengumuman'], ['tgl', 'Berlaku sampai (opsional)', 'date']],
+            need: ['judul', 'isi'],
+            build: (f, t) => ({
+                judul: f.judul, until: f.tgl || '',
+                isi: t === 'santai' ? `Halo A9! 👋\n${f.isi}\nTerima kasih, semangat terus! 💪` : `Kepada seluruh mahasiswa A9,\n${f.isi}\nDemikian disampaikan. Terima kasih.`
+            })
+        }
+    };
+
+    const jf = $('p-judul');
+    if (jf) {
+        const box = document.createElement('div');
+        box.className = 'tpl-box';
+        box.innerHTML = `<label for="tpl-type">✨ Pakai template (opsional)</label>
+          <div class="tpl-row"><select id="tpl-type" class="modern-input"><option value="">— pilih jenis pengumuman —</option>${Object.entries(TPL).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('')}</select>
+            <select id="tpl-tone" class="modern-input" aria-label="Gaya bahasa"><option value="resmi">Gaya resmi</option><option value="santai">Gaya santai</option></select></div>
+          <div id="tpl-fields"></div>
+          <button type="button" class="btn btn-outline btn-sm" id="tpl-fill" style="display:none;">Isi otomatis ke form di bawah</button>
+          <p class="hint" style="margin:8px 0 0;">Hasilnya masuk ke judul, isi, dan batas tampil di bawah. Kamu masih bisa mengeditnya sebelum disimpan.</p>`;
+        (jf.closest('.form-group') || jf).before(box);
+
+        $('tpl-type').addEventListener('change', () => {
+            const T = TPL[$('tpl-type').value], wrap = $('tpl-fields');
+            $('tpl-fill').style.display = T ? 'inline-flex' : 'none';
+            wrap.innerHTML = T ? T.fields.map(([k, l, type, ops]) => type === 'select'
+                ? `<div class="form-group"><label>${esc(l)}</label><select class="modern-input" data-f="${k}">${ops.map(o => `<option>${esc(o)}</option>`).join('')}</select></div>`
+                : `<div class="form-group"><label>${esc(l)}</label><input class="modern-input" data-f="${k}" type="${type || 'text'}"></div>`).join('') : '';
+        });
+        $('tpl-fill').addEventListener('click', () => {
+            const T = TPL[$('tpl-type').value]; if (!T) return;
+            const f = {}; $('tpl-fields').querySelectorAll('[data-f]').forEach(el => { f[el.dataset.f] = el.value.trim(); });
+            if (T.need.some(k => !f[k])) { alert('Lengkapi dulu kolom yang wajib (nama, tanggal, dan sejenisnya).'); return; }
+            const r = T.build(f, $('tpl-tone').value);
+            $('p-judul').value = r.judul; $('p-isi').value = r.isi;
+            const dl = $('p-deadline'); if (dl) { if (r.until) dl.value = r.until; else { const d = new Date(); d.setDate(d.getDate() + 7); dl.value = isoLocal(d); } }
+            $('p-judul').dataset.kind = T.kind;
+            alert('Template terisi. Periksa lalu klik simpan pengumuman.');
+        });
+    }
+})();
+
+// ==========================================================================
 // BAGIAN 7 — DESAIN v3 & PERFORMA KETIK
 // ==========================================================================
 
 // Tunda (debounce) semua kolom pencarian supaya daftar tidak digambar ulang di setiap huruf
 (function () {
-    const SEL = '#jd-search, #pa-search, .fv-bar input, .search-box';
+    const SEL = '#jd-search, #pa-search, .fv-bar input, .search-box, .fd-search';
     document.addEventListener('input', e => {
         const t = e.target;
         if (e.__again || !t.matches || !t.matches(SEL)) return;
