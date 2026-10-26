@@ -66,7 +66,7 @@ function applyKey(k, v) {
         dbData.globalAnnouncement = v.globalAnnouncement || '';
         dbData.adminCode = v.adminCode || dbData.adminCode || 'A9ACOR';
     } else if (k === 'jadwal') {
-        dbData.jadwalCustom = v || [];
+        dbData.jadwalCustom = Array.isArray(v) ? v : (v && Array.isArray(v.jadwal) ? v.jadwal : []);
     } else {
         dbData[k] = v || [];
     }
@@ -514,17 +514,7 @@ function renderAll() {
         <li><span>${u}</span> ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="deleteItem('jadwalUpdates', ${idx})">Hapus</button>` : ''}</li>
     `).join('');
 
-    // Render Jadwal
-    const jBody = document.getElementById('jadwal-table-body');
-    if (jBody) jBody.innerHTML = dbData.jadwalCustom.length === 0 ? '<tr><td colspan="5" style="text-align:center;">Tidak ada jadwal hari ini/besok.</td></tr>' : dbData.jadwalCustom.map((j, idx) => `
-        <tr>
-            <td data-label="Tanggal"><strong>${j.tgl}</strong></td>
-            <td data-label="Sesi 1">${j.sesi[0].jam}<br><small>${j.sesi[0].kegiatan}</small></td>
-            <td data-label="Sesi 2">${j.sesi[1].jam}<br><small>${j.sesi[1].kegiatan}</small></td>
-            <td data-label="Sesi 3">${j.sesi[2].jam}<br><small>${j.sesi[2].kegiatan}</small></td>
-            <td data-label="Sesi 4">${j.sesi[3].jam}<br><small>${j.sesi[3].kegiatan}</small></td>
-        </tr>
-    `).join('');
+
 }
 
 // ==========================================================================
@@ -994,6 +984,10 @@ body { font-size: 16px; }
           <li><strong>Setelan:</strong> tombol ⚙️ Setelan di kanan atas untuk mode maintenance, pengumuman global, dan mengganti kode admin.</li></ol></details>
         <details class="admin-guide" style="display:none;"><summary>📁 Upload materi dan file besar lewat Google Drive (Admin)</summary>
           <ol><li>Buka <strong>drive.google.com</strong> dan buat folder, misalnya "Portal A9", dengan subfolder per mata kuliah. Drive gratis 15 GB dan bisa menyimpan PDF, PPT, atau video besar.</li><li>Upload filenya. Klik kanan file atau folder, pilih <strong>Bagikan</strong>, ubah Akses umum menjadi <strong>Siapa saja yang memiliki link</strong> dengan peran <strong>Pelihat</strong>, lalu <strong>Salin link</strong>.</li><li>Di portal, buka halaman tujuan (Materi, Tugas, Lab, Skills Lab, atau Tutorial), isi nama, lalu tempel link tadi di kolom <strong>Link</strong> dan klik Simpan.</li><li>Mahasiswa yang klik <em>Buka</em> akan melihat pratinjau file di jendela portal, dengan tombol <em>Buka di Drive</em> dan <em>Unduh</em>. Link folder juga didukung, isinya tampil sebagai daftar.</li><li>Kalau mahasiswa melihat "Anda memerlukan akses", berarti akses umum belum diatur ke "Siapa saja yang memiliki link". Perbaiki di Drive, tidak perlu mengubah data di portal.</li><li>Kolom upload file langsung dari komputer tetap ada untuk file kecil (maksimal 50 MB). Untuk file besar, pakai Drive.</li></ol></details>
+        <details><summary>🔎 Folder, pencarian, dan filter</summary>
+          <ul><li><strong>Materi, Lab, Skills Lab, dan Tutorial</strong> tampil sebagai folder. Klik folder untuk melihat isinya, dan klik <em>Semua folder</em> untuk kembali.</li><li>Ketik di kolom pencarian untuk mencari berkas di semua folder sekaligus, atau pilih folder lewat menu di sebelahnya.</li><li><strong>Tugas:</strong> pakai tombol Semua, Akan datang, atau Terlewat, dan kolom pencarian.</li><li><strong>Jadwal:</strong> pilih Hari ini &amp; besok, Minggu ini, atau Semua, atau ketik kata kunci seperti "Tutor" atau nama dosen.</li></ul></details>
+        <details class="admin-guide" style="display:none;"><summary>📊 Progres mahasiswa dan jadwal (Admin)</summary>
+          <ol><li>Buka <strong>Latihan, Progres Mahasiswa</strong> untuk melihat jumlah pengerjaan, rata-rata, nilai terbaik, nilai terakhir, dan tren tiap mahasiswa. Gunakan pencarian dan filter jenis latihan.</li><li>Klik <strong>Detail</strong> untuk melihat semua pengerjaan satu mahasiswa. Tombol <em>Hapus</em> di tiap baris menghapus satu pengerjaan, dan <em>Hapus semua progres</em> mengosongkan progres mahasiswa itu. Pakai ini kalau terjadi kesalahan sistem. Penghapusan tidak bisa dibatalkan.</li><li><strong>Jadwal:</strong> buka Kuliah, Jadwal, lalu tempel isi JSON jadwal di kotak admin dan klik <em>Simpan jadwal ke database</em>. Format array langsung atau berbentuk {"jadwal": [...]} sama-sama diterima.</li></ol></details>
         <details><summary>8. Masalah yang sering terjadi</summary>
           <ul><li><strong>Gambar soal tidak muncul:</strong> cek internet, lalu refresh dengan Ctrl+Shift+R. Kalau masih kosong, laporkan nomor soalnya.</li><li><strong>Halaman tidak merespons:</strong> refresh. Jawaban CBT yang belum diselesaikan tidak tersimpan.</li><li><strong>Portal maintenance:</strong> mahasiswa tidak bisa masuk sampai admin selesai.</li></ul></details>
       </div>
@@ -1046,7 +1040,7 @@ body { font-size: 16px; }
         { id: 'home', ico: '🏠', label: 'Beranda', tabs: [['home', 'Beranda']] },
         { id: 'kuliah', ico: '📅', label: 'Kuliah', tabs: [['jadwal', 'Jadwal'], ['tugas', 'Tugas'], ['materi', 'Materi']] },
         { id: 'praktikum', ico: '🔬', label: 'Praktikum', tabs: [['lab', 'Lab'], ['skills', 'Skills Lab'], ['tutorial', 'Tutorial']] },
-        { id: 'latihan', ico: '✍️', label: 'Latihan', tabs: [['soal', 'Soal Isian'], ['cbt', 'Simulasi CBT'], ['progres', 'Progres Saya']] },
+        { id: 'latihan', ico: '✍️', label: 'Latihan', tabs: () => [['soal', 'Soal Isian'], ['cbt', 'Simulasi CBT'], isAdmin() ? ['progres-admin', 'Progres Mahasiswa'] : ['progres', 'Progres Saya']] },
         { id: 'bantuan', ico: '💬', label: 'Bantuan', tabs: () => [['panduan', 'Panduan'], isAdmin() ? ['laporan-admin', 'Laporan Masuk'] : ['lapor', 'Lapor Masalah']] }
     ];
     const tabsOf = g => typeof g.tabs === 'function' ? g.tabs() : g.tabs;
@@ -1605,11 +1599,256 @@ body { font-size: 16px; }
     }
     const orr = window.renderAll;
     window.renderAll = function () { orr(); try { wireDrive(); } catch (e) { } };
+    window.wireDriveAll = wireDrive;
 
     ['t-link-manual', 'lab-link-manual', 'skills-link-manual', 'tut-link-manual', 'm-link-manual'].forEach(id => {
         const el = $(id); if (!el) return;
         el.placeholder = 'Link Google Drive / URL lainnya';
         el.insertAdjacentHTML('afterend', '<small style="display:block;color:var(--text-muted);margin:-4px 0 10px;">💡 File besar? Upload ke Google Drive, bagikan "Siapa saja yang memiliki link" (Pelihat), lalu tempel link-nya di sini. Lihat Bantuan, Panduan, Panduan Admin.</small>');
     });
+    window.renderAll();
+})();
+
+// ==========================================================================
+// JADWAL BARU, FOLDER & FILTER MATERI, PROGRES MAHASISWA UNTUK ADMIN
+// ==========================================================================
+(function () {
+    const $ = id => document.getElementById(id);
+    const esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const isAdmin = () => typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin';
+    const fmtTgl = t => new Date(t).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+    const JENIS = { 'cbt-ujian': 'CBT (Ujian)', 'cbt-latihan': 'CBT (Latihan)', 'isian': 'Soal Isian' };
+
+    const st = document.createElement('style');
+    st.textContent = `
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    .chip { border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); padding: 6px 16px; border-radius: 50px; font-weight: 600; font-size: 13px; cursor: pointer; }
+    .chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .jd { border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 12px; background: var(--bg-base); }
+    .jd.today { border-color: var(--primary); box-shadow: var(--shadow-glow); background: var(--primary-light); }
+    .jd-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+    .jd-tag { background: var(--primary); color: #fff; border-radius: 20px; padding: 1px 10px; font-size: 12px; font-weight: 700; }
+    .jd-row { display: grid; grid-template-columns: 110px 1fr; gap: 10px; padding: 7px 0; border-top: 1px dashed var(--border-color); font-size: 14px; }
+    .jd-jam { color: var(--primary); font-weight: 700; font-variant-numeric: tabular-nums; }
+    .fv-bar { display: grid; grid-template-columns: 1fr 220px; gap: 10px; margin-bottom: 6px; }
+    .fv-crumb { font-size: 14px; margin-bottom: 12px; color: var(--text-muted); min-height: 22px; }
+    .fv-crumb a { color: var(--primary); cursor: pointer; font-weight: 600; }
+    .fv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+    .fv-folder { background: var(--bg-base); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 18px 14px; text-align: center; cursor: pointer; font: inherit; color: var(--text-main); transition: .2s; }
+    .fv-folder:hover { border-color: var(--primary); background: var(--primary-light); transform: translateY(-2px); }
+    .fv-folder .ico { font-size: 40px; display: block; }
+    .fv-folder strong { display: block; margin: 6px 0 2px; font-size: 14px; word-break: break-word; }
+    .fv-folder small { color: var(--text-muted); }
+    .fv-file { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 8px; background: var(--bg-base); }
+    .fv-file .ico { font-size: 26px; }
+    .fv-meta { flex: 1; min-width: 0; } .fv-meta strong { display: block; word-break: break-word; } .fv-meta small { color: var(--text-muted); }
+    .pa-trend-up { color: #10b981; font-weight: 700; } .pa-trend-down { color: #ef4444; font-weight: 700; }
+    @media (max-width: 768px) { .fv-bar { grid-template-columns: 1fr; } .jd-row { grid-template-columns: 1fr; gap: 2px; } }`;
+    document.head.appendChild(st);
+
+    // ======================= JADWAL =======================
+    const MON = { jan: 0, feb: 1, mar: 2, apr: 3, mei: 4, may: 4, jun: 5, jul: 6, agu: 7, aug: 7, sep: 8, okt: 9, oct: 9, nov: 10, des: 11, dec: 11 };
+    function parseTgl(t) {
+        const m = String(t).match(/(\d{1,2})[-\s]([A-Za-z]{3})[a-z]*[-\s](\d{2,4})/); if (!m) return null;
+        const mo = MON[m[2].toLowerCase()]; if (mo === undefined) return null;
+        let y = +m[3]; if (y < 100) y += 2000; return new Date(y, mo, +m[1]);
+    }
+    const sod = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    let jView = 'dekat';
+
+    const jCard = $('tab-jadwal').querySelector('.card');
+    jCard.querySelector('.table-responsive').style.display = 'none';
+    jCard.querySelector('.card-title').textContent = '📅 Jadwal Kuliah';
+    jCard.querySelector('.card-header').insertAdjacentHTML('afterend', `
+      <div class="chips" id="jd-chips"><button class="chip active" data-v="dekat">Hari ini &amp; besok</button><button class="chip" data-v="minggu">Minggu ini</button><button class="chip" data-v="semua">Semua</button></div>
+      <input type="search" id="jd-search" class="modern-input" placeholder="🔎 Cari kegiatan, dosen, atau hari (contoh: Tutor, Anatomi, Selasa)">
+      <div id="jd-view"></div>
+      <details class="admin-form-box" style="margin-top:20px;"><summary style="cursor:pointer;font-weight:700;">⚙️ Admin: ganti seluruh jadwal (tempel JSON)</summary>
+        <p style="font-size:13px;color:var(--text-muted);margin:8px 0;">Tempel isi JSON jadwal. Format array langsung atau {"jadwal": [...]} sama-sama diterima. Ini menggantikan jadwal yang ada.</p>
+        <textarea id="jd-json" class="modern-input" style="height:140px;font-family:monospace;font-size:12px;" placeholder='{"jadwal":[{"tgl":"Senin, 21-Sep-26","sesi":[{"jam":"07.50-09.30","kegiatan":"-"}]}]}'></textarea>
+        <button class="btn btn-primary" id="jd-save">Simpan jadwal ke database</button></details>`);
+
+    function renderJadwal() {
+        const all = (dbData.jadwalCustom || []).filter(j => j && Array.isArray(j.sesi));
+        const today = sod(new Date()), tmr = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+        const q = ($('jd-search').value || '').trim().toLowerCase();
+        const items = all.map(j => ({ j, d: parseTgl(j.tgl) }));
+        let shown, note = '';
+        if (q) shown = items.filter(x => (x.j.tgl + ' ' + x.j.sesi.map(s => s.jam + ' ' + s.kegiatan).join(' ')).toLowerCase().includes(q));
+        else if (jView === 'semua') shown = items;
+        else if (jView === 'minggu') {
+            const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - ((today.getDay() + 6) % 7)), end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+            shown = items.filter(x => x.d && x.d >= start && x.d <= end);
+        } else {
+            shown = items.filter(x => x.d && (x.d.getTime() === today.getTime() || x.d.getTime() === tmr.getTime()));
+            if (!shown.length) { const nx = items.find(x => x.d && x.d > today); if (nx) { shown = [nx]; note = 'Tidak ada jadwal hari ini atau besok. Ini jadwal terdekat berikutnya:'; } }
+        }
+        $('jd-view').innerHTML = (note ? `<p style="color:var(--text-muted);margin-bottom:10px;">${note}</p>` : '') +
+            (shown.length ? shown.map(({ j, d }) => {
+                const isT = d && d.getTime() === today.getTime(), isTm = d && d.getTime() === tmr.getTime();
+                const rows = j.sesi.filter(s => s && s.kegiatan && s.kegiatan.trim() !== '-');
+                return `<div class="jd ${isT ? 'today' : ''}"><div class="jd-head"><strong>${esc(j.tgl)}</strong>${isT ? '<span class="jd-tag">Hari ini</span>' : isTm ? '<span class="jd-tag" style="background:#3b82f6">Besok</span>' : ''}</div>
+                    ${rows.length ? rows.map(s => `<div class="jd-row"><span class="jd-jam">${esc(s.jam)}</span><span>${esc(s.kegiatan)}</span></div>`).join('') : '<div class="jd-row"><span></span><span style="color:var(--text-muted)">Tidak ada kegiatan</span></div>'}</div>`;
+            }).join('') : '<p style="color:var(--text-muted);">Tidak ada jadwal yang cocok.</p>');
+    }
+    $('jd-chips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; jView = b.dataset.v; document.querySelectorAll('#jd-chips .chip').forEach(c => c.classList.toggle('active', c === b)); renderJadwal(); });
+    $('jd-search').addEventListener('input', renderJadwal);
+    $('jd-save').addEventListener('click', async () => {
+        let p; try { p = JSON.parse($('jd-json').value); } catch (e) { alert('JSON tidak valid: ' + e.message); return; }
+        const arr = Array.isArray(p) ? p : (p && p.jadwal);
+        if (!Array.isArray(arr) || !arr.length || arr.some(j => !j || !j.tgl || !Array.isArray(j.sesi))) { alert('Format salah. Tiap hari harus punya "tgl" dan daftar "sesi".'); return; }
+        if (!confirm(`Ganti seluruh jadwal dengan ${arr.length} hari dari JSON ini?`)) return;
+        dbData.jadwalCustom = arr; await saveCategoryData('jadwal'); $('jd-json').value = ''; alert('Jadwal tersimpan.');
+    });
+
+    // ======================= FOLDER MATERI & PRAKTIKUM =======================
+    const iconOf = u => /drive\.google\.com\/drive\/.*folders/.test(u) ? '📁' : /\.pdf($|\?)/i.test(u) ? '📕' : /\.(pptx?|key)($|\?)/i.test(u) ? '📊' : /\.(docx?|txt)($|\?)/i.test(u) ? '📝' : /\.(mp4|mov|mkv|webm)($|\?)/i.test(u) || /youtu/.test(u) ? '🎬' : /\.(xlsx?|csv)($|\?)/i.test(u) ? '📈' : /\.(png|jpe?g|gif|webp)($|\?)/i.test(u) ? '🖼️' : '📄';
+    const mounts = [];
+    function mount(cfg) {
+        const host = cfg.el || $(cfg.hide), box = document.createElement('div');
+        box.className = 'fv'; box.id = 'fv-' + cfg.id;
+        box.innerHTML = `<div class="fv-bar"><input type="search" class="modern-input" placeholder="${cfg.ph}" aria-label="Cari"><select class="modern-input" aria-label="Pilih folder"></select></div><div class="fv-crumb"></div><div class="fv-body"></div>`;
+        host.style.display = 'none'; host.after(box);
+        const m = { cfg, box, folder: '', q: '' };
+        const input = box.querySelector('input'), sel = box.querySelector('select');
+        input.addEventListener('input', () => { m.q = input.value.trim().toLowerCase(); draw(m); });
+        sel.addEventListener('change', () => { m.folder = sel.value; draw(m); });
+        box.addEventListener('click', e => {
+            const f = e.target.closest('[data-folder]'); if (f) { m.folder = f.dataset.folder; draw(m); return; }
+            if (e.target.closest('[data-back]')) { m.folder = ''; input.value = ''; m.q = ''; draw(m); return; }
+            const d = e.target.closest('[data-del]'); if (d) window.deleteItem(cfg.cat, +d.dataset.del);
+        });
+        mounts.push(m); draw(m);
+    }
+    function draw(m) {
+        const c = m.cfg, list = (dbData[c.cat] || []).map((it, idx) => ({ it, idx, g: (c.group(it) || 'Lainnya').trim() }));
+        const names = [...new Set(list.map(x => x.g))].sort((a, b) => a.localeCompare(b, 'id'));
+        if (m.folder && !names.includes(m.folder)) m.folder = '';
+        const sel = m.box.querySelector('select');
+        sel.innerHTML = '<option value="">📂 Semua folder</option>' + names.map(n => `<option value="${esc(n)}"${n === m.folder ? ' selected' : ''}>${esc(n)}</option>`).join('');
+        const crumb = m.box.querySelector('.fv-crumb'), body = m.box.querySelector('.fv-body');
+        if (!list.length) { crumb.innerHTML = ''; body.innerHTML = '<p style="color:var(--text-muted);">Belum ada berkas.</p>'; return; }
+        if (!m.folder && !m.q) {
+            crumb.innerHTML = `📂 Semua folder (${names.length})`;
+            body.innerHTML = '<div class="fv-grid">' + names.map(n => `<button type="button" class="fv-folder" data-folder="${esc(n)}"><span class="ico">📁</span><strong>${esc(n)}</strong><small>${list.filter(x => x.g === n).length} berkas</small></button>`).join('') + '</div>';
+            return;
+        }
+        const res = list.filter(x => (!m.folder || x.g === m.folder) && (!m.q || (c.title(x.it) + ' ' + x.g + ' ' + (c.sub(x.it) || '')).toLowerCase().includes(m.q)));
+        crumb.innerHTML = `<a data-back="1">📂 Semua folder</a>${m.folder ? ' › 📁 <strong>' + esc(m.folder) + '</strong>' : ''} · ${res.length} berkas`;
+        body.innerHTML = res.length ? res.map(({ it, idx, g }) => `
+          <div class="fv-file"><span class="ico">${iconOf(it.link || '')}</span>
+            <div class="fv-meta"><strong>${esc(c.title(it))}</strong><small>${m.folder ? esc(c.sub(it) || '') : '📁 ' + esc(g)}</small></div>
+            ${it.link && it.link !== '#' ? `<a class="btn btn-sm btn-primary" href="${esc(it.link)}" target="_blank" rel="noopener">Buka</a>` : ''}
+            ${isAdmin() ? `<button class="btn btn-danger btn-sm" data-del="${idx}">Hapus</button>` : ''}</div>`).join('') : '<p style="color:var(--text-muted);">Tidak ada berkas yang cocok.</p>';
+    }
+    mount({ id: 'materi', el: document.querySelector('#tab-materi .table-responsive'), cat: 'materi', ph: '🔎 Cari materi atau mata kuliah...', group: it => it.kuliah, title: it => it.materi, sub: it => '' });
+    mount({ id: 'lab', hide: 'lab-list', cat: 'laboratorium', ph: '🔎 Cari kegiatan lab...', group: it => it.skenario, title: it => it.nama, sub: it => '' });
+    mount({ id: 'skills', hide: 'skills-list', cat: 'skills_lab', ph: '🔎 Cari keterampilan...', group: it => it.skenario, title: it => it.nama, sub: it => '' });
+    mount({ id: 'tut', hide: 'tutorial-list', cat: 'tutorial', ph: '🔎 Cari topik tutorial...', group: it => it.skenario, title: it => it.nama, sub: it => '' });
+
+    // ======================= FILTER TUGAS =======================
+    let tF = 'semua';
+    const tw = document.querySelector('#tab-tugas .table-responsive');
+    tw.insertAdjacentHTML('beforebegin', '<div class="chips" id="t-chips"><button class="chip active" data-f="semua">Semua</button><button class="chip" data-f="soon">Akan datang</button><button class="chip" data-f="late">Terlewat</button></div>');
+    function tugasFilter() {
+        const q = ($('search-tugas-table-body') || { value: '' }).value.toLowerCase();
+        document.querySelectorAll('#tugas-table-body tr').forEach(tr => {
+            const late = !!tr.querySelector('.dl-late');
+            const okF = tF === 'semua' || (tF === 'late' ? late : !late);
+            tr.style.display = (okF && tr.textContent.toLowerCase().includes(q)) ? '' : 'none';
+        });
+    }
+    $('t-chips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; tF = b.dataset.f; document.querySelectorAll('#t-chips .chip').forEach(c => c.classList.toggle('active', c === b)); tugasFilter(); });
+    let tHooked = false;
+
+    // ======================= PROGRES MAHASISWA (ADMIN) =======================
+    $('tab-lapor').insertAdjacentHTML('afterend', `
+    <div id="tab-progres-admin" class="tab-content" style="display:none;">
+      <div class="card">
+        <div class="card-header flex-between"><h3 class="card-title">📊 Progres Mahasiswa</h3><button class="btn btn-outline btn-sm" id="pa-refresh">🔄 Muat ulang</button></div>
+        <div class="fv-bar"><input type="search" id="pa-search" class="modern-input" placeholder="🔎 Cari nama atau NIM...">
+          <select id="pa-jenis" class="modern-input"><option value="all">Semua jenis</option><option value="cbt-ujian">CBT (Ujian)</option><option value="cbt-latihan">CBT (Latihan)</option><option value="isian">Soal Isian</option></select></div>
+        <div id="pa-body"></div>
+        <div id="pa-detail"></div>
+      </div>
+    </div>`);
+
+    let adminRes = {}, selNim = null;
+    const avg = a => a.length ? Math.round(a.reduce((s, r) => s + r.skor, 0) / a.length) : 0;
+    async function loadAll() {
+        if (!supabaseClient) return;
+        const { data, error } = await supabaseClient.from('portal_db').select('key,value').like('key', 'hasil_%');
+        if (error) throw error;
+        adminRes = {};
+        (data || []).forEach(r => {
+            if (!r.key.startsWith('hasil_')) return;
+            let v = r.value; if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { v = []; } }
+            adminRes[r.key.slice(6)] = Array.isArray(v) ? v : [];
+        });
+    }
+    async function writeRes(nim, arr) {
+        const { error } = await supabaseClient.from('portal_db').upsert({ key: 'hasil_' + nim, value: arr }, { onConflict: 'key' });
+        if (error) throw error; adminRes[nim] = arr;
+    }
+    function renderPA() {
+        const q = $('pa-search').value.trim().toLowerCase(), f = $('pa-jenis').value;
+        const nims = [...new Set([...Object.keys(allowedUsers), ...Object.keys(adminRes)])];
+        const rows = nims.map(n => {
+            const arr = (adminRes[n] || []).filter(r => f === 'all' || r.jenis === f).sort((a, b) => a.t - b.t);
+            return { n, name: allowedUsers[n] || '(tidak terdaftar)', arr };
+        }).filter(x => !q || x.n.includes(q) || x.name.toLowerCase().includes(q)).sort((a, b) => a.name.localeCompare(b.name));
+        const aktif = rows.filter(x => x.arr.length), all = [].concat(...aktif.map(x => x.arr));
+        $('pa-body').innerHTML = `
+          <div class="prog-stats" style="margin-top:14px;">
+            <div class="prog-stat"><b>${aktif.length}/${rows.length}</b><small>Mahasiswa sudah mengerjakan</small></div>
+            <div class="prog-stat"><b>${all.length}</b><small>Total pengerjaan</small></div>
+            <div class="prog-stat"><b>${avg(all)}</b><small>Rata-rata kelas</small></div></div>
+          <div class="table-responsive"><table class="modern-table"><thead><tr><th>Nama</th><th>NIM</th><th>Pengerjaan</th><th>Rata-rata</th><th>Terbaik</th><th>Terakhir</th><th>Tren</th><th>Aksi</th></tr></thead><tbody>
+          ${rows.map(x => {
+            const a = x.arr, last = a[a.length - 1]; let tr = '-';
+            if (a.length >= 2) { const d = last.skor - a[a.length - 2].skor; tr = d > 0 ? `<span class="pa-trend-up">▲ ${d}</span>` : d < 0 ? `<span class="pa-trend-down">▼ ${-d}</span>` : '➖'; }
+            return `<tr><td data-label="Nama"><strong>${esc(x.name)}</strong></td><td data-label="NIM">${esc(x.n)}</td><td data-label="Pengerjaan">${a.length}</td><td data-label="Rata-rata">${a.length ? avg(a) : '-'}</td><td data-label="Terbaik">${a.length ? Math.max(...a.map(r => r.skor)) : '-'}</td><td data-label="Terakhir">${last ? `${last.skor} <small>(${esc(fmtTgl(last.t))})</small>` : '-'}</td><td data-label="Tren">${tr}</td><td data-label="Aksi"><button class="btn btn-outline btn-sm" data-det="${esc(x.n)}">Detail</button></td></tr>`;
+        }).join('')}</tbody></table></div>`;
+        renderDetail();
+    }
+    function renderDetail() {
+        const el = $('pa-detail'); if (!selNim) { el.innerHTML = ''; return; }
+        const arr = (adminRes[selNim] || []).slice().sort((a, b) => b.t - a.t);
+        el.innerHTML = `<div class="card" style="margin-top:20px;border-color:var(--primary);">
+          <div class="card-header flex-between"><h3 class="card-title">${esc(allowedUsers[selNim] || selNim)} <small style="color:var(--text-muted);font-weight:400;">(${esc(selNim)})</small></h3>
+            <span style="display:flex;gap:8px;"><button class="btn btn-danger btn-sm" data-delall="${esc(selNim)}"${arr.length ? '' : ' disabled'}>Hapus semua progres</button><button class="btn btn-outline btn-sm" data-close="1">Tutup</button></span></div>
+          ${arr.length ? `<div class="table-responsive"><table class="modern-table"><thead><tr><th>Tanggal</th><th>Jenis</th><th>Nilai</th><th>Benar</th><th>Waktu</th><th>Aksi</th></tr></thead><tbody>
+          ${arr.map(r => `<tr><td data-label="Tanggal">${esc(fmtTgl(r.t))}</td><td data-label="Jenis">${esc(JENIS[r.jenis] || r.jenis)}</td><td data-label="Nilai"><strong>${r.skor}</strong></td><td data-label="Benar">${r.benar}/${r.total}</td><td data-label="Waktu">${r.durasi ? cbtFormatTime(r.durasi) : '-'}</td><td data-label="Aksi"><button class="btn btn-danger btn-sm" data-delone="${r.t}">Hapus</button></td></tr>`).join('')}</tbody></table></div>`
+                : '<p style="color:var(--text-muted);">Belum ada progres untuk mahasiswa ini.</p>'}</div>`;
+    }
+    $('tab-progres-admin').addEventListener('click', async e => {
+        const d = e.target.closest('[data-det]'); if (d) { selNim = d.dataset.det; renderDetail(); $('pa-detail').scrollIntoView({ behavior: 'smooth' }); return; }
+        if (e.target.closest('[data-close]')) { selNim = null; renderDetail(); return; }
+        const one = e.target.closest('[data-delone]'), all = e.target.closest('[data-delall]');
+        try {
+            if (one) { if (!confirm('Hapus pengerjaan ini dari progres mahasiswa? Tindakan ini tidak bisa dibatalkan.')) return; await writeRes(selNim, (adminRes[selNim] || []).filter(r => String(r.t) !== one.dataset.delone)); renderPA(); alert('Pengerjaan dihapus.'); }
+            else if (all) { if (!confirm(`Hapus SEMUA progres ${allowedUsers[selNim] || selNim}? Tindakan ini tidak bisa dibatalkan.`)) return; await writeRes(selNim, []); renderPA(); alert('Semua progres dihapus.'); }
+        } catch (err) { console.error(err); alert('Gagal menghapus. Cek izin tabel di Supabase.'); }
+    });
+    async function openPA() { $('pa-body').innerHTML = '<p>Memuat...</p>'; try { await loadAll(); } catch (e) { console.error(e); alert('Gagal memuat progres mahasiswa.'); } renderPA(); }
+    $('pa-refresh').addEventListener('click', openPA);
+    $('pa-search').addEventListener('input', renderPA);
+    $('pa-jenis').addEventListener('change', renderPA);
+
+    const osw = window.switchTab;
+    window.switchTab = function (t, b) { osw(t, b); if (t === 'progres-admin') openPA(); };
+
+    // ======================= RENDER ULANG SETIAP renderAll =======================
+    const orr = window.renderAll;
+    window.renderAll = function () {
+        orr();
+        try {
+            renderJadwal(); mounts.forEach(draw);
+            if (!tHooked && $('search-tugas-table-body')) { $('search-tugas-table-body').addEventListener('input', tugasFilter); tHooked = true; }
+            tugasFilter();
+            document.querySelectorAll('#tab-jadwal .admin-form-box').forEach(el => { el.style.display = isAdmin() ? 'block' : 'none'; });
+            if (typeof wireDriveAll === 'function') wireDriveAll();
+        } catch (e) { console.error(e); }
+    };
     window.renderAll();
 })();
