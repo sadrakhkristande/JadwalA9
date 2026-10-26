@@ -16,9 +16,6 @@
     'use strict';
     const $ = id => document.getElementById(id);
 
-    // ---- Performa: sessionStorage.setItem dipanggil di SETIAP gerakan mouse & ketukan tombol
-    // (setupInactivityTracker). Operasi ini sinkron dan jadi penyebab utama ngelag saat mengetik.
-    // Cukup tulis maksimal 1x per 15 detik; batas sesi 30 menit tetap akurat.
     (function throttleActivityWrite() {
         const raw = Storage.prototype.setItem;
         let last = 0;
@@ -32,7 +29,6 @@
         };
     })();
 
-    // ---- Performa: tunda (debounce) semua kolom pencarian agar daftar tidak digambar ulang tiap huruf
     (function debounceSearch() {
         const SEL = '#jd-search, #pa-search, .fv-bar input, .search-box, #prog-filter';
         document.addEventListener('input', e => {
@@ -48,7 +44,6 @@
         }, true);
     })();
 
-    // ---- Bug: login bisa lolos sebelum data cloud (maintenance, kode admin) selesai dimuat
     const fetchOrig = window.fetchDatabaseFromCloud;
     if (typeof fetchOrig === 'function') {
         window.fetchDatabaseFromCloud = function () {
@@ -60,15 +55,17 @@
     const loginOrig = window.handleLogin;
     if (typeof loginOrig === 'function') {
         window.handleLogin = async function () {
-            const wait = new Promise(r => setTimeout(r, 4000));
+            const wait = new Promise(r => setTimeout(r, 1500));
             try { await Promise.race([window.__dbReady || Promise.resolve(), wait]); } catch (e) { }
             return loginOrig.apply(this, arguments);
         };
     }
 
-    // ---- Bug: mahasiswa menekan tema = menimpa pengaturan global (maintenance, kode admin).
-    // Tema sekarang disimpan per perangkat saja.
-    const themeOrig = window.applyTheme;
+    const themeRaw = window.applyTheme;
+    const themeOrig = function (t) {
+        if (typeof themeRaw === 'function') themeRaw(t);
+        else document.body.classList.toggle('theme-dark', t === 'dark');
+    };
     function setMeta(dark) {
         let m = document.querySelector('meta[name="theme-color"]');
         if (!m) { m = document.createElement('meta'); m.name = 'theme-color'; document.head.appendChild(m); }
@@ -86,7 +83,6 @@
         themeOrig(next); setMeta(next === 'dark');
     };
 
-    // ---- Bug: gagal simpan ke server tidak diberi tahu
     window.saveCategoryData = async function (categoryKey) {
         window.renderAll();
         if (!supabaseClient) { alert('Server belum terhubung. Perubahan belum tersimpan.'); return false; }
@@ -110,7 +106,6 @@
         if (await window.saveCategoryData(category)) alert('Data dihapus.');
     };
 
-    // ---- Bug: upload gagal bila nama file memuat karakter khusus
     window.uploadFileToSupabaseStorage = async function (fileInputId) {
         const input = $(fileInputId);
         if (!input || !input.files || !input.files.length) return null;
@@ -125,7 +120,6 @@
         } catch (err) { console.error(err); alert('Upload gagal. Coba lagi atau pakai link Google Drive.'); return null; }
     };
 
-    // ---- Bug: label deadline "Hari ini" / "1 hari lagi" salah hitung
     function fixBadges() {
         const today = new Date(); today.setHours(0, 0, 0, 0);
         document.querySelectorAll('#tugas-table-body td[data-label="Deadline"]').forEach(td => {
@@ -141,33 +135,29 @@
     }
     const renderOrig = window.renderAll;
     window.renderAll = function () {
-        renderOrig.apply(this, arguments);
+        if (typeof renderOrig === 'function') renderOrig.apply(this, arguments);
         try { fixBadges(); } catch (e) { console.error(e); }
     };
 
-    // ---- Bug: sesi berakhir, pesan hilang sebelum terbaca
     const logoutOrig = window.handleLogout;
     window.handleLogout = function () {
         if (window.__loggingOut) return;
         window.__loggingOut = true;
-        setTimeout(() => logoutOrig.apply(this, arguments), 1200);
+        setTimeout(() => {
+            if (typeof logoutOrig === 'function') logoutOrig(); else { sessionStorage.clear(); location.reload(); }
+        }, 1200);
     };
 
-    // ---- Info koneksi
     window.addEventListener('offline', () => alert('Kamu sedang offline. Perubahan belum bisa tersimpan.'));
     window.addEventListener('online', () => alert('Kembali online.'));
 })();
 
 // --------------------------------------------------------------------------
 // 1) Sistem desain
-//    Arah: tenang dan klinis (teal tua + tinta biru-hitam), kartu putih datar
-//    dengan garis tipis, satu huruf (Plus Jakarta Sans). Aksen kuat hanya di
-//    sapaan Beranda dan tombol utama; sisanya sengaja sunyi.
 // --------------------------------------------------------------------------
 (function () {
     'use strict';
 
-    // Huruf: dimuat tanpa memblokir tampilan (display=swap). Tanpa internet, jatuh ke huruf sistem.
     if (!document.getElementById('a9-font')) {
         const pc = document.createElement('link'); pc.rel = 'preconnect'; pc.href = 'https://fonts.gstatic.com'; pc.crossOrigin = '';
         const f = document.createElement('link'); f.id = 'a9-font'; f.rel = 'stylesheet';
@@ -181,7 +171,6 @@
     const css = document.createElement('style');
     css.id = 'a9-v3';
     css.textContent = `
-/* ================= Token ================= */
 :root, body {
   --primary: #0f766e; --primary-hover: #115e59; --primary-light: #e7f4f1;
   --bg-base: #f4f6f9; --bg-card: #ffffff;
@@ -210,16 +199,13 @@ body.theme-dark .osce-st.done { background: rgba(239,68,68,.12); color: #fca5a5;
 body.theme-dark .osce-big.warn, body.theme-dark .osce-banner.warn { background: rgba(245,158,11,.12); color: #fcd34d; }
 body.theme-dark .osce-big.done, body.theme-dark .osce-banner.end { background: rgba(239,68,68,.12); color: #fca5a5; }
 
-/* ================= Dasar & performa ================= */
 html { -webkit-text-size-adjust: 100%; }
 body { font-family: var(--font); background: var(--bg-base); color: var(--text-main); line-height: 1.55; letter-spacing: -.003em; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; overscroll-behavior-y: none; }
 * { -webkit-tap-highlight-color: transparent; }
 button, a, input, select, textarea, summary, label { touch-action: manipulation; }
 button, input, select, textarea { font-family: inherit; }
 ::selection { background: var(--primary-light); color: var(--text-main); }
-/* blur di atas konten besar membuat ketikan tersendat, diganti permukaan solid */
 * { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
-/* ganti 'transition: all' yang boros dengan properti yang perlu saja */
 .card, .btn, .nav-pill, .sn-chip, .chip, .modern-input, .option-label, .fv-folder, .cx-btn {
   transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease;
 }
@@ -229,12 +215,10 @@ h1, h2, h3, h4 { letter-spacing: -.02em; line-height: 1.25; }
 @keyframes a9-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .tab-content { animation: a9-in .22s ease-out; }
 
-/* ================= Kartu ================= */
 .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); padding: clamp(16px, 2.4vw, 26px); margin-bottom: 18px; }
 .card-header { padding-bottom: 14px; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); }
 .card-title { font-size: clamp(17px, 2vw, 20px); font-weight: 700; }
 
-/* ================= Tombol ================= */
 .btn { border-radius: 10px; font-weight: 600; font-size: 14px; padding: 10px 18px; min-height: 42px; border: 1px solid var(--border-color); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .btn:active { transform: scale(.97); }
 .btn-sm { min-height: 36px; padding: 6px 14px; font-size: 13px; }
@@ -249,7 +233,6 @@ body.theme-dark .btn-danger { background: rgba(220,38,38,.12); border-color: rgb
 .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 :focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; border-radius: 6px; }
 
-/* ================= Input ================= */
 .modern-input { width: 100%; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 11px 14px; min-height: 44px; font-size: 16px; margin-bottom: 12px; }
 .modern-input::placeholder { color: var(--text-muted); opacity: .8; }
 .modern-input:hover { border-color: #b8c2d1; }
@@ -258,7 +241,6 @@ textarea.modern-input { line-height: 1.5; }
 .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-main); }
 .admin-form-box { background: transparent; border: 1.5px dashed var(--border-color); border-radius: var(--radius-lg); padding: 14px 16px; }
 
-/* ================= Navigasi ================= */
 .simple-nav { background: var(--bg-card); border-bottom: 1px solid var(--border-color); box-shadow: none; }
 .nav-pill { border: 1px solid transparent; background: transparent; color: var(--text-muted); font-weight: 600; border-radius: 12px; cursor: pointer; }
 .nav-pill:hover { background: var(--bg-base); color: var(--text-main); }
@@ -275,24 +257,19 @@ textarea.modern-input { line-height: 1.5; }
   #sn-sub .sn-chip { scroll-snap-align: start; min-height: 40px; }
 }
 
-/* ================= Beranda ================= */
 .greeting { background: var(--primary); color: #fff; border-radius: var(--radius-xl); padding: clamp(20px, 3vw, 30px); margin-bottom: 18px; }
 .greeting h3 { font-size: clamp(20px, 3vw, 26px); font-weight: 800; }
 .greeting p { opacity: .9; margin-top: 4px; }
 .upd-card { background: var(--primary-light); border: 1px solid var(--primary); }
 
-/* ================= Tabel ================= */
 .table-responsive { border: 1px solid var(--border-color); border-radius: var(--radius-lg); overflow-x: auto; background: var(--bg-card); -webkit-overflow-scrolling: touch; }
 .modern-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .modern-table th { text-align: left; font-size: 13px; font-weight: 700; color: var(--text-muted); background: var(--bg-base); padding: 12px 16px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
 .modern-table td { padding: 13px 16px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
 .modern-table tbody tr:last-child td { border-bottom: none; }
 .modern-table tr:hover td { background: var(--primary-light); }
-@media (max-width: 640px) {
-  .modern-table td { padding: 10px 14px; }
-}
+@media (max-width: 640px) { .modern-table td { padding: 10px 14px; } }
 
-/* ================= Chip, jadwal, folder ================= */
 .chip, .sn-chip { border-radius: 999px; min-height: 38px; }
 .chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 .jd { border-radius: var(--radius-lg); background: var(--bg-card); }
@@ -303,7 +280,6 @@ textarea.modern-input { line-height: 1.5; }
 .fv-file { background: var(--bg-card); border-radius: var(--radius-md); }
 .dl-badge { border-radius: 999px; }
 
-/* ================= CBT & latihan ================= */
 .cbtx-title { color: var(--text-main); }
 .q-text { font-size: clamp(16px, 2vw, 18px); line-height: 1.65; font-weight: 500; max-width: 75ch; margin-bottom: 14px; }
 .options { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
@@ -331,18 +307,15 @@ button.option-label.picked { border-color: var(--primary); background: var(--pri
   .cbtx-nav .btn { flex: 1; }
 }
 
-/* ================= OSCE ================= */
 .osce-st, .osce-stase { background: var(--bg-card); border-radius: var(--radius-lg); }
 .osce-time { font-weight: 800; }
 .osce-big { border-radius: var(--radius-xl); background: var(--primary-light); border-color: var(--primary); }
 .osce-big #g-timer { font-size: clamp(48px, 14vw, 76px); }
 .osce-chip { border-radius: 999px; }
 
-/* ================= Notifikasi ================= */
 #toast-wrap { gap: 10px; }
 .toast { background: var(--text-main); color: var(--bg-card); border-radius: 14px; padding: 13px 18px; font-weight: 600; text-align: left; box-shadow: 0 12px 32px -10px rgba(15,23,42,.45); }
 
-/* ================= Login, modal, kecil-kecil ================= */
 #login-page { background: radial-gradient(900px 500px at 15% -10%, var(--primary-light), transparent 60%), var(--bg-base); }
 .modal-content, #preview-modal > div, #admin-settings-modal > div { border-radius: var(--radius-xl); border: 1px solid var(--border-color); }
 #to-top { background: var(--bg-card); color: var(--primary); border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); }
@@ -351,7 +324,6 @@ button.option-label.picked { border-color: var(--primary); background: var(--pri
 ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; border: 2px solid var(--bg-base); }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-/* ================= HP kecil ================= */
 @media (max-width: 480px) {
   .card { border-radius: var(--radius-lg); padding: 16px; }
   .btn-lg { width: 100%; }
@@ -359,11 +331,9 @@ button.option-label.picked { border-color: var(--primary); background: var(--pri
   .osce-grid, .osce-peserta { grid-template-columns: 1fr; }
   .prog-stats { grid-template-columns: repeat(2, 1fr); }
 }
-/* hormati preferensi kurangi gerak */
 @media (prefers-reduced-motion: reduce) { .tab-content { animation: none; } }
 `;
     document.head.appendChild(css);
 
-    // Terapkan ulang tema (supaya warna meta & kelas gelap ikut sistem desain baru)
     try { window.applyTheme(document.body.classList.contains('theme-dark') ? 'dark' : (window.dbData && dbData.theme) || 'light'); } catch (e) { }
 })();
