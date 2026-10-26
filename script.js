@@ -38,8 +38,9 @@ function cleanText(t) {
 // INISIALISASI & LOGIN
 // ==========================================================================
 window.addEventListener('DOMContentLoaded', async () => {
-    await fetchDatabaseFromCloud();
+    const loadP = fetchDatabaseFromCloud();   // data tersimpan tampil dulu, data terbaru menyusul
     applyTheme(dbData.theme || 'light');
+    loadP.then(() => applyTheme(dbData.theme || 'light'));
 
     const nimInput = document.getElementById('login-nim-input');
     const adminInput = document.getElementById('login-admin-code');
@@ -54,29 +55,47 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
+const CACHE_KEY = 'a9_cache_v1';
+
+function applyKey(k, v) {
+    if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { console.error('JSON "' + k + '" rusak:', e); } }
+    if (k === 'config') {
+        v = v || {};
+        dbData.maintenance = v.maintenance || false;
+        dbData.theme = v.theme || 'light';
+        dbData.globalAnnouncement = v.globalAnnouncement || '';
+        dbData.adminCode = v.adminCode || dbData.adminCode || 'A9ACOR';
+    } else if (k === 'jadwal') {
+        dbData.jadwalCustom = v || [];
+    } else {
+        dbData[k] = v || [];
+    }
+}
+
 async function fetchDatabaseFromCloud() {
+    // 1) Tampilkan data tersimpan lebih dulu supaya portal terasa instan
     try {
-        if (!supabaseClient) return;
-        const keys = ['pengumuman', 'reminder', 'jadwalUpdates', 'tugas', 'laboratorium', 'skills_lab', 'tutorial', 'materi', 'jadwal', 'soal', 'config', 'cbt_soal'];
-        for (const k of keys) {
-            const { data, error } = await supabaseClient.from('portal_db').select('value').eq('key', k).single();
-            if (!error && data && data.value) {
-                // Kalau JSON tersimpan sebagai teks, ubah dulu menjadi data
-                let v = data.value;
-                if (typeof v === 'string') {
-                    try { v = JSON.parse(v); } catch (e) { console.error('JSON "' + k + '" rusak:', e); }
+        const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+        if (c) { Object.keys(c).forEach(k => applyKey(k, c[k])); renderAll(); }
+    } catch (e) { }
+    // 2) Ambil data terbaru dari server secara paralel
+    try {
+        if (supabaseClient) {
+            const keys = ['pengumuman', 'reminder', 'jadwalUpdates', 'tugas', 'laboratorium', 'skills_lab', 'tutorial', 'materi', 'jadwal', 'soal', 'config', 'cbt_soal'];
+            const results = await Promise.all(keys.map(k =>
+                supabaseClient.from('portal_db').select('value').eq('key', k).maybeSingle()
+                    .then(r => [k, r]).catch(() => [k, null])));
+            const cache = {};
+            results.forEach(([k, r]) => {
+                if (r && !r.error && r.data && r.data.value) {
+                    applyKey(k, r.data.value);
+                    if (k === 'config') {
+                        const v = typeof r.data.value === 'string' ? JSON.parse(r.data.value) : r.data.value;
+                        cache.config = { maintenance: v.maintenance, theme: v.theme, globalAnnouncement: v.globalAnnouncement };
+                    } else cache[k] = r.data.value;
                 }
-                if (k === 'config') {
-                    dbData.maintenance = v.maintenance || false;
-                    dbData.theme = v.theme || 'light';
-                    dbData.globalAnnouncement = v.globalAnnouncement || '';
-                    dbData.adminCode = v.adminCode || 'A9ACOR';
-                } else if (k === 'jadwal') {
-                    dbData.jadwalCustom = v || [];
-                } else {
-                    dbData[k] = v || [];
-                }
-            }
+            });
+            try { localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); } catch (e) { }
         }
     } catch (err) { console.error("Gagal memuat Supabase:", err); }
 
@@ -962,7 +981,9 @@ body { font-size: 16px; }
         <details><summary>5. Latihan soal isian</summary>
           <ol><li>Buka <strong>Latihan, Soal Isian</strong>, lalu klik <strong>Mulai Latihan</strong>.</li><li>Ketik jawaban. Huruf besar-kecil dan awalan "Os", "M.", "N." tidak berpengaruh.</li><li>Klik <strong>Submit Jawaban</strong> untuk melihat skor dan pembahasan.</li></ol></details>
         <details><summary>6. Simulasi CBT</summary>
-          <ul><li><strong>Mode Latihan:</strong> tanpa batas waktu, jawaban langsung dikoreksi.</li><li><strong>Mode CBT:</strong> 100 soal acak, 100 menit, koreksi di akhir. Timer merah di 10 menit terakhir.</li><li><strong>Bilah bawah layar:</strong> menunjukkan jumlah soal terjawab. Klik untuk daftar nomor soal.</li><li><strong>🚩 Tandai ragu:</strong> menandai soal yang ingin dicek ulang.</li><li>Setelah selesai kamu melihat nilai, pembahasan soal yang salah, dan riwayat nilai.</li></ul></details>
+          <ul><li><strong>Tampilan:</strong> satu soal per halaman. Pakai tombol Sebelumnya/Berikutnya, atau klik nomor di <strong>Daftar Soal</strong> untuk memilih soal mana yang mau dikerjakan.</li><li><strong>Warna nomor:</strong> abu-abu = belum dikerjakan, hijau = sudah dijawab, titik oranye = ditandai ragu-ragu.</li><li><strong>Mode Latihan:</strong> tanpa waktu. Setelah memilih jawaban, benar/salah dan pembahasan langsung muncul.</li><li><strong>Mode CBT:</strong> ada waktu 100 menit (timer merah di 10 menit terakhir). Jawaban boleh diubah sebelum dikumpulkan. Pembahasan bisa dilihat setelah dikumpulkan lewat tombol <em>Review &amp; Pembahasan</em>.</li><li><strong>Tombol cepat:</strong> A-E atau 1-5 untuk memilih jawaban, panah kiri/kanan untuk pindah soal, F untuk tandai ragu.</li><li>Di akhir sesi kamu mendapat apresiasi, laporan nilai, dan rekomendasi topik belajar. Hasilnya otomatis tersimpan.</li></ul></details>
+        <details class="guest-guide"><summary>📈 Progres dan hasil belajar</summary>
+          <ol><li>Setiap selesai CBT atau Soal Isian, nilaimu tersimpan otomatis di akunmu (NIM), jadi bisa dilihat dari HP atau laptop mana pun.</li><li>Buka <strong>Latihan, Progres Saya</strong> untuk melihat grafik nilai, rata-rata, nilai terbaik, dan apakah kamu meningkat dibanding pengerjaan sebelumnya.</li><li>Bagian <em>Topik yang perlu diperkuat</em> menunjukkan topik yang paling sering salah, sebagai panduan belajar.</li></ol></details>
         <details class="guest-guide"><summary>7. Melapor masalah dan melihat perkembangannya</summary>
           <ol><li>Buka <strong>Bantuan, Lapor Masalah</strong>, isi jenis, bagian, dan penjelasan, lalu klik <strong>Kirim Laporan</strong>.</li><li>Di halaman yang sama, bagian <strong>Laporan Saya</strong> menunjukkan perkembangannya: Terkirim, Sedang diproses, lalu Selesai.</li><li>Kalau admin mengubah status atau menulis catatan, kamu mendapat notifikasi dan kartu <strong>🔔 Update laporanmu</strong> di Beranda. Klik <em>Tandai sudah dibaca</em> kalau sudah dilihat.</li></ol></details>
         <details class="admin-guide" style="display:none;"><summary>🛠️ Panduan Admin</summary>
@@ -971,6 +992,8 @@ body { font-size: 16px; }
           <li><strong>Mengolah laporan:</strong> tulis catatan untuk pelapor (opsional), lalu klik <em>Proses</em> saat mulai dikerjakan, dan <em>Selesai</em> kalau sudah beres. Mahasiswa pelapor otomatis mendapat notifikasi di Beranda.</li>
           <li><strong>Filter:</strong> pakai tombol Belum selesai, Selesai, atau Semua. Klik Muat ulang untuk mengecek laporan baru.</li>
           <li><strong>Setelan:</strong> tombol ⚙️ Setelan di kanan atas untuk mode maintenance, pengumuman global, dan mengganti kode admin.</li></ol></details>
+        <details class="admin-guide" style="display:none;"><summary>📁 Upload materi dan file besar lewat Google Drive (Admin)</summary>
+          <ol><li>Buka <strong>drive.google.com</strong> dan buat folder, misalnya "Portal A9", dengan subfolder per mata kuliah. Drive gratis 15 GB dan bisa menyimpan PDF, PPT, atau video besar.</li><li>Upload filenya. Klik kanan file atau folder, pilih <strong>Bagikan</strong>, ubah Akses umum menjadi <strong>Siapa saja yang memiliki link</strong> dengan peran <strong>Pelihat</strong>, lalu <strong>Salin link</strong>.</li><li>Di portal, buka halaman tujuan (Materi, Tugas, Lab, Skills Lab, atau Tutorial), isi nama, lalu tempel link tadi di kolom <strong>Link</strong> dan klik Simpan.</li><li>Mahasiswa yang klik <em>Buka</em> akan melihat pratinjau file di jendela portal, dengan tombol <em>Buka di Drive</em> dan <em>Unduh</em>. Link folder juga didukung, isinya tampil sebagai daftar.</li><li>Kalau mahasiswa melihat "Anda memerlukan akses", berarti akses umum belum diatur ke "Siapa saja yang memiliki link". Perbaiki di Drive, tidak perlu mengubah data di portal.</li><li>Kolom upload file langsung dari komputer tetap ada untuk file kecil (maksimal 50 MB). Untuk file besar, pakai Drive.</li></ol></details>
         <details><summary>8. Masalah yang sering terjadi</summary>
           <ul><li><strong>Gambar soal tidak muncul:</strong> cek internet, lalu refresh dengan Ctrl+Shift+R. Kalau masih kosong, laporkan nomor soalnya.</li><li><strong>Halaman tidak merespons:</strong> refresh. Jawaban CBT yang belum diselesaikan tidak tersimpan.</li><li><strong>Portal maintenance:</strong> mahasiswa tidak bisa masuk sampai admin selesai.</li></ul></details>
       </div>
@@ -1023,7 +1046,7 @@ body { font-size: 16px; }
         { id: 'home', ico: '🏠', label: 'Beranda', tabs: [['home', 'Beranda']] },
         { id: 'kuliah', ico: '📅', label: 'Kuliah', tabs: [['jadwal', 'Jadwal'], ['tugas', 'Tugas'], ['materi', 'Materi']] },
         { id: 'praktikum', ico: '🔬', label: 'Praktikum', tabs: [['lab', 'Lab'], ['skills', 'Skills Lab'], ['tutorial', 'Tutorial']] },
-        { id: 'latihan', ico: '✍️', label: 'Latihan', tabs: [['soal', 'Soal Isian'], ['cbt', 'Simulasi CBT']] },
+        { id: 'latihan', ico: '✍️', label: 'Latihan', tabs: [['soal', 'Soal Isian'], ['cbt', 'Simulasi CBT'], ['progres', 'Progres Saya']] },
         { id: 'bantuan', ico: '💬', label: 'Bantuan', tabs: () => [['panduan', 'Panduan'], isAdmin() ? ['laporan-admin', 'Laporan Masuk'] : ['lapor', 'Lapor Masalah']] }
     ];
     const tabsOf = g => typeof g.tabs === 'function' ? g.tabs() : g.tabs;
@@ -1188,4 +1211,405 @@ body { font-size: 16px; }
         }
     };
     renderNav();
+})();
+
+// ==========================================================================
+// CBT MODEL UJIAN (SATU SOAL PER HALAMAN) + HASIL TERSIMPAN + PROGRES + GOOGLE DRIVE
+// ==========================================================================
+(function () {
+    const $ = id => document.getElementById(id);
+    const esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const isGuest = () => typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'guest';
+    const L = ['A', 'B', 'C', 'D', 'E'];
+    const JENIS = { 'cbt-ujian': 'CBT (Ujian)', 'cbt-latihan': 'CBT (Latihan)', 'isian': 'Soal Isian' };
+    const fmtTgl = t => new Date(t).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+
+    const st = document.createElement('style');
+    st.textContent = `
+    #cbt-question-container { scroll-margin-top: 170px; }
+    .cbtx { display: grid; grid-template-columns: 1fr 290px; gap: 22px; align-items: start; }
+    .cbtx-main { min-width: 0; }
+    .cbtx-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .cbtx-title { font-weight: 800; color: var(--primary); font-size: 17px; }
+    button.option-label { width: 100%; text-align: left; font: inherit; color: inherit; }
+    button.option-label:disabled { opacity: 1; cursor: default; }
+    button.option-label.picked { border-color: var(--primary); background: var(--primary-light); }
+    .cbtx-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 22px; }
+    .cbtx-side { background: var(--bg-base); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 16px; position: sticky; top: 150px; }
+    .cbtx-side h4 { font-size: 15px; margin-bottom: 4px; }
+    .cx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 6px; margin: 12px 0; max-height: 44vh; overflow-y: auto; padding: 2px; }
+    .cx-btn { padding: 8px 0; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-weight: 700; font-size: 13px; cursor: pointer; position: relative; }
+    .cx-btn.done { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .cx-btn.ok { background: #10b981; color: #fff; border-color: #10b981; }
+    .cx-btn.bad { background: #ef4444; color: #fff; border-color: #ef4444; }
+    .cx-btn.blank { background: var(--border-color); }
+    .cx-btn.flag::after { content: ''; position: absolute; top: 2px; right: 2px; width: 9px; height: 9px; border-radius: 50%; background: var(--warning); border: 1px solid #fff; }
+    .cx-btn.cur { outline: 3px solid var(--text-main); outline-offset: 1px; }
+    .cx-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--text-muted); }
+    .cx-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; border: 1px solid var(--border-color); }
+    .cx-stats { font-size: 13px; margin: 10px 0; }
+    .cx-side-acts { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    .cx-toggle { display: none; }
+    @media (max-width: 900px) { .cbtx { grid-template-columns: 1fr; } .cbtx-side { position: static; display: none; } .cbtx-side.open { display: block; } .cx-toggle { display: inline-flex; } }
+    .apres { background: linear-gradient(135deg, var(--primary), var(--primary-hover)); color: #fff; border-radius: var(--radius-lg); padding: 20px; text-align: center; margin-bottom: 16px; }
+    .apres .big { font-size: 42px; } .apres h4 { font-size: 20px; margin: 4px 0; } .apres p { font-size: 14px; opacity: .95; margin: 0 0 8px; }
+    .apres .cmp { font-weight: 700; background: rgba(255,255,255,.2); border-radius: 20px; display: inline-block; padding: 3px 14px; font-size: 13px; }
+    .prog-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .prog-stat { background: var(--bg-base); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; text-align: center; }
+    .prog-stat b { display: block; font-size: 26px; color: var(--primary); } .prog-stat small { color: var(--text-muted); }
+    .prog-chart { width: 100%; height: auto; background: var(--bg-base); border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 16px; }
+    .prog-trend { background: var(--primary-light); border-radius: var(--radius-md); padding: 12px 16px; margin-bottom: 16px; font-weight: 600; }`;
+    document.head.appendChild(st);
+
+    // ================= Hasil tersimpan (per NIM) =================
+    let myResults = [];
+    const rKey = () => 'hasil_' + currentUser.nim;
+    async function loadResults() {
+        if (!isGuest() || !supabaseClient) return myResults;
+        try {
+            const { data, error } = await supabaseClient.from('portal_db').select('value').eq('key', rKey()).maybeSingle();
+            if (error) throw error;
+            let v = data && data.value;
+            if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { v = []; } }
+            myResults = Array.isArray(v) ? v : [];
+        } catch (e) { console.error('Gagal memuat hasil:', e); }
+        return myResults;
+    }
+    async function saveResult(r) {
+        if (!isGuest() || !supabaseClient) return;
+        try {
+            const cur = await loadResults();
+            const next = cur.concat([r]).slice(-100);
+            const { error } = await supabaseClient.from('portal_db').upsert({ key: rKey(), value: next }, { onConflict: 'key' });
+            if (error) throw error;
+            myResults = next;
+        } catch (e) { console.error(e); alert('Hasil belum tersimpan ke server. Cek koneksi internetmu.'); }
+    }
+    function prevScore(jenis) {
+        if (!isGuest()) return undefined;
+        const a = myResults.filter(r => r.jenis === jenis);
+        return a.length ? a[a.length - 1].skor : null;
+    }
+    function apresiasi(skor, prev) {
+        let ico = '🌱', t = 'Terus berlatih!', m = 'Setiap latihan membuatmu lebih siap. Baca pembahasan soal yang salah, lalu coba lagi.';
+        if (skor >= 85) { ico = '🏆'; t = 'Luar biasa!'; m = 'Pemahamanmu sangat baik. Pertahankan, dan bantu temanmu yang masih belajar.'; }
+        else if (skor >= 70) { ico = '👏'; t = 'Bagus sekali!'; m = 'Kamu sudah menguasai sebagian besar materi. Sedikit lagi menuju sempurna.'; }
+        else if (skor >= 50) { ico = '💪'; t = 'Sudah di jalur yang benar!'; m = 'Fokus pada topik yang masih sering salah di rekomendasi belajar.'; }
+        let cmp = '';
+        if (prev === null) cmp = '🎯 Ini pengerjaan pertamamu, jadikan patokan untuk berikutnya';
+        else if (prev !== undefined) { const d = skor - prev; cmp = d > 0 ? `📈 Naik ${d} poin dari pengerjaan sebelumnya` : d < 0 ? `📉 Turun ${-d} poin dari pengerjaan sebelumnya` : '➖ Sama dengan pengerjaan sebelumnya'; }
+        return `<div class="apres"><div class="big">${ico}</div><h4>${t}</h4><p>${m}</p>${cmp ? `<span class="cmp">${cmp}</span>` : ''}</div>`;
+    }
+
+    // ================= CBT satu soal per halaman =================
+    let cbt = null, timer = null;
+    const leaveGuard = e => { e.preventDefault(); e.returnValue = ''; };
+    const active = () => cbt && $('cbt-active-area') && $('cbt-active-area').style.display === 'block';
+
+    window.startCBT = function (mode) {
+        if (cbtStarted) return;
+        const bank = dbData.cbt_soal || [];
+        if (!bank.length) { alert('Soal CBT belum tersedia di database (key: cbt_soal).'); return; }
+        const qs = bank.slice();
+        for (let i = qs.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [qs[i], qs[j]] = [qs[j], qs[i]]; }
+        cbt = { mode, qs: qs.slice(0, 100), idx: 0, ans: {}, flag: {}, review: false, side: false, startedAt: Date.now(), endAt: mode === 'exam' ? Date.now() + EXAM_DURATION * 1000 : 0 };
+        cbtStarted = true; cbtMode = mode; cbtTimeInSeconds = mode === 'exam' ? EXAM_DURATION : 0;
+        const tm = $('cbt-timer'); tm.style.display = mode === 'exam' ? '' : 'none'; tm.textContent = cbtFormatTime(cbtTimeInSeconds);
+        $('cbt-start-card').style.display = 'none'; $('cbt-result-card').style.display = 'none'; $('cbt-active-area').style.display = 'block';
+        const ft = document.querySelector('#cbt-active-area .cbt-footer'); if (ft) ft.style.display = 'none';
+        if (timer) clearInterval(timer);
+        if (mode === 'exam') timer = setInterval(tick, 500);
+        window.addEventListener('beforeunload', leaveGuard);
+        loadResults();
+        renderCbt(); window.scrollTo({ top: 0 });
+    };
+
+    function tick() {
+        if (!cbt || cbt.mode !== 'exam') return;
+        const rem = Math.max(0, Math.ceil((cbt.endAt - Date.now()) / 1000));
+        cbtTimeInSeconds = rem; $('cbt-timer').textContent = cbtFormatTime(rem);
+        if (rem <= 0) { clearInterval(timer); timer = null; alert('⏰ Waktu habis! Jawaban dikumpulkan otomatis.'); finish(); }
+    }
+
+    function renderCbt() {
+        const c = cbt, q = c.qs[c.idx], n = c.qs.length, ans = c.ans[q.id], rv = c.review, pr = c.mode === 'practice';
+        const reveal = rv || (pr && ans !== undefined);
+        const opts = q.options.map((o, i) => {
+            let cls = 'option-label';
+            if (reveal) { if (o === q.answer) cls += ' correct-answer'; else if (o === ans) cls += ' wrong-answer'; }
+            else if (ans === o) cls += ' picked';
+            return `<li><button type="button" class="${cls}" data-opt="${i}"${reveal ? ' disabled' : ''}><span class="option-text"><strong>${L[i]}.</strong> ${esc(o)}</span></button></li>`;
+        }).join('');
+        let fb = '';
+        if (reveal) {
+            const ok = ans === q.answer;
+            const head = ans === undefined ? '⚪ <strong>Tidak dijawab.</strong>' : ok ? '✅ <strong>Benar!</strong>' : '❌ <strong>Salah.</strong>';
+            fb = `<div class="cbt-feedback ${ok ? 'feedback-success' : 'feedback-danger'}" style="display:block;">${head}${ok ? '' : ` Jawaban benar: <strong>${esc(q.answer)}</strong>`}${rv && q.topic ? `<br><small>Topik: ${esc(q.topic)}</small>` : ''}<br><br><em>Pembahasan:</em> ${esc(cleanText(q.explanation || 'Belum ada pembahasan untuk soal ini.'))}</div>`;
+        }
+        const img = q.image ? `<div class="cbt-image-container"><img src="${esc(q.image)}" class="cbt-image" alt="Ilustrasi soal" referrerpolicy="no-referrer" onerror="this.style.display='none'"><small style="display:block;color:var(--text-muted);margin-top:6px;font-size:11px;">${esc(q.image_credit || '')}</small></div>` : '';
+
+        const answered = Object.keys(c.ans).length, flagged = Object.keys(c.flag).length;
+        const grid = c.qs.map((x, i) => {
+            const a = c.ans[x.id]; let s = '';
+            if (rv) s = a === undefined ? 'blank' : a === x.answer ? 'ok' : 'bad';
+            else if (pr && a !== undefined) s = a === x.answer ? 'ok' : 'bad';
+            else if (a !== undefined) s = 'done';
+            return `<button type="button" class="cx-btn ${s}${c.flag[x.id] ? ' flag' : ''}${i === c.idx ? ' cur' : ''}" data-go="${i}" aria-label="Soal ${i + 1}">${i + 1}</button>`;
+        }).join('');
+        const sw = (bg, t) => `<span><i style="background:${bg}"></i>${t}</span>`;
+        const legend = rv ? sw('#10b981', 'Benar') + sw('#ef4444', 'Salah') + sw('var(--border-color)', 'Kosong')
+            : pr ? sw('var(--bg-card)', 'Belum') + sw('#10b981', 'Benar') + sw('#ef4444', 'Salah') + sw('var(--warning)', 'Ragu')
+                : sw('var(--bg-card)', 'Belum dikerjakan') + sw('var(--primary)', 'Sudah dijawab') + sw('var(--warning)', 'Ragu-ragu');
+        const stats = rv ? `Review: ${Object.keys(c.ans).filter(id => { const x = c.qs.find(y => String(y.id) === id); return x && c.ans[id] === x.answer; }).length} benar dari ${n} soal`
+            : `Terjawab <strong>${answered}</strong> · Ragu <strong>${flagged}</strong> · Belum <strong>${n - answered}</strong>`;
+        const acts = rv ? '<button class="btn btn-primary" data-act="back">← Kembali ke laporan</button>'
+            : `<button class="btn btn-outline" data-act="blank">⏭ Ke soal belum dijawab</button><button class="btn btn-primary" data-act="submit">${c.mode === 'exam' ? '📤 Kumpulkan Jawaban' : '✅ Selesai Latihan'}</button>`;
+
+        $('cbt-question-container').innerHTML = `
+        <div class="cbtx">
+          <div class="cbtx-main">
+            <div class="cbtx-head">
+              <span class="cbtx-title">${rv ? '📖 Review · ' : ''}Soal ${c.idx + 1} dari ${n}</span>
+              <span style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn btn-outline btn-sm cx-toggle" data-act="side">📋 Daftar soal</button>
+                ${rv ? '' : `<button class="btn btn-outline btn-sm" data-act="flag">${c.flag[q.id] ? '🚩 Ragu-ragu (klik untuk batal)' : '🏳️ Tandai ragu-ragu'}</button>`}
+              </span>
+            </div>
+            <div class="q-text">${q.text}</div>
+            ${img}
+            <ul class="options">${opts}</ul>
+            ${fb}
+            <div class="cbtx-nav">
+              <button class="btn btn-outline" data-act="prev"${c.idx === 0 ? ' disabled' : ''}>◀ Sebelumnya</button>
+              <button class="btn btn-primary" data-act="next"${c.idx === n - 1 ? ' disabled' : ''}>Berikutnya ▶</button>
+            </div>
+          </div>
+          <aside class="cbtx-side${c.side ? ' open' : ''}">
+            <h4>Daftar Soal</h4>
+            <div class="cx-legend">${legend}</div>
+            <div class="cx-grid">${grid}</div>
+            <div class="cx-stats">${stats}</div>
+            <div class="cx-side-acts">${acts}</div>
+          </aside>
+        </div>`;
+    }
+
+    function go(i) {
+        if (!cbt) return;
+        cbt.idx = Math.max(0, Math.min(cbt.qs.length - 1, i));
+        renderCbt();
+        const nx = cbt.qs[cbt.idx + 1]; if (nx && nx.image) { new Image().src = nx.image; }
+        $('cbt-question-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    function pick(i) {
+        const c = cbt, q = c.qs[c.idx]; if (!c || c.review) return;
+        const o = q.options[i]; if (o === undefined) return;
+        if (c.mode === 'practice' && c.ans[q.id] !== undefined) return;
+        if (c.ans[q.id] === o && c.mode === 'exam') delete c.ans[q.id]; else c.ans[q.id] = o;
+        renderCbt();
+    }
+    function toggleFlag() { const q = cbt.qs[cbt.idx]; if (cbt.flag[q.id]) delete cbt.flag[q.id]; else cbt.flag[q.id] = true; renderCbt(); }
+    function jumpBlank() {
+        const n = cbt.qs.length;
+        for (let k = 1; k <= n; k++) { const i = (cbt.idx + k) % n; if (cbt.ans[cbt.qs[i].id] === undefined) { go(i); return; } }
+        alert('Semua soal sudah dijawab 🎉');
+    }
+
+    $('cbt-question-container').addEventListener('click', e => {
+        if (!cbt) return;
+        const o = e.target.closest('[data-opt]'); if (o) { pick(+o.dataset.opt); return; }
+        const g = e.target.closest('[data-go]'); if (g) { go(+g.dataset.go); return; }
+        const a = e.target.closest('[data-act]'); if (!a) return;
+        const act = a.dataset.act;
+        if (act === 'prev') go(cbt.idx - 1);
+        else if (act === 'next') go(cbt.idx + 1);
+        else if (act === 'flag') toggleFlag();
+        else if (act === 'blank') jumpBlank();
+        else if (act === 'submit') window.submitCBT();
+        else if (act === 'back') showReport();
+        else if (act === 'side') { cbt.side = !cbt.side; renderCbt(); }
+    });
+
+    document.addEventListener('keydown', e => {
+        if (!active() || e.ctrlKey || e.metaKey || e.altKey) return;
+        const tg = e.target.tagName; if (tg === 'INPUT' || tg === 'TEXTAREA' || tg === 'SELECT') return;
+        const k = e.key.toLowerCase();
+        if (k === 'arrowright') { go(cbt.idx + 1); e.preventDefault(); }
+        else if (k === 'arrowleft') { go(cbt.idx - 1); e.preventDefault(); }
+        else if (k === 'f' && !cbt.review) toggleFlag();
+        else if (k.length === 1) { const n = 'abcde'.indexOf(k) >= 0 ? 'abcde'.indexOf(k) : '12345'.indexOf(k); if (n >= 0) pick(n); }
+    });
+
+    window.submitCBT = function () {
+        if (!cbt || cbt.review) return;
+        const n = cbt.qs.length, done = Object.keys(cbt.ans).length, fl = Object.keys(cbt.flag).length;
+        const verb = cbt.mode === 'exam' ? 'mengumpulkan' : 'menyelesaikan';
+        const msg = done < n ? `Kamu baru menjawab ${done} dari ${n} soal${fl ? ` dan menandai ${fl} soal ragu-ragu` : ''}. Yakin ingin ${verb}?`
+            : `Semua soal sudah dijawab${fl ? ` (${fl} ditandai ragu-ragu)` : ''}. Yakin ingin ${verb}?`;
+        if (!confirm(msg)) return;
+        finish();
+    };
+
+    function finish() {
+        if (!cbt) return;
+        if (timer) { clearInterval(timer); timer = null; }
+        window.removeEventListener('beforeunload', leaveGuard);
+        cbtStarted = false;
+        const c = cbt, n = c.qs.length;
+        let benar = 0, salah = 0, kosong = 0; const wrong = {};
+        c.qs.forEach(q => {
+            const a = c.ans[q.id];
+            if (a === undefined) kosong++; else if (a === q.answer) benar++; else salah++;
+            if (a !== q.answer && q.topic) wrong[q.topic] = (wrong[q.topic] || 0) + 1;
+        });
+        const skor = n ? Math.round(benar / n * 100) : 0;
+        const durasi = Math.min(Math.round((Date.now() - c.startedAt) / 1000), c.mode === 'exam' ? EXAM_DURATION : 1e9);
+        const jenis = c.mode === 'exam' ? 'cbt-ujian' : 'cbt-latihan';
+        c.result = { benar, salah, kosong, skor, durasi, wrong, jenis, prev: prevScore(jenis) };
+        if (isGuest()) saveResult({ t: Date.now(), jenis, skor, benar, total: n, kosong, durasi, wrong });
+        showReport();
+    }
+
+    function showReport() {
+        const c = cbt; if (!c || !c.result) return;
+        c.review = false; const r = c.result, n = c.qs.length;
+        const topics = Object.entries(r.wrong).sort((a, b) => b[1] - a[1]);
+        $('cbt-report-content').innerHTML = `
+          ${apresiasi(r.skor, r.prev)}
+          <div class="report-score"><h4>Nilai Akhir</h4><div class="score-number">${r.skor}</div><small style="color:var(--text-muted);">Skala 0 - 100 · ${c.mode === 'exam' ? 'Mode CBT' : 'Mode Latihan'}</small></div>
+          <div class="report-row"><span>Jawaban Benar</span><span class="report-value report-correct">${r.benar} Soal</span></div>
+          <div class="report-row"><span>Jawaban Salah</span><span class="report-value report-wrong">${r.salah} Soal</span></div>
+          <div class="report-row"><span>Tidak Dijawab</span><span class="report-value">${r.kosong} Soal</span></div>
+          <div class="report-row"><span>Waktu Pengerjaan</span><span class="report-value">${cbtFormatTime(r.durasi)}</span></div>
+          ${topics.length ? `<div class="report-recommendation"><h5>📚 Rekomendasi Belajar (Fokus Tingkatkan):</h5><ul>${topics.map(([t, k]) => `<li><strong>${esc(t)}</strong> (${k} soal)</li>`).join('')}</ul></div>`
+                : `<div class="report-recommendation" style="background:#ecfdf5;border-color:#10b981;"><h5 style="color:#065f46;">🌟 Luar Biasa!</h5><ul style="color:#065f46;"><li>Semua jawabanmu benar.</li></ul></div>`}
+          <div class="lap-acts" style="margin-top:18px;justify-content:center;">
+            <button class="btn btn-primary" data-rep="review">📖 Review &amp; Pembahasan</button>
+            <button class="btn btn-outline" data-rep="progres">📈 Lihat Progres</button>
+          </div>
+          ${isGuest() ? '<p style="font-size:12px;color:var(--text-muted);margin-top:12px;text-align:center;">Hasil ini tersimpan otomatis di akunmu.</p>' : ''}`;
+        $('cbt-active-area').style.display = 'none'; $('cbt-result-card').style.display = 'block';
+        window.scrollTo({ top: 0 });
+    }
+
+    $('cbt-report-content').addEventListener('click', e => {
+        const b = e.target.closest('[data-rep]'); if (!b || !cbt) return;
+        if (b.dataset.rep === 'review') { cbt.review = true; cbt.idx = 0; $('cbt-result-card').style.display = 'none'; $('cbt-active-area').style.display = 'block'; renderCbt(); window.scrollTo({ top: 0 }); }
+        else window.switchTab('progres', null);
+    });
+
+    window.resetCBT = function () {
+        if (timer) { clearInterval(timer); timer = null; }
+        window.removeEventListener('beforeunload', leaveGuard);
+        cbt = null; cbtStarted = false; cbtTimeInSeconds = 0;
+        const tm = $('cbt-timer'); tm.style.display = ''; tm.textContent = '00:00:00'; tm.classList.remove('cbt-timer-warn');
+        $('cbt-start-card').style.display = 'block'; $('cbt-active-area').style.display = 'none'; $('cbt-result-card').style.display = 'none';
+        $('cbt-question-container').innerHTML = '';
+    };
+
+    // ================= Soal isian: apresiasi + simpan hasil =================
+    const origSubmitQuiz = window.submitQuiz;
+    window.submitQuiz = function () {
+        origSubmitQuiz();
+        const total = dbData.soal.length, benar = document.querySelectorAll('#soal-cards-container .feedback-success').length;
+        const skor = total ? Math.round(benar / total * 100) : 0;
+        const card = $('quiz-result-card');
+        card.querySelectorAll('.apres').forEach(x => x.remove());
+        card.insertAdjacentHTML('afterbegin', apresiasi(skor, prevScore('isian')));
+        if (isGuest()) saveResult({ t: Date.now(), jenis: 'isian', skor, benar, total, kosong: total - document.querySelectorAll('#soal-cards-container .feedback-success, #soal-cards-container .feedback-danger').length, durasi: 0, wrong: {} });
+    };
+
+    // ================= Halaman Progres =================
+    $('tab-lapor').insertAdjacentHTML('afterend', `
+    <div id="tab-progres" class="tab-content" style="display:none;">
+      <div class="card">
+        <div class="card-header flex-between"><h3 class="card-title">📈 Progres Belajar Saya</h3>
+          <select id="prog-filter" class="modern-input" style="width:auto;margin:0;"><option value="all">Semua pengerjaan</option><option value="cbt-ujian">CBT (Ujian)</option><option value="cbt-latihan">CBT (Latihan)</option><option value="isian">Soal Isian</option></select></div>
+        <div id="progres-body"></div>
+      </div>
+    </div>`);
+
+    function chart(arr) {
+        const pts = arr.slice(-20), W = 640, H = 200, P = 30;
+        const x = i => P + (pts.length === 1 ? (W - 2 * P) / 2 : i * (W - 2 * P) / (pts.length - 1));
+        const y = v => H - P - (v / 100) * (H - 2 * P);
+        const grid = [0, 50, 100].map(v => `<line x1="${P}" x2="${W - P}" y1="${y(v)}" y2="${y(v)}" style="stroke:var(--border-color)"/><text x="4" y="${y(v) + 4}" style="fill:var(--text-muted);font-size:11px">${v}</text>`).join('');
+        const line = pts.map((r, i) => `${x(i).toFixed(1)},${y(r.skor).toFixed(1)}`).join(' ');
+        const dots = pts.map((r, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(r.skor).toFixed(1)}" r="5" style="fill:var(--primary)"><title>${esc(fmtTgl(r.t))}: ${r.skor}</title></circle><text x="${x(i).toFixed(1)}" y="${(y(r.skor) - 10).toFixed(1)}" text-anchor="middle" style="fill:var(--text-main);font-size:11px;font-weight:700">${r.skor}</text>`).join('');
+        return `<svg class="prog-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafik nilai dari waktu ke waktu">${grid}<polyline points="${line}" style="fill:none;stroke:var(--primary);stroke-width:3"/>${dots}</svg>`;
+    }
+
+    function renderProgress() {
+        const el = $('progres-body');
+        if (!isGuest()) { el.innerHTML = '<p style="color:var(--text-muted);">Halaman ini menampilkan progres belajar mahasiswa setelah mengerjakan soal.</p>'; return; }
+        const f = $('prog-filter').value;
+        const arr = myResults.filter(r => f === 'all' || r.jenis === f).sort((a, b) => a.t - b.t);
+        if (!arr.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">🌱</div><h3>Belum ada hasil</h3><p>Kerjakan CBT atau Soal Isian. Nilaimu otomatis tersimpan di sini supaya kamu bisa melihat peningkatannya.</p></div>'; return; }
+        const avg = a => a.length ? Math.round(a.reduce((s, r) => s + r.skor, 0) / a.length) : 0;
+        const last = arr[arr.length - 1], best = Math.max(...arr.map(r => r.skor));
+        let trend = 'Kerjakan satu sesi lagi untuk melihat perbandingannya.';
+        if (arr.length >= 2) {
+            const d = last.skor - arr[arr.length - 2].skor;
+            trend = d > 0 ? `📈 Nilai terakhirmu naik ${d} poin dari sebelumnya. Pertahankan!` : d < 0 ? `📉 Nilai terakhirmu turun ${-d} poin dari sebelumnya. Cek pembahasan soal yang salah.` : '➖ Nilai terakhirmu sama dengan sebelumnya.';
+            if (arr.length >= 4) { const a1 = avg(arr.slice(-3)), a0 = avg(arr.slice(Math.max(0, arr.length - 6), arr.length - 3)); const dd = a1 - a0; trend += ` Rata-rata 3 terakhir ${dd >= 0 ? 'naik' : 'turun'} ${Math.abs(dd)} poin dibanding 3 sebelumnya.`; }
+        }
+        const wrongAgg = {}; arr.forEach(r => Object.entries(r.wrong || {}).forEach(([t, k]) => { wrongAgg[t] = (wrongAgg[t] || 0) + k; }));
+        const weak = Object.entries(wrongAgg).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        el.innerHTML = `
+          <div class="prog-stats">
+            <div class="prog-stat"><b>${arr.length}</b><small>Pengerjaan</small></div>
+            <div class="prog-stat"><b>${avg(arr)}</b><small>Rata-rata</small></div>
+            <div class="prog-stat"><b>${best}</b><small>Terbaik</small></div>
+            <div class="prog-stat"><b>${last.skor}</b><small>Terakhir</small></div>
+          </div>
+          <div class="prog-trend">${trend}</div>
+          ${chart(arr)}
+          ${weak.length ? `<div class="report-recommendation" style="margin-bottom:16px;"><h5>🎯 Topik yang perlu diperkuat</h5><ul>${weak.map(([t, k]) => `<li><strong>${esc(t)}</strong> (${k} kali salah)</li>`).join('')}</ul></div>` : ''}
+          <div class="table-responsive"><table class="modern-table"><thead><tr><th>Tanggal</th><th>Jenis</th><th>Nilai</th><th>Benar</th><th>Waktu</th></tr></thead><tbody>
+            ${arr.slice().reverse().slice(0, 10).map(r => `<tr><td data-label="Tanggal">${esc(fmtTgl(r.t))}</td><td data-label="Jenis">${esc(JENIS[r.jenis] || r.jenis)}</td><td data-label="Nilai"><strong>${r.skor}</strong></td><td data-label="Benar">${r.benar}/${r.total}</td><td data-label="Waktu">${r.durasi ? cbtFormatTime(r.durasi) : '-'}</td></tr>`).join('')}
+          </tbody></table></div>`;
+    }
+    $('prog-filter').addEventListener('change', renderProgress);
+
+    const osw = window.switchTab;
+    window.switchTab = async function (t, b) {
+        osw(t, b);
+        if (t === 'progres') { if (isGuest()) { $('progres-body').innerHTML = '<p>Memuat...</p>'; await loadResults(); } renderProgress(); }
+    };
+    const olog = window.finishLogin;
+    window.finishLogin = function () { olog(); if (isGuest()) loadResults(); };
+
+    // ================= Google Drive: pratinjau di portal =================
+    function driveInfo(u) {
+        let m;
+        if ((m = u.match(/drive\.google\.com\/drive\/(?:u\/\d+\/)?folders\/([\w-]+)/))) return { open: u, embed: `https://drive.google.com/embeddedfolderview?id=${m[1]}#list`, download: null };
+        if ((m = u.match(/drive\.google\.com\/file\/d\/([\w-]+)/)) || (m = u.match(/drive\.google\.com\/(?:open|uc)\?(?:[^#]*&)?id=([\w-]+)/)))
+            return { open: `https://drive.google.com/file/d/${m[1]}/view`, embed: `https://drive.google.com/file/d/${m[1]}/preview`, download: `https://drive.google.com/uc?export=download&id=${m[1]}` };
+        if ((m = u.match(/docs\.google\.com\/(document|presentation|spreadsheets)\/d\/([\w-]+)/))) return { open: u, embed: `https://docs.google.com/${m[1]}/d/${m[2]}/preview`, download: null };
+        return null;
+    }
+    function openDrive(info) {
+        openPreviewModal(info.embed);
+        $('preview-title').textContent = 'Pratinjau berkas';
+        let bar = $('preview-links');
+        if (!bar) { bar = document.createElement('div'); bar.id = 'preview-links'; bar.style.cssText = 'padding:8px 20px;display:flex;gap:16px;font-size:13px;border-bottom:1px solid var(--border-color);'; document.querySelector('#preview-modal .modal-header').after(bar); }
+        bar.innerHTML = `<a href="${esc(info.open)}" target="_blank" rel="noopener">↗ Buka di Drive</a>${info.download ? `<a href="${esc(info.download)}" target="_blank" rel="noopener">⬇ Unduh</a>` : ''}`;
+    }
+    function wireDrive() {
+        document.querySelectorAll('#main-app a[href*="google.com"]').forEach(a => {
+            if (a.dataset.drive) return;
+            const info = driveInfo(a.getAttribute('href') || ''); if (!info) return;
+            a.dataset.drive = '1';
+            a.addEventListener('click', e => { e.preventDefault(); openDrive(info); });
+        });
+    }
+    const orr = window.renderAll;
+    window.renderAll = function () { orr(); try { wireDrive(); } catch (e) { } };
+
+    ['t-link-manual', 'lab-link-manual', 'skills-link-manual', 'tut-link-manual', 'm-link-manual'].forEach(id => {
+        const el = $(id); if (!el) return;
+        el.placeholder = 'Link Google Drive / URL lainnya';
+        el.insertAdjacentHTML('afterend', '<small style="display:block;color:var(--text-muted);margin:-4px 0 10px;">💡 File besar? Upload ke Google Drive, bagikan "Siapa saja yang memiliki link" (Pelihat), lalu tempel link-nya di sini. Lihat Bantuan, Panduan, Panduan Admin.</small>');
+    });
+    window.renderAll();
 })();
