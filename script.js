@@ -900,13 +900,27 @@ body { font-size: 16px; }
 })();
 
 // ==========================================================================
-// PANDUAN PENGGUNAAN & LAPOR KE ADMIN
+// NAVIGASI SEDERHANA, PANDUAN, & LAPORAN (STATUS UNTUK MAHASISWA, KELOLA UNTUK ADMIN)
 // ==========================================================================
 (function () {
     const $ = id => document.getElementById(id);
+    const esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const isAdmin = () => typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin';
+    const isGuest = () => typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'guest';
+    const fmt = d => new Date(d).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+    const KEY = 'laporan';
+    const STAT = { baru: 'Terkirim', proses: 'Sedang diproses', selesai: 'Selesai' };
+    dbData.laporan = [];
 
     const st = document.createElement('style');
     st.textContent = `
+    .simple-nav { flex-direction: column; gap: 8px; padding: 12px 25px; }
+    .sn-row { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; }
+    .sn-row::-webkit-scrollbar { display: none; }
+    .sn-chip { border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); padding: 6px 16px; border-radius: 50px; font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap; }
+    .sn-chip.active { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+    .sn-badge { background: var(--danger); color: #fff; border-radius: 20px; font-size: 11px; padding: 0 6px; margin-left: 6px; font-weight: 800; line-height: 18px; display: inline-block; }
+    @media (max-width: 768px) { .simple-nav { padding: 10px 12px; } }
     .guide details { border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px 18px; margin-bottom: 10px; background: var(--bg-base); }
     .guide summary { cursor: pointer; font-weight: 700; font-size: 15px; }
     .guide details[open] { border-color: var(--primary); }
@@ -914,67 +928,84 @@ body { font-size: 16px; }
     .guide li { margin-bottom: 6px; }
     .guide p { font-size: 14px; color: var(--text-muted); margin-top: 8px; }
     .report-hint { font-size: 13px; color: var(--text-muted); margin-bottom: 18px; }
-    .report-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-    select.modern-input { appearance: auto; }`;
+    select.modern-input { appearance: auto; }
+    .lap-item { border: 1px solid var(--border-color); border-left: 4px solid var(--warning); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 12px; background: var(--bg-base); }
+    .lap-item.s-proses { border-left-color: #3b82f6; } .lap-item.s-selesai { border-left-color: var(--primary); }
+    .lap-top { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+    .lap-cat { background: var(--primary-light); color: var(--primary); border-radius: 20px; padding: 2px 10px; font-weight: 700; font-size: 12px; }
+    .lap-body { white-space: pre-wrap; font-size: 14px; margin: 8px 0; }
+    .lap-note { background: var(--primary-light); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 14px; margin-top: 8px; }
+    .lap-acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .trk { display: flex; gap: 6px; margin: 8px 0; font-size: 12px; }
+    .trk span { flex: 1; text-align: center; padding: 5px; border-radius: 8px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-muted); }
+    .trk span.on { background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 700; }
+    .upd-card { background: var(--primary-light); border: 1px solid var(--primary); border-radius: var(--radius-xl); padding: 18px 22px; margin-bottom: 25px; }
+    .upd-card h3 { font-size: 17px; margin-bottom: 10px; }
+    .upd-row { padding: 10px 0; border-top: 1px solid var(--border-color); font-size: 14px; }
+    .lap-filter.active { background: var(--primary); color: #fff; border-color: var(--primary); }`;
     document.head.appendChild(st);
 
-    // Tombol menu
-    const nav = document.querySelector('.modern-nav');
-    [['panduan', '📖 Panduan'], ['lapor', '📣 Lapor Admin']].forEach(([t, label]) => {
-        const b = document.createElement('button');
-        b.className = 'nav-pill'; b.textContent = label;
-        b.setAttribute('onclick', `switchTab('${t}', this)`);
-        nav.appendChild(b);
-    });
-
-    // Isi tab
+    // ---------- Isi tab ----------
     const main = document.querySelector('.main-content');
     main.insertAdjacentHTML('beforeend', `
     <div id="tab-panduan" class="tab-content" style="display:none;">
       <div class="card guide">
         <div class="card-header"><h3 class="card-title">📖 Panduan Penggunaan Portal</h3></div>
-        <details open><summary>1. Masuk ke portal</summary>
-          <ol><li>Pilih peran <strong>Mahasiswa</strong>, lalu isi NIM kamu.</li><li>Klik <strong>Masuk Portal</strong>. Kalau NIM tidak terdaftar, hubungi admin lewat menu Lapor Admin.</li><li>Sesi otomatis berakhir setelah 30 menit tanpa aktivitas, jadi masuk lagi kalau diminta.</li></ol></details>
-        <details><summary>2. Beranda, Jadwal, dan Tugas</summary>
-          <ul><li><strong>Beranda:</strong> pengumuman akademik, reminder, dan info update terbaru.</li><li><strong>Jadwal:</strong> kegiatan kuliah hari ini dan besok per sesi.</li><li><strong>Tugas:</strong> daftar tugas beserta deadline. Label warna menunjukkan sisa waktu (hijau aman, kuning mendekati, merah terlewat). Klik <em>Lihat</em> untuk membuka berkas. Gunakan kolom pencarian untuk mencari tugas.</li></ul></details>
-        <details><summary>3. Lab, Skills Lab, Tutorial, dan Materi</summary>
-          <p>Buka tab yang diinginkan lalu klik <strong>Buka Berkas</strong> atau <strong>Buka</strong> untuk melihat modul. Di tab Materi kamu bisa mencari berdasarkan mata kuliah atau topik lewat kolom pencarian.</p></details>
-        <details><summary>4. Latihan soal isian</summary>
-          <ol><li>Buka tab <strong>Latihan</strong> dan klik <strong>Mulai Latihan</strong>.</li><li>Ketik jawabanmu di kolom yang tersedia. Huruf besar-kecil dan awalan seperti "Os", "M.", atau "N." tidak berpengaruh.</li><li>Klik <strong>Submit Jawaban</strong> untuk melihat skor, jawaban benar, dan pembahasan.</li><li>Klik <strong>Ulangi</strong> untuk mencoba lagi.</li></ol></details>
-        <details><summary>5. Simulasi CBT</summary>
-          <ul><li><strong>Mode Latihan:</strong> tanpa batas waktu, jawaban langsung dikoreksi dan pembahasan muncul saat itu juga.</li><li><strong>Mode CBT:</strong> 100 soal acak dengan waktu 100 menit. Tidak ada koreksi sampai kamu selesai. Timer berubah merah di 10 menit terakhir.</li><li><strong>Bilah di bawah layar:</strong> menunjukkan jumlah soal terjawab. Klik untuk membuka daftar nomor soal dan loncat ke soal tertentu.</li><li><strong>🚩 Tandai ragu:</strong> menandai soal yang ingin kamu cek ulang. Nomornya berwarna oranye di daftar.</li><li>Klik <strong>Selesai &amp; Simpan Jawaban</strong> untuk melihat nilai, rekomendasi belajar, pembahasan soal yang salah, dan riwayat nilai.</li></ul></details>
-        <details><summary>6. Tema dan pengaturan</summary>
-          <p>Klik ikon 🌓 di pojok kanan atas untuk berganti antara tema terang dan gelap.</p></details>
-        <details><summary>7. Masalah yang sering terjadi</summary>
-          <ul><li><strong>Gambar soal tidak muncul:</strong> cek koneksi internet, lalu refresh dengan Ctrl+Shift+R (di HP, tutup dan buka lagi tabnya). Kalau masih kosong, laporkan nomor soalnya.</li><li><strong>Soal atau jawaban terlihat keliru:</strong> catat nomor atau potongan soalnya, lalu kirim lewat menu Lapor Admin.</li><li><strong>Halaman tidak merespons:</strong> refresh halaman. Jawaban CBT yang belum diselesaikan tidak tersimpan.</li><li><strong>Portal maintenance:</strong> tunggu sampai admin selesai, mahasiswa tidak bisa masuk selama itu.</li></ul></details>
-        <details><summary>8. Cara melapor ke admin</summary>
-          <ol><li>Buka tab <strong>Lapor Admin</strong>.</li><li>Pilih kategori, tulis bagian atau nomor soal, dan jelaskan masalahnya.</li><li>Klik <strong>Kirim Laporan</strong>. Laporan langsung masuk ke daftar laporan admin dan akan segera dicek.</li></ol></details>
+        <details open><summary>1. Cara menggunakan menu</summary>
+          <p>Menu utama ada di bagian atas: <strong>Beranda, Kuliah, Praktikum, Latihan, Bantuan</strong>. Klik salah satunya, lalu pilih halaman di baris kedua. Contoh: Kuliah berisi Jadwal, Tugas, dan Materi.</p></details>
+        <details><summary>2. Masuk ke portal</summary>
+          <ol><li>Pilih peran <strong>Mahasiswa</strong>, lalu isi NIM.</li><li>Klik <strong>Masuk Portal</strong>. Kalau NIM tidak terdaftar, hubungi admin.</li><li>Sesi berakhir setelah 30 menit tanpa aktivitas.</li></ol></details>
+        <details><summary>3. Jadwal dan Tugas (menu Kuliah)</summary>
+          <ul><li><strong>Jadwal:</strong> kegiatan hari ini dan besok per sesi.</li><li><strong>Tugas:</strong> daftar tugas dengan label sisa waktu (hijau aman, kuning mendekati, merah terlewat). Gunakan kolom pencarian untuk mencari.</li><li><strong>Materi:</strong> klik <em>Buka</em> untuk membuka berkas.</li></ul></details>
+        <details><summary>4. Lab, Skills Lab, dan Tutorial (menu Praktikum)</summary>
+          <p>Pilih halamannya, lalu klik <strong>Buka Berkas</strong> untuk melihat modul.</p></details>
+        <details><summary>5. Latihan soal isian</summary>
+          <ol><li>Buka <strong>Latihan, Soal Isian</strong>, lalu klik <strong>Mulai Latihan</strong>.</li><li>Ketik jawaban. Huruf besar-kecil dan awalan "Os", "M.", "N." tidak berpengaruh.</li><li>Klik <strong>Submit Jawaban</strong> untuk melihat skor dan pembahasan.</li></ol></details>
+        <details><summary>6. Simulasi CBT</summary>
+          <ul><li><strong>Mode Latihan:</strong> tanpa batas waktu, jawaban langsung dikoreksi.</li><li><strong>Mode CBT:</strong> 100 soal acak, 100 menit, koreksi di akhir. Timer merah di 10 menit terakhir.</li><li><strong>Bilah bawah layar:</strong> menunjukkan jumlah soal terjawab. Klik untuk daftar nomor soal.</li><li><strong>🚩 Tandai ragu:</strong> menandai soal yang ingin dicek ulang.</li><li>Setelah selesai kamu melihat nilai, pembahasan soal yang salah, dan riwayat nilai.</li></ul></details>
+        <details class="guest-guide"><summary>7. Melapor masalah dan melihat perkembangannya</summary>
+          <ol><li>Buka <strong>Bantuan, Lapor Masalah</strong>, isi jenis, bagian, dan penjelasan, lalu klik <strong>Kirim Laporan</strong>.</li><li>Di halaman yang sama, bagian <strong>Laporan Saya</strong> menunjukkan perkembangannya: Terkirim, Sedang diproses, lalu Selesai.</li><li>Kalau admin mengubah status atau menulis catatan, kamu mendapat notifikasi dan kartu <strong>🔔 Update laporanmu</strong> di Beranda. Klik <em>Tandai sudah dibaca</em> kalau sudah dilihat.</li></ol></details>
+        <details class="admin-guide" style="display:none;"><summary>🛠️ Panduan Admin</summary>
+          <ol><li><strong>Menambah konten:</strong> form berwarna putus-putus di tiap halaman (pengumuman, tugas, materi, lab, dan seterusnya) hanya terlihat oleh admin. Isi lalu klik Simpan. Tombol Hapus muncul di tiap data.</li>
+          <li><strong>Menu Laporan:</strong> buka <em>Bantuan, Laporan Masuk</em>. Angka merah di menu menunjukkan laporan yang belum selesai.</li>
+          <li><strong>Mengolah laporan:</strong> tulis catatan untuk pelapor (opsional), lalu klik <em>Proses</em> saat mulai dikerjakan, dan <em>Selesai</em> kalau sudah beres. Mahasiswa pelapor otomatis mendapat notifikasi di Beranda.</li>
+          <li><strong>Filter:</strong> pakai tombol Belum selesai, Selesai, atau Semua. Klik Muat ulang untuk mengecek laporan baru.</li>
+          <li><strong>Setelan:</strong> tombol ⚙️ Setelan di kanan atas untuk mode maintenance, pengumuman global, dan mengganti kode admin.</li></ol></details>
+        <details><summary>8. Masalah yang sering terjadi</summary>
+          <ul><li><strong>Gambar soal tidak muncul:</strong> cek internet, lalu refresh dengan Ctrl+Shift+R. Kalau masih kosong, laporkan nomor soalnya.</li><li><strong>Halaman tidak merespons:</strong> refresh. Jawaban CBT yang belum diselesaikan tidak tersimpan.</li><li><strong>Portal maintenance:</strong> mahasiswa tidak bisa masuk sampai admin selesai.</li></ul></details>
       </div>
     </div>
 
     <div id="tab-lapor" class="tab-content" style="display:none;">
       <div class="card">
-        <div class="card-header"><h3 class="card-title">📣 Lapor ke Admin</h3></div>
-        <p class="report-hint">Isi formulir di bawah. Laporan yang dikirim akan masuk ke daftar laporan admin di portal.</p>
-        <div class="form-group"><label for="lap-nama">Nama</label><input type="text" id="lap-nama" class="modern-input" placeholder="Nama lengkap"></div>
-        <div class="form-group"><label for="lap-nim">NIM</label><input type="text" id="lap-nim" class="modern-input" placeholder="NIM"></div>
+        <div class="card-header"><h3 class="card-title">📣 Lapor Masalah</h3></div>
+        <p class="report-hint">Laporan masuk ke admin, dan perkembangannya bisa kamu pantau di bagian Laporan Saya di bawah.</p>
+        <div class="form-group"><label for="lap-nama">Nama</label><input type="text" id="lap-nama" class="modern-input"></div>
+        <div class="form-group"><label for="lap-nim">NIM</label><input type="text" id="lap-nim" class="modern-input" readonly></div>
         <div class="form-group"><label for="lap-kategori">Jenis laporan</label>
-          <select id="lap-kategori" class="modern-input">
-            <option>Soal atau jawaban keliru</option><option>Gambar tidak muncul</option><option>Error atau bug di portal</option>
-            <option>Jadwal, tugas, atau materi tidak sesuai</option><option>Tidak bisa masuk (NIM)</option><option>Saran fitur</option><option>Lainnya</option>
-          </select></div>
-        <div class="form-group"><label for="lap-lokasi">Bagian atau nomor soal (kalau ada)</label><input type="text" id="lap-lokasi" class="modern-input" placeholder="Contoh: CBT soal 17, atau tab Tugas"></div>
+          <select id="lap-kategori" class="modern-input"><option>Soal atau jawaban keliru</option><option>Gambar tidak muncul</option><option>Error atau bug di portal</option><option>Jadwal, tugas, atau materi tidak sesuai</option><option>Saran fitur</option><option>Lainnya</option></select></div>
+        <div class="form-group"><label for="lap-lokasi">Bagian atau nomor soal (kalau ada)</label><input type="text" id="lap-lokasi" class="modern-input" placeholder="Contoh: CBT soal 17, atau halaman Tugas"></div>
         <div class="form-group"><label for="lap-isi">Penjelasan</label><textarea id="lap-isi" class="modern-input" style="height:120px;resize:vertical;" placeholder="Ceritakan apa yang terjadi, dan apa yang seharusnya tampil."></textarea></div>
-        <div class="report-actions">
-          <button class="btn btn-primary btn-lg" id="lap-kirim">📨 Kirim Laporan</button>
+        <button class="btn btn-primary btn-lg" id="lap-kirim">📨 Kirim Laporan</button>
+      </div>
+      <div class="card"><div class="card-header"><h3 class="card-title">📋 Laporan Saya</h3></div><div id="lap-mine"></div></div>
+    </div>
+
+    <div id="tab-laporan-admin" class="tab-content" style="display:none;">
+      <div class="card">
+        <div class="card-header flex-between"><h3 class="card-title">🛠️ Laporan Masuk</h3><button class="btn btn-outline btn-sm" id="lap-refresh">🔄 Muat ulang</button></div>
+        <details class="guide" style="margin-bottom:15px;"><summary style="cursor:pointer;font-weight:700;">📘 Cara memakai halaman ini</summary>
+          <ol style="margin:10px 0 0 22px;font-size:14px;color:var(--text-muted);"><li>Baca laporan, lalu tulis catatan untuk pelapor (opsional).</li><li>Klik <strong>Proses</strong> saat mulai dikerjakan dan <strong>Selesai</strong> kalau sudah beres.</li><li>Mahasiswa pelapor otomatis mendapat notifikasi di Beranda mereka.</li><li>Pakai filter di bawah untuk memisahkan laporan yang belum dan sudah selesai.</li></ol></details>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px;">
+          <button class="btn btn-outline btn-sm lap-filter active" data-f="baru">Belum selesai</button>
+          <button class="btn btn-outline btn-sm lap-filter" data-f="selesai">Selesai</button>
+          <button class="btn btn-outline btn-sm lap-filter" data-f="semua">Semua</button>
         </div>
+        <div id="lap-list"></div>
       </div>
     </div>`);
 
-    dbData.laporan = [];
-    const KEY = 'laporan';
-    const esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-
+    // ---------- Supabase ----------
     async function fetchLaporan() {
         const { data, error } = await supabaseClient.from('portal_db').select('value').eq('key', KEY).maybeSingle();
         if (error) throw error;
@@ -987,7 +1018,61 @@ body { font-size: 16px; }
         if (error) throw error;
     }
 
-    // Kirim laporan (mahasiswa & admin)
+    // ---------- Navigasi sederhana ----------
+    const GROUPS = [
+        { id: 'home', ico: '🏠', label: 'Beranda', tabs: [['home', 'Beranda']] },
+        { id: 'kuliah', ico: '📅', label: 'Kuliah', tabs: [['jadwal', 'Jadwal'], ['tugas', 'Tugas'], ['materi', 'Materi']] },
+        { id: 'praktikum', ico: '🔬', label: 'Praktikum', tabs: [['lab', 'Lab'], ['skills', 'Skills Lab'], ['tutorial', 'Tutorial']] },
+        { id: 'latihan', ico: '✍️', label: 'Latihan', tabs: [['soal', 'Soal Isian'], ['cbt', 'Simulasi CBT']] },
+        { id: 'bantuan', ico: '💬', label: 'Bantuan', tabs: () => [['panduan', 'Panduan'], isAdmin() ? ['laporan-admin', 'Laporan Masuk'] : ['lapor', 'Lapor Masalah']] }
+    ];
+    const tabsOf = g => typeof g.tabs === 'function' ? g.tabs() : g.tabs;
+    const oldNav = document.querySelector('.modern-nav');
+    oldNav.style.display = 'none';
+    const nav = document.createElement('nav');
+    nav.className = 'modern-nav simple-nav';
+    nav.innerHTML = '<div id="sn-main" class="sn-row"></div><div id="sn-sub" class="sn-row"></div>';
+    oldNav.after(nav);
+
+    let curTab = 'home', adminBaru = 0, mine = [], seen = {}, lastUnread = 0, lastBaru = 0, filter = 'baru', poll = null;
+    const badge = () => isAdmin() ? adminBaru : unread().length;
+
+    function renderNav() {
+        const g = GROUPS.find(x => tabsOf(x).some(t => t[0] === curTab)) || GROUPS[0];
+        $('sn-main').innerHTML = GROUPS.map(x => `<button class="nav-pill ${x === g ? 'active' : ''}" data-g="${x.id}">${x.ico} ${x.label}${x.id === 'bantuan' && badge() ? `<span class="sn-badge">${badge()}</span>` : ''}</button>`).join('');
+        const ts = tabsOf(g);
+        $('sn-sub').style.display = ts.length > 1 ? 'flex' : 'none';
+        $('sn-sub').innerHTML = ts.length > 1 ? ts.map(t => `<button class="sn-chip ${t[0] === curTab ? 'active' : ''}" data-t="${t[0]}">${t[1]}${(t[0] === 'laporan-admin' && adminBaru) ? `<span class="sn-badge">${adminBaru}</span>` : ''}</button>`).join('') : '';
+        document.querySelectorAll('.admin-guide').forEach(e => e.style.display = isAdmin() ? 'block' : 'none');
+        document.querySelectorAll('.guest-guide').forEach(e => e.style.display = isAdmin() ? 'none' : 'block');
+    }
+    $('sn-main').addEventListener('click', e => {
+        const b = e.target.closest('[data-g]'); if (!b) return;
+        const g = GROUPS.find(x => x.id === b.dataset.g), ts = tabsOf(g);
+        window.switchTab((g.id === 'bantuan' && badge() && ts[1]) ? ts[1][0] : ts[0][0], null);
+    });
+    $('sn-sub').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (b) window.switchTab(b.dataset.t, null); });
+
+    const origSw = window.switchTab;
+    window.switchTab = function (tab, btn) {
+        origSw(tab, btn);
+        curTab = tab; renderNav();
+        if (tab === 'lapor' && isGuest()) {
+            if (!$('lap-nama').value) $('lap-nama').value = currentUser.name || '';
+            $('lap-nim').value = currentUser.nim || '';
+            refreshMine(false).then(markAllSeen);
+        }
+        if (tab === 'laporan-admin') refreshAdmin(false);
+    };
+
+    // ---------- Mahasiswa: kirim & pantau laporan ----------
+    const seenKey = () => 'a9_lap_seen_' + (currentUser && currentUser.nim);
+    const loadSeen = () => { try { seen = JSON.parse(localStorage.getItem(seenKey())) || {}; } catch (e) { seen = {}; } };
+    const saveSeen = () => { try { localStorage.setItem(seenKey(), JSON.stringify(seen)); } catch (e) { } };
+    const sig = x => x.status + '|' + (x.tglUpdate || '') + '|' + (x.catatan || '');
+    const unread = () => mine.filter(x => x.status !== 'baru' && seen[x.id] !== sig(x));
+    function markAllSeen() { unread().forEach(x => { seen[x.id] = sig(x); }); saveSeen(); lastUnread = 0; renderUpdateCard(); renderNav(); }
+
     $('lap-kirim').addEventListener('click', async () => {
         const v = id => $(id).value.trim();
         if (!v('lap-nama')) { alert('Nama wajib diisi.'); return; }
@@ -996,122 +1081,111 @@ body { font-size: 16px; }
         const btn = $('lap-kirim'); btn.disabled = true;
         try {
             const list = await fetchLaporan(); // ambil data terbaru dulu supaya laporan lain tidak tertimpa
-            list.unshift({ id: Date.now(), tgl: new Date().toISOString(), nama: v('lap-nama'), nim: v('lap-nim') || '-', kategori: v('lap-kategori'), lokasi: v('lap-lokasi') || '-', isi: v('lap-isi'), perangkat: navigator.userAgent.slice(0, 90), status: 'baru' });
-            await writeLaporan(list.slice(0, 200));
+            list.unshift({ id: Date.now(), tgl: new Date().toISOString(), nama: v('lap-nama'), nim: currentUser.nim || v('lap-nim') || '-', kategori: v('lap-kategori'), lokasi: v('lap-lokasi') || '-', isi: v('lap-isi'), perangkat: navigator.userAgent.slice(0, 90), status: 'baru', catatan: '', tglUpdate: '' });
+            await writeLaporan(list.slice(0, 300));
             $('lap-isi').value = ''; $('lap-lokasi').value = '';
-            alert('Laporan terkirim ke admin. Terima kasih!');
+            alert('Laporan terkirim. Pantau perkembangannya di Laporan Saya.');
+            await refreshMine(false);
         } catch (e) { console.error(e); alert('Gagal mengirim laporan. Coba lagi sebentar lagi.'); }
         btn.disabled = false;
     });
 
-    // ===== Sisi admin: daftar laporan + notifikasi =====
-    const st2 = document.createElement('style');
-    st2.textContent = `
-    #lap-badge { display: none; margin-left: 6px; background: var(--danger); color: #fff; border-radius: 20px; min-width: 20px; padding: 0 6px; font-size: 11px; font-weight: 800; line-height: 20px; }
-    .lap-item { border: 1px solid var(--border-color); border-left: 4px solid var(--danger); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 12px; background: var(--bg-base); }
-    .lap-item.done { border-left-color: var(--primary); opacity: .75; }
-    .lap-top { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
-    .lap-cat { background: var(--primary-light); color: var(--primary); border-radius: 20px; padding: 2px 10px; font-weight: 700; font-size: 12px; }
-    .lap-body { white-space: pre-wrap; font-size: 14px; margin: 8px 0; }
-    .lap-acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-    .lap-filter.active { background: var(--primary); color: #fff; border-color: var(--primary); }`;
-    document.head.appendChild(st2);
+    function renderMine() {
+        const el = $('lap-mine'); if (!el) return;
+        if (!mine.length) { el.innerHTML = '<p style="color:var(--text-muted);">Belum ada laporan. Laporan yang kamu kirim akan muncul di sini beserta perkembangannya.</p>'; return; }
+        el.innerHTML = mine.map(x => {
+            const i = x.status === 'selesai' ? 2 : x.status === 'proses' ? 1 : 0;
+            return `<div class="lap-item s-${x.status}">
+              <div class="lap-top"><span><span class="lap-cat">${esc(x.kategori)}</span> &nbsp;${esc(x.lokasi)}</span><span>${esc(fmt(x.tgl))}</span></div>
+              <div class="trk">${['Terkirim', 'Diproses', 'Selesai'].map((t, k) => `<span class="${k <= i ? 'on' : ''}">${t}</span>`).join('')}</div>
+              <div class="lap-body">${esc(x.isi)}</div>
+              ${x.catatan ? `<div class="lap-note"><strong>Catatan admin:</strong> ${esc(x.catatan)}</div>` : ''}</div>`;
+        }).join('');
+    }
 
-    const pill = document.createElement('button');
-    pill.className = 'nav-pill admin-only'; pill.id = 'nav-laporan-admin'; pill.style.display = 'none';
-    pill.setAttribute('onclick', "switchTab('laporan-admin', this)");
-    pill.innerHTML = '🛠️ Laporan<span id="lap-badge"></span>';
-    nav.appendChild(pill);
+    function renderUpdateCard() {
+        let c = $('lap-update-card'); const u = isGuest() ? unread() : [];
+        if (!u.length) { if (c) c.remove(); return; }
+        if (!c) { c = document.createElement('div'); c.id = 'lap-update-card'; c.className = 'upd-card'; const ref = document.querySelector('#tab-home .grid-2-1'); ref.before(c); }
+        c.innerHTML = `<h3>🔔 Update laporanmu (${u.length})</h3>
+          ${u.map(x => `<div class="upd-row"><strong>${esc(x.kategori)}</strong> (${esc(x.lokasi)}): ${x.status === 'selesai' ? '✅ <strong>Selesai</strong>' : '🔵 <strong>Sedang diproses</strong>'}${x.catatan ? `<br><em>Catatan admin: ${esc(x.catatan)}</em>` : ''}</div>`).join('')}
+          <div class="lap-acts"><button class="btn btn-primary btn-sm" id="upd-lihat">Lihat laporan saya</button><button class="btn btn-outline btn-sm" id="upd-baca">Tandai sudah dibaca</button></div>`;
+        $('upd-lihat').onclick = () => window.switchTab('lapor', null);
+        $('upd-baca').onclick = markAllSeen;
+    }
 
-    main.insertAdjacentHTML('beforeend', `
-    <div id="tab-laporan-admin" class="tab-content" style="display:none;">
-      <div class="card">
-        <div class="card-header flex-between"><h3 class="card-title">🛠️ Laporan dari Mahasiswa</h3><button class="btn btn-outline btn-sm" id="lap-refresh">🔄 Muat ulang</button></div>
-        <div class="report-actions" style="margin-bottom:15px;">
-          <button class="btn btn-outline btn-sm lap-filter active" data-f="baru">Belum selesai</button>
-          <button class="btn btn-outline btn-sm lap-filter" data-f="selesai">Selesai</button>
-          <button class="btn btn-outline btn-sm lap-filter" data-f="semua">Semua</button>
-        </div>
-        <div id="lap-list"></div>
-      </div>
-    </div>`);
+    async function refreshMine(notify) {
+        if (!isGuest() || !supabaseClient) return;
+        try {
+            loadSeen();
+            mine = (await fetchLaporan()).filter(x => x.nim === currentUser.nim);
+            const n = unread().length;
+            if (n > 0 && (notify || n > lastUnread)) alert(`🔔 Ada ${n} update untuk laporanmu. Lihat di Beranda.`);
+            lastUnread = n; renderMine(); renderUpdateCard(); renderNav();
+        } catch (e) { console.error('Gagal memuat laporan:', e); }
+    }
 
-    let filter = 'baru', lastBaru = 0, pollTimer = null;
-    const isAdmin = () => typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin';
-
-    function renderLaporan() {
+    // ---------- Admin: kelola laporan ----------
+    function renderAdmin() {
         const all = dbData.laporan || [];
-        const baru = all.filter(x => x.status !== 'selesai').length;
-        const bd = $('lap-badge'); bd.textContent = baru; bd.style.display = baru ? 'inline-block' : 'none';
+        adminBaru = all.filter(x => x.status !== 'selesai').length;
         document.querySelectorAll('.lap-filter').forEach(b => b.classList.toggle('active', b.dataset.f === filter));
         const shown = all.filter(x => filter === 'semua' || (filter === 'baru' ? x.status !== 'selesai' : x.status === 'selesai'));
         $('lap-list').innerHTML = shown.length ? shown.map(x => `
-            <div class="lap-item ${x.status === 'selesai' ? 'done' : ''}">
-              <div class="lap-top"><span><span class="lap-cat">${esc(x.kategori)}</span> &nbsp;<strong>${esc(x.nama)}</strong> (${esc(x.nim)})</span>
-                <span>${esc(new Date(x.tgl).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }))}</span></div>
-              <div><small>Bagian: <strong>${esc(x.lokasi)}</strong></small></div>
-              <div class="lap-body">${esc(x.isi)}</div>
-              <small style="color:var(--text-muted)">${esc(x.perangkat)}</small>
-              <div class="lap-acts">
-                <button class="btn btn-sm ${x.status === 'selesai' ? 'btn-outline' : 'btn-primary'}" data-act="toggle" data-id="${x.id}">${x.status === 'selesai' ? '↩️ Buka lagi' : '✅ Tandai selesai'}</button>
-                <button class="btn btn-sm btn-danger" data-act="del" data-id="${x.id}">Hapus</button>
-              </div>
-            </div>`).join('') : '<p style="color:var(--text-muted);">Tidak ada laporan di kategori ini.</p>';
+          <div class="lap-item s-${x.status}">
+            <div class="lap-top"><span><span class="lap-cat">${esc(x.kategori)}</span> &nbsp;<strong>${esc(x.nama)}</strong> (${esc(x.nim)}) · <strong>${esc(STAT[x.status] || x.status)}</strong></span><span>${esc(fmt(x.tgl))}</span></div>
+            <small>Bagian: <strong>${esc(x.lokasi)}</strong></small>
+            <div class="lap-body">${esc(x.isi)}</div>
+            <small style="color:var(--text-muted)">${esc(x.perangkat)}</small>
+            <input type="text" class="modern-input" style="margin-top:8px;" data-note="${x.id}" value="${esc(x.catatan || '')}" placeholder="Catatan untuk pelapor (opsional)">
+            <div class="lap-acts">
+              ${x.status !== 'proses' ? `<button class="btn btn-sm btn-outline" data-act="proses" data-id="${x.id}">🔵 Proses</button>` : ''}
+              ${x.status !== 'selesai' ? `<button class="btn btn-sm btn-primary" data-act="selesai" data-id="${x.id}">✅ Selesai</button>` : ''}
+              ${x.status !== 'baru' ? `<button class="btn btn-sm btn-outline" data-act="baru" data-id="${x.id}">↩️ Buka lagi</button>` : ''}
+              <button class="btn btn-sm btn-danger" data-act="del" data-id="${x.id}">Hapus</button>
+            </div></div>`).join('') : '<p style="color:var(--text-muted);">Tidak ada laporan di kategori ini.</p>';
+        renderNav();
     }
 
-    async function refreshLaporan(notify) {
+    async function refreshAdmin(notify) {
         if (!isAdmin() || !supabaseClient) return;
         try {
             dbData.laporan = await fetchLaporan();
             const baru = dbData.laporan.filter(x => x.status !== 'selesai').length;
-            if (baru > 0 && (notify || baru > lastBaru)) alert(`🔔 Ada ${baru} laporan belum selesai dari mahasiswa. Buka menu 🛠️ Laporan.`);
-            lastBaru = baru;
-            renderLaporan();
+            if (baru > 0 && (notify || baru > lastBaru)) alert(`🔔 Ada ${baru} laporan belum selesai. Buka Bantuan, Laporan Masuk.`);
+            lastBaru = baru; renderAdmin();
         } catch (e) { console.error('Gagal memuat laporan:', e); }
     }
 
-    async function mutateLaporan(fn) {
+    async function mutate(fn) {
         try {
-            const list = await fetchLaporan();
-            const out = fn(list);
+            const out = fn(await fetchLaporan());
             await writeLaporan(out);
-            dbData.laporan = out; lastBaru = out.filter(x => x.status !== 'selesai').length;
-            renderLaporan();
+            dbData.laporan = out; lastBaru = out.filter(x => x.status !== 'selesai').length; renderAdmin();
         } catch (e) { console.error(e); alert('Gagal memperbarui laporan.'); }
     }
 
     $('lap-list').addEventListener('click', e => {
         const b = e.target.closest('button[data-act]'); if (!b) return;
-        const id = +b.dataset.id;
-        if (b.dataset.act === 'del') {
-            if (!confirm('Hapus laporan ini secara permanen?')) return;
-            mutateLaporan(l => l.filter(x => x.id !== id));
-        } else {
-            mutateLaporan(l => l.map(x => x.id === id ? Object.assign({}, x, { status: x.status === 'selesai' ? 'baru' : 'selesai' }) : x));
-        }
+        const id = +b.dataset.id, act = b.dataset.act;
+        if (act === 'del') { if (confirm('Hapus laporan ini secara permanen?')) mutate(l => l.filter(x => x.id !== id)); return; }
+        const note = (document.querySelector(`[data-note="${id}"]`) || {}).value || '';
+        mutate(l => l.map(x => x.id === id ? Object.assign({}, x, { status: act, catatan: note.trim(), tglUpdate: new Date().toISOString() }) : x));
     });
-    document.querySelectorAll('.lap-filter').forEach(b => b.addEventListener('click', () => { filter = b.dataset.f; renderLaporan(); }));
-    $('lap-refresh').addEventListener('click', () => refreshLaporan(false));
+    document.querySelectorAll('.lap-filter').forEach(b => b.addEventListener('click', () => { filter = b.dataset.f; renderAdmin(); }));
+    $('lap-refresh').addEventListener('click', () => refreshAdmin(false));
 
-    // Saat admin login: cek laporan baru, lalu cek berkala tiap 60 detik
+    // ---------- Saat login ----------
     const origLogin = window.finishLogin;
     window.finishLogin = function () {
         origLogin();
-        if (isAdmin()) {
-            refreshLaporan(true);
-            if (!pollTimer) pollTimer = setInterval(() => refreshLaporan(false), 60000);
+        curTab = 'home'; renderNav();
+        if (poll) clearInterval(poll);
+        if (isAdmin()) { refreshAdmin(true); poll = setInterval(() => refreshAdmin(false), 60000); }
+        else if (isGuest()) {
+            if ($('lap-nama')) $('lap-nama').value = currentUser.name || '';
+            refreshMine(true); poll = setInterval(() => refreshMine(false), 60000);
         }
     };
-    const origSw = window.switchTab;
-    window.switchTab = function (tab, btn) { origSw(tab, btn); if (tab === 'laporan-admin') refreshLaporan(false); };
-
-    // Isi otomatis nama & NIM saat tab Lapor dibuka
-    const origSwitch = window.switchTab;
-    window.switchTab = function (tab, btn) {
-        origSwitch(tab, btn);
-        if (tab === 'lapor' && typeof currentUser !== 'undefined' && currentUser) {
-            if (!$('lap-nama').value) $('lap-nama').value = currentUser.name || '';
-            if (!$('lap-nim').value) $('lap-nim').value = currentUser.nim || '';
-        }
-    };
+    renderNav();
 })();
