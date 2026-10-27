@@ -1,11 +1,11 @@
 // ==========================================================================
-// PORTAL AKADEMIK A9 — SATU FILE (script.js + tambahan-v2.js + desain v3)
-// Urutan: inti portal → tampilan dasar & fitur kecil → navigasi/panduan/laporan
-//         → CBT/progres/Drive → jadwal/folder/progres admin → OSCE/admin → desain v3
+// PORTAL AKADEMIK A9 â€” SATU FILE (script.js + tambahan-v2.js + desain v3)
+// Urutan: inti portal â†’ tampilan dasar & fitur kecil â†’ navigasi/panduan/laporan
+//         â†’ CBT/progres/Drive â†’ jadwal/folder/progres admin â†’ OSCE/admin â†’ desain v3
 // ==========================================================================
 
 // ==========================================================================
-// BAGIAN 1 — INTI PORTAL
+// BAGIAN 1 â€” INTI PORTAL
 // ==========================================================================
 const allowedUsers = {
     "21105032610023": "ALICA MARATU SULHA", "21105032610047": "AYESHA LILIAN PUTRI",
@@ -271,7 +271,7 @@ window.handleLogin = async function () {
                 finishLogin();
             } else { alert('Kode Admin Salah!'); }
         } else {
-            if (dbData.maintenance) { alert('⚠️ PORTAL SEDANG MAINTENANCE.'); return; }
+            if (dbData.maintenance) { alert('âš ï¸ PORTAL SEDANG MAINTENANCE.'); return; }
             const nim = document.getElementById('login-nim-input').value.trim();
             if (allowedUsers[nim]) {
                 currentUser = { role: 'guest', name: allowedUsers[nim], nim: nim };
@@ -411,7 +411,7 @@ function applyBanners() {
 }
 
 const escH = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const ANN_TAG = { info: '📢 Pengumuman', tugas: '📝 Tugas', materi: '📚 Materi', file: '📚 Berkas baru', jadwal: '🗓️ Jadwal', ujian: '📌 Ujian / Kegiatan', penting: '⚠️ Penting' };
+const ANN_TAG = { info: 'ðŸ“¢ Pengumuman', tugas: 'ðŸ“ Tugas', materi: 'ðŸ“š Materi', file: 'ðŸ“š Berkas baru', jadwal: 'ðŸ—“ï¸ Jadwal', ujian: 'ðŸ“Œ Ujian / Kegiatan', penting: 'âš ï¸ Penting' };
 
 function renderAll() {
     const isAdmin = currentUser && currentUser.role === 'admin';
@@ -421,11 +421,11 @@ function renderAll() {
     const pList = document.getElementById('pengumuman-list');
     if (pList) pList.innerHTML = dbData.pengumuman.length === 0 ? '<p style="color:var(--text-muted);">Belum ada pengumuman.</p>' : dbData.pengumuman.map((p, idx) => `
         <div style="background:var(--bg-base); border-radius:var(--radius-md); padding:20px; margin-bottom:15px; border-left:4px solid var(--primary); position: relative;">
-            <small style="display:block; color:var(--text-muted); margin-bottom:4px;">${ANN_TAG[p.kind] || ANN_TAG.info}${p.tgl ? ' · ' + new Date(p.tgl).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</small>
+            <small style="display:block; color:var(--text-muted); margin-bottom:4px;">${ANN_TAG[p.kind] || ANN_TAG.info}${p.tgl ? ' Â· ' + new Date(p.tgl).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</small>
             <h4 style="margin-bottom:8px; color:var(--text-main); font-size:16px; padding-right: 80px;">${escH(p.judul)}</h4>
             <p style="font-size:14px; color:var(--text-muted); margin-bottom:12px; white-space:pre-line;">${escH(p.isi)}</p>
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <small style="color:var(--primary); font-weight:600;">🗓️ s/d ${p.deadline}</small>
+                <small style="color:var(--primary); font-weight:600;">ðŸ—“ï¸ s/d ${p.deadline}</small>
                 <a href="https://wa.me/?text=${encodeURIComponent(p.judul + ' - ' + p.isi)}" target="_blank" class="badge badge-wa">Bagikan</a>
             </div>
             ${isAdmin ? `<button class="btn btn-danger btn-sm" style="position: absolute; top: 15px; right: 15px;" onclick="deleteItem('pengumuman', ${idx})">Hapus</button>` : ''}
@@ -513,7 +513,7 @@ window.addTugasItem = async function () {
     document.getElementById('t-nama').value = ''; document.getElementById('t-deadline').value = ''; document.getElementById('t-ket').value = '';
     document.getElementById('t-file-pc').value = ''; document.getElementById('t-link-manual').value = '';
     alert('Tugas disimpan!');
-    postUpdate('tugas', '📝 Tugas baru: ' + nama, nama + (ket ? ' — ' + ket : '') + '. Deadline ' + tglIndo(deadline) + '.', { until: deadline });
+    postUpdate('tugas', 'ðŸ“ Tugas baru: ' + nama, nama + (ket ? ' â€” ' + ket : '') + '. Deadline ' + tglIndo(deadline) + '.', { until: deadline });
 };
 
 window.handlePraktikumUpload = async function (category, idNama, idSkenario, idKet, idFilePc, idLink) {
@@ -535,7 +535,7 @@ window.handlePraktikumUpload = async function (category, idNama, idSkenario, idK
     document.getElementById(idFilePc).value = ''; document.getElementById(idLink).value = '';
     alert('Berhasil disimpan!');
     const lbl = { laboratorium: 'Lab', skills_lab: 'Skills Lab', tutorial: 'Tutorial' }[category] || category;
-    postUpdate('file', '📚 Berkas baru di ' + lbl, nama + (skenario ? ' (' + skenario + ')' : '') + ' telah ditambahkan.', { key: 'file:' + category, merge: n => n + ' berkas baru ditambahkan ke ' + lbl + '.' });
+    postUpdate('file', 'ðŸ“š Berkas baru di ' + lbl, nama + (skenario ? ' (' + skenario + ')' : '') + ' telah ditambahkan.', { key: 'file:' + category, merge: n => n + ' berkas baru ditambahkan ke ' + lbl + '.' });
 };
 
 window.handleMateriUpload = async function () {
@@ -553,7 +553,7 @@ window.handleMateriUpload = async function () {
     document.getElementById('m-kuliah').value = ''; document.getElementById('m-materi').value = '';
     document.getElementById('m-file-pc').value = ''; document.getElementById('m-link-manual').value = '';
     alert('Materi disimpan!');
-    postUpdate('materi', '📚 Materi baru: ' + materi, kuliah + ': ' + materi + ' telah ditambahkan di menu Kuliah › Materi.', { key: 'materi', merge: n => n + ' materi baru ditambahkan di menu Kuliah › Materi.' });
+    postUpdate('materi', 'ðŸ“š Materi baru: ' + materi, kuliah + ': ' + materi + ' telah ditambahkan di menu Kuliah â€º Materi.', { key: 'materi', merge: n => n + ' materi baru ditambahkan di menu Kuliah â€º Materi.' });
 };
 
 window.addReminder = async function () {
@@ -564,7 +564,7 @@ window.addReminder = async function () {
 window.addJadwalUpdateWithFile = async function () {
     const title = document.getElementById('up-title').value; if (!title) return;
     dbData.jadwalUpdates.push(title); await saveCategoryData('jadwalUpdates'); document.getElementById('up-title').value = '';
-    postUpdate('jadwal', '🗓️ Update jadwal', title);
+    postUpdate('jadwal', 'ðŸ—“ï¸ Update jadwal', title);
 };
 
 window.toggleMaintenanceMode = async function () {
@@ -632,7 +632,7 @@ window.submitQuiz = function () {
         const fb = document.getElementById('fb_' + s.id);
         fb.style.display = 'block';
         fb.className = 'cbt-feedback ' + (ok ? 'feedback-success' : 'feedback-danger');
-        fb.innerHTML = (ok ? '<strong>✅ Benar!</strong>' : `<strong>❌ Salah.</strong> Jawaban: <strong>${s.answer}</strong>`)
+        fb.innerHTML = (ok ? '<strong>âœ… Benar!</strong>' : `<strong>âŒ Salah.</strong> Jawaban: <strong>${s.answer}</strong>`)
             + (s.explanation ? `<br><br><em>Pembahasan:</em> ${cleanText(s.explanation)}` : '');
     });
 
@@ -649,7 +649,7 @@ window.resetQuiz = function () { window.startQuiz(); };
 window.openJadwalModal = function () { alert("Fitur edit jadwal via UI sedang dalam pengembangan. Menggunakan Supabase."); };
 
 // ==========================================================================
-// BAGIAN 2 — TAMPILAN DASAR & FITUR KECIL
+// BAGIAN 2 â€” TAMPILAN DASAR & FITUR KECIL
 // ==========================================================================
 (function () {
     const st = document.createElement('style');
@@ -788,7 +788,7 @@ body { font-size: 16px; }
         const sapa = jam < 11 ? 'Selamat pagi' : jam < 15 ? 'Selamat siang' : jam < 18 ? 'Selamat sore' : 'Selamat malam';
         const d = document.createElement('div');
         d.id = 'greeting'; d.className = 'greeting';
-        d.innerHTML = `<h3>${sapa}, ${esc(nama.charAt(0) + nama.slice(1).toLowerCase())}! 👋</h3><p class="quote">“${esc(window.a9Quote())}”</p><p class="sub">Cek pengingat, jadwal, dan tugasmu di bawah.</p>`;
+        d.innerHTML = `<h3>${sapa}, ${esc(nama.charAt(0) + nama.slice(1).toLowerCase())}! ðŸ‘‹</h3><p class="quote">â€œ${esc(window.a9Quote())}â€</p><p class="sub">Cek pengingat, jadwal, dan tugasmu di bawah.</p>`;
         home.prepend(d);
     }
 
@@ -796,8 +796,8 @@ body { font-size: 16px; }
     window.renderAll = function () {
         origRender();
         try {
-            addSearch('tugas-table-body', '🔎 Cari tugas...');
-            addSearch('materi-table-body', '🔎 Cari materi...');
+            addSearch('tugas-table-body', 'ðŸ”Ž Cari tugas...');
+            addSearch('materi-table-body', 'ðŸ”Ž Cari materi...');
             deadlineBadges(); greeting();
             applyFilter('tugas-table-body'); applyFilter('materi-table-body');
         } catch (e) { console.error(e); }
@@ -806,7 +806,7 @@ body { font-size: 16px; }
 
     // 4. Tombol kembali ke atas
     const up = document.createElement('button');
-    up.id = 'to-top'; up.type = 'button'; up.setAttribute('aria-label', 'Kembali ke atas'); up.textContent = '▲';
+    up.id = 'to-top'; up.type = 'button'; up.setAttribute('aria-label', 'Kembali ke atas'); up.textContent = 'â–²';
     up.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
     document.body.appendChild(up);
     let upShown = false;
@@ -817,7 +817,7 @@ body { font-size: 16px; }
 })();
 
 // ==========================================================================
-// BAGIAN 3 — NAVIGASI SEDERHANA, PANDUAN, & LAPORAN (STATUS UNTUK MAHASISWA, KELOLA UNTUK ADMIN)
+// BAGIAN 3 â€” NAVIGASI SEDERHANA, PANDUAN, & LAPORAN (STATUS UNTUK MAHASISWA, KELOLA UNTUK ADMIN)
 // ==========================================================================
 (function () {
     const $ = id => document.getElementById(id);
@@ -867,7 +867,7 @@ body { font-size: 16px; }
     main.insertAdjacentHTML('beforeend', `
     <div id="tab-panduan" class="tab-content" style="display:none;">
       <div class="card guide">
-        <div class="card-header"><h3 class="card-title">📖 Panduan Penggunaan Portal</h3></div>
+        <div class="card-header"><h3 class="card-title">ðŸ“– Panduan Penggunaan Portal</h3></div>
         <details open><summary>1. Cara menggunakan menu</summary>
           <p>Menu utama ada di bagian atas: <strong>Beranda, Kuliah, Praktikum, Latihan, Bantuan</strong>. Klik salah satunya, lalu pilih halaman di baris kedua. Contoh: Kuliah berisi Jadwal, Tugas, dan Materi.</p></details>
         <details><summary>2. Masuk ke portal</summary>
@@ -880,23 +880,23 @@ body { font-size: 16px; }
           <ol><li>Buka <strong>Latihan, Soal Isian</strong>, lalu klik <strong>Mulai Latihan</strong>.</li><li>Ketik jawaban. Huruf besar-kecil dan awalan "Os", "M.", "N." tidak berpengaruh.</li><li>Klik <strong>Submit Jawaban</strong> untuk melihat skor dan pembahasan.</li></ol></details>
         <details><summary>6. Simulasi CBT</summary>
           <ul><li><strong>Tampilan:</strong> satu soal per halaman. Pakai tombol Sebelumnya/Berikutnya, atau klik nomor di <strong>Daftar Soal</strong> untuk memilih soal mana yang mau dikerjakan.</li><li><strong>Warna nomor:</strong> abu-abu = belum dikerjakan, hijau = sudah dijawab, titik oranye = ditandai ragu-ragu.</li><li><strong>Mode Latihan:</strong> tanpa waktu. Setelah memilih jawaban, benar/salah dan pembahasan langsung muncul.</li><li><strong>Mode CBT:</strong> ada waktu 100 menit (timer merah di 10 menit terakhir). Jawaban boleh diubah sebelum dikumpulkan. Pembahasan bisa dilihat setelah dikumpulkan lewat tombol <em>Review &amp; Pembahasan</em>.</li><li><strong>Tombol cepat:</strong> A-E atau 1-5 untuk memilih jawaban, panah kiri/kanan untuk pindah soal, F untuk tandai ragu.</li><li>Di akhir sesi kamu mendapat apresiasi, laporan nilai, dan rekomendasi topik belajar. Hasilnya otomatis tersimpan.</li></ul></details>
-        <details class="guest-guide"><summary>📈 Progres dan hasil belajar</summary>
+        <details class="guest-guide"><summary>ðŸ“ˆ Progres dan hasil belajar</summary>
           <ol><li>Setiap selesai CBT atau Soal Isian, nilaimu tersimpan otomatis di akunmu (NIM), jadi bisa dilihat dari HP atau laptop mana pun.</li><li>Buka <strong>Latihan, Progres Saya</strong> untuk melihat grafik nilai, rata-rata, nilai terbaik, dan apakah kamu meningkat dibanding pengerjaan sebelumnya.</li><li>Bagian <em>Topik yang perlu diperkuat</em> menunjukkan topik yang paling sering salah, sebagai panduan belajar.</li></ol></details>
         <details class="guest-guide"><summary>7. Melapor masalah dan melihat perkembangannya</summary>
-          <ol><li>Buka <strong>Bantuan, Lapor Masalah</strong>, isi jenis, bagian, dan penjelasan, lalu klik <strong>Kirim Laporan</strong>.</li><li>Di halaman yang sama, bagian <strong>Laporan Saya</strong> menunjukkan perkembangannya: Terkirim, Sedang diproses, lalu Selesai.</li><li>Kalau admin mengubah status atau menulis catatan, kamu mendapat notifikasi dan kartu <strong>🔔 Update laporanmu</strong> di Beranda. Klik <em>Tandai sudah dibaca</em> kalau sudah dilihat.</li></ol></details>
-        <details class="admin-guide" style="display:none;"><summary>🛠️ Panduan Admin</summary>
+          <ol><li>Buka <strong>Bantuan, Lapor Masalah</strong>, isi jenis, bagian, dan penjelasan, lalu klik <strong>Kirim Laporan</strong>.</li><li>Di halaman yang sama, bagian <strong>Laporan Saya</strong> menunjukkan perkembangannya: Terkirim, Sedang diproses, lalu Selesai.</li><li>Kalau admin mengubah status atau menulis catatan, kamu mendapat notifikasi dan kartu <strong>ðŸ”” Update laporanmu</strong> di Beranda. Klik <em>Tandai sudah dibaca</em> kalau sudah dilihat.</li></ol></details>
+        <details class="admin-guide" style="display:none;"><summary>ðŸ› ï¸ Panduan Admin</summary>
           <ol><li><strong>Menambah konten:</strong> form berwarna putus-putus di tiap halaman (pengumuman, tugas, materi, lab, dan seterusnya) hanya terlihat oleh admin. Isi lalu klik Simpan. Tombol Hapus muncul di tiap data.</li>
           <li><strong>Menu Laporan:</strong> buka <em>Bantuan, Laporan Masuk</em>. Angka merah di menu menunjukkan laporan yang belum selesai.</li>
           <li><strong>Mengolah laporan:</strong> tulis catatan untuk pelapor (opsional), lalu klik <em>Proses</em> saat mulai dikerjakan, dan <em>Selesai</em> kalau sudah beres. Mahasiswa pelapor otomatis mendapat notifikasi di Beranda.</li>
           <li><strong>Filter:</strong> pakai tombol Belum selesai, Selesai, atau Semua. Klik Muat ulang untuk mengecek laporan baru.</li>
-          <li><strong>Setelan:</strong> tombol ⚙️ Setelan di kanan atas untuk mode maintenance, pengumuman global, dan mengganti kode admin.</li></ol></details>
-        <details class="admin-guide" style="display:none;"><summary>📁 Upload materi dan file besar lewat Google Drive (Admin)</summary>
+          <li><strong>Setelan:</strong> tombol âš™ï¸ Setelan di kanan atas untuk mode maintenance, pengumuman global, dan mengganti kode admin.</li></ol></details>
+        <details class="admin-guide" style="display:none;"><summary>ðŸ“ Upload materi dan file besar lewat Google Drive (Admin)</summary>
           <ol><li>Buka <strong>drive.google.com</strong> dan buat folder, misalnya "Portal A9", dengan subfolder per mata kuliah. Drive gratis 15 GB dan bisa menyimpan PDF, PPT, atau video besar.</li><li>Upload filenya. Klik kanan file atau folder, pilih <strong>Bagikan</strong>, ubah Akses umum menjadi <strong>Siapa saja yang memiliki link</strong> dengan peran <strong>Pelihat</strong>, lalu <strong>Salin link</strong>.</li><li>Di portal, buka halaman tujuan (Materi, Tugas, Lab, Skills Lab, atau Tutorial), isi nama, lalu tempel link tadi di kolom <strong>Link</strong> dan klik Simpan.</li><li>Mahasiswa yang klik <em>Buka</em> akan melihat pratinjau file di jendela portal, dengan tombol <em>Buka di Drive</em> dan <em>Unduh</em>. Link folder juga didukung, isinya tampil sebagai daftar.</li><li>Kalau mahasiswa melihat "Anda memerlukan akses", berarti akses umum belum diatur ke "Siapa saja yang memiliki link". Perbaiki di Drive, tidak perlu mengubah data di portal.</li><li>Kolom upload file langsung dari komputer tetap ada untuk file kecil (maksimal 50 MB). Untuk file besar, pakai Drive.</li></ol></details>
-        <details><summary>🔎 Filter materi, pencarian, dan favorit</summary>
-          <ul><li><strong>Materi, Lab, Skills Lab, dan Tutorial</strong> punya filter sendiri: <strong>Blok</strong>, <strong>Sumber</strong>, <strong>Mata kuliah</strong>, <strong>Jenis</strong> berkas, dan urutan. Pilihannya otomatis mengikuti data di halaman itu.</li><li>Ketik di kolom cari untuk mencari judul, blok, sumber, atau mata kuliah. Tombol <em>Atur ulang filter</em> mengosongkan semuanya.</li><li>Klik kartu untuk <strong>pratinjau</strong>: PDF, slide, gambar, dan video tampil langsung. Pakai panah kiri/kanan atau tombol Sebelumnya/Berikutnya untuk pindah berkas. Tekan ☆ untuk menyimpan ke <em>Favorit saya</em>; berkas yang baru dibuka muncul di <em>Terakhir dibuka</em>.</li><li><strong>Video YouTube</strong> diputar di dalam portal, dan di bawahnya muncul <strong>rangkuman otomatis</strong> (ringkasan, poin penting dengan waktu yang bisa diklik, istilah, dan pertanyaan latihan). Rangkuman dibuat AI dari subtitle video, jadi cocokkan lagi dengan materi resmi.</li><li class="admin-guide" style="display:none;"><strong>Admin:</strong> tombol <em>Tambah</em> di tiap halaman untuk mengisi judul, blok, sumber, mata kuliah, dan tautan atau file. Menu ⋯ di kartu untuk ubah atau hapus.</li><li><strong>Alat Belajar</strong> (menu Kuliah): timer fokus, catatan cepat, dan kalkulator IPS/IPK. Di halaman Jadwal ada tombol untuk menambahkan jadwal ke kalender HP.</li><li><strong>Tugas:</strong> pakai tombol Semua atau Akan datang, dan kolom pencarian.</li><li><strong>Jadwal:</strong> pilih Hari ini &amp; besok, Minggu ini, atau Semua, atau ketik kata kunci seperti "Tutor" atau nama dosen.</li></ul></details>
-        <details class="admin-guide" style="display:none;"><summary>📊 Progres mahasiswa dan jadwal (Admin)</summary>
+        <details><summary>ðŸ”Ž Filter materi, pencarian, dan favorit</summary>
+          <ul><li><strong>Materi, Lab, Skills Lab, dan Tutorial</strong> punya filter sendiri: <strong>Blok</strong>, <strong>Sumber</strong>, <strong>Mata kuliah</strong>, <strong>Jenis</strong> berkas, dan urutan. Pilihannya otomatis mengikuti data di halaman itu.</li><li>Ketik di kolom cari untuk mencari judul, blok, sumber, atau mata kuliah. Tombol <em>Atur ulang filter</em> mengosongkan semuanya.</li><li>Klik kartu untuk <strong>pratinjau</strong>: PDF, slide, gambar, dan video tampil langsung. Pakai panah kiri/kanan atau tombol Sebelumnya/Berikutnya untuk pindah berkas. Tekan â˜† untuk menyimpan ke <em>Favorit saya</em>; berkas yang baru dibuka muncul di <em>Terakhir dibuka</em>.</li><li><strong>Video YouTube</strong> diputar di dalam portal, dan di bawahnya muncul <strong>rangkuman otomatis</strong> (ringkasan, poin penting dengan waktu yang bisa diklik, istilah, dan pertanyaan latihan). Rangkuman dibuat AI dari subtitle video, jadi cocokkan lagi dengan materi resmi.</li><li class="admin-guide" style="display:none;"><strong>Admin:</strong> tombol <em>Tambah</em> di tiap halaman untuk mengisi judul, blok, sumber, mata kuliah, dan tautan atau file. Menu â‹¯ di kartu untuk ubah atau hapus.</li><li><strong>Alat Belajar</strong> (menu Kuliah): timer fokus, catatan cepat, dan kalkulator IPS/IPK. Di halaman Jadwal ada tombol untuk menambahkan jadwal ke kalender HP.</li><li><strong>Tugas:</strong> pakai tombol Semua atau Akan datang, dan kolom pencarian.</li><li><strong>Jadwal:</strong> pilih Hari ini &amp; besok, Minggu ini, atau Semua, atau ketik kata kunci seperti "Tutor" atau nama dosen.</li></ul></details>
+        <details class="admin-guide" style="display:none;"><summary>ðŸ“Š Progres mahasiswa dan jadwal (Admin)</summary>
           <ol><li>Buka <strong>Latihan, Progres Mahasiswa</strong> untuk melihat jumlah pengerjaan, rata-rata, nilai terbaik, nilai terakhir, dan tren tiap mahasiswa. Gunakan pencarian dan filter jenis latihan.</li><li>Klik <strong>Detail</strong> untuk melihat semua pengerjaan satu mahasiswa. Tombol <em>Hapus</em> di tiap baris menghapus satu pengerjaan, dan <em>Hapus semua progres</em> mengosongkan progres mahasiswa itu. Pakai ini kalau terjadi kesalahan sistem. Penghapusan tidak bisa dibatalkan.</li><li><strong>Jadwal:</strong> buka Kuliah, Jadwal, lalu tempel isi JSON jadwal di kotak admin dan klik <em>Simpan jadwal ke database</em>. Format array langsung atau berbentuk {"jadwal": [...]} sama-sama diterima.</li></ol></details>
-        <details><summary>🎮 Game santai</summary>
+        <details><summary>ðŸŽ® Game santai</summary>
           <ul><li>Buka <strong>Latihan, Game Santai</strong> untuk istirahat sebentar. Ada tiga game: <strong>Memory medis</strong>, <strong>Ular</strong>, dan <strong>2048</strong>.</li><li>Di HP, geser jari di papan untuk bermain. Di laptop, pakai tombol panah atau WASD.</li><li>Skor terbaikmu tersimpan di perangkat ini. Permainan berhenti otomatis saat kamu pindah menu, dan ada pengingat lembut setelah 5 menit.</li></ul></details>
         <details><summary>8. Masalah yang sering terjadi</summary>
           <ul><li><strong>Gambar soal tidak muncul:</strong> cek internet, lalu refresh dengan Ctrl+Shift+R. Kalau masih kosong, laporkan nomor soalnya.</li><li><strong>Halaman tidak merespons:</strong> refresh. Jawaban CBT yang belum diselesaikan tidak tersimpan.</li><li><strong>Portal maintenance:</strong> mahasiswa tidak bisa masuk sampai admin selesai.</li></ul></details>
@@ -905,7 +905,7 @@ body { font-size: 16px; }
 
     <div id="tab-lapor" class="tab-content" style="display:none;">
       <div class="card">
-        <div class="card-header"><h3 class="card-title">📣 Lapor Masalah</h3></div>
+        <div class="card-header"><h3 class="card-title">ðŸ“£ Lapor Masalah</h3></div>
         <p class="report-hint">Laporan masuk ke admin, dan perkembangannya bisa kamu pantau di bagian Laporan Saya di bawah.</p>
         <div class="form-group"><label for="lap-nama">Nama</label><input type="text" id="lap-nama" class="modern-input"></div>
         <div class="form-group"><label for="lap-nim">NIM</label><input type="text" id="lap-nim" class="modern-input" readonly></div>
@@ -913,15 +913,15 @@ body { font-size: 16px; }
           <select id="lap-kategori" class="modern-input"><option>Soal atau jawaban keliru</option><option>Gambar tidak muncul</option><option>Error atau bug di portal</option><option>Jadwal, tugas, atau materi tidak sesuai</option><option>Saran fitur</option><option>Lainnya</option></select></div>
         <div class="form-group"><label for="lap-lokasi">Bagian atau nomor soal (kalau ada)</label><input type="text" id="lap-lokasi" class="modern-input" placeholder="Contoh: CBT soal 17, atau halaman Tugas"></div>
         <div class="form-group"><label for="lap-isi">Penjelasan</label><textarea id="lap-isi" class="modern-input" style="height:120px;resize:vertical;" placeholder="Ceritakan apa yang terjadi, dan apa yang seharusnya tampil."></textarea></div>
-        <button class="btn btn-primary btn-lg" id="lap-kirim">📨 Kirim Laporan</button>
+        <button class="btn btn-primary btn-lg" id="lap-kirim">ðŸ“¨ Kirim Laporan</button>
       </div>
-      <div class="card"><div class="card-header"><h3 class="card-title">📋 Laporan Saya</h3></div><div id="lap-mine"></div></div>
+      <div class="card"><div class="card-header"><h3 class="card-title">ðŸ“‹ Laporan Saya</h3></div><div id="lap-mine"></div></div>
     </div>
 
     <div id="tab-laporan-admin" class="tab-content" style="display:none;">
       <div class="card">
-        <div class="card-header flex-between"><h3 class="card-title">🛠️ Laporan Masuk</h3><button class="btn btn-outline btn-sm" id="lap-refresh">🔄 Muat ulang</button></div>
-        <details class="guide" style="margin-bottom:15px;"><summary style="cursor:pointer;font-weight:700;">📘 Cara memakai halaman ini</summary>
+        <div class="card-header flex-between"><h3 class="card-title">ðŸ› ï¸ Laporan Masuk</h3><button class="btn btn-outline btn-sm" id="lap-refresh">ðŸ”„ Muat ulang</button></div>
+        <details class="guide" style="margin-bottom:15px;"><summary style="cursor:pointer;font-weight:700;">ðŸ“˜ Cara memakai halaman ini</summary>
           <ol style="margin:10px 0 0 22px;font-size:14px;color:var(--text-muted);"><li>Baca laporan, lalu tulis catatan untuk pelapor (opsional).</li><li>Klik <strong>Proses</strong> saat mulai dikerjakan dan <strong>Selesai</strong> kalau sudah beres.</li><li>Mahasiswa pelapor otomatis mendapat notifikasi di Beranda mereka.</li><li>Pakai filter di bawah untuk memisahkan laporan yang belum dan sudah selesai.</li></ol></details>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px;">
           <button class="btn btn-outline btn-sm lap-filter active" data-f="baru">Belum selesai</button>
@@ -947,11 +947,11 @@ body { font-size: 16px; }
 
     // ---------- Navigasi sederhana ----------
     const GROUPS = [
-        { id: 'home', ico: '🏠', label: 'Beranda', tabs: [['home', 'Beranda']] },
-        { id: 'kuliah', ico: '📅', label: 'Kuliah', tabs: [['jadwal', 'Jadwal'], ['tugas', 'Tugas'], ['materi', 'Materi'], ['alat', 'Alat Belajar']] },
-        { id: 'praktikum', ico: '🔬', label: 'Praktikum', tabs: [['lab', 'Lab'], ['skills', 'Skills Lab'], ['tutorial', 'Tutorial']] },
-        { id: 'latihan', ico: '✍️', label: 'Latihan', tabs: () => [['soal', 'Soal Isian'], ['cbt', 'Simulasi CBT'], isAdmin() ? ['progres-admin', 'Progres Mahasiswa'] : ['progres', 'Progres Saya'], ['game', 'Game Santai']] },
-        { id: 'bantuan', ico: '💬', label: 'Bantuan', tabs: () => [['panduan', 'Panduan'], isAdmin() ? ['laporan-admin', 'Laporan Masuk'] : ['lapor', 'Lapor Masalah']] }
+        { id: 'home', ico: 'ðŸ ', label: 'Beranda', tabs: [['home', 'Beranda']] },
+        { id: 'kuliah', ico: 'ðŸ“…', label: 'Kuliah', tabs: [['jadwal', 'Jadwal'], ['tugas', 'Tugas'], ['materi', 'Materi'], ['alat', 'Alat Belajar']] },
+        { id: 'praktikum', ico: 'ðŸ”¬', label: 'Praktikum', tabs: [['lab', 'Lab'], ['skills', 'Skills Lab'], ['tutorial', 'Tutorial']] },
+        { id: 'latihan', ico: 'âœï¸', label: 'Latihan', tabs: () => [['soal', 'Soal Isian'], ['cbt', 'Simulasi CBT'], isAdmin() ? ['progres-admin', 'Progres Mahasiswa'] : ['progres', 'Progres Saya'], ['game', 'Game Santai']] },
+        { id: 'bantuan', ico: 'ðŸ’¬', label: 'Bantuan', tabs: () => [['panduan', 'Panduan'], isAdmin() ? ['laporan-admin', 'Laporan Masuk'] : ['lapor', 'Lapor Masalah']] }
     ];
     const tabsOf = g => typeof g.tabs === 'function' ? g.tabs() : g.tabs;
     const oldNav = document.querySelector('.modern-nav');
@@ -1038,8 +1038,8 @@ body { font-size: 16px; }
             const ref = document.querySelector('#tab-home .grid-2-1');
             if (ref) ref.before(c); else if ($('tab-home')) $('tab-home').appendChild(c);   // cadangan bila struktur Beranda berbeda
         }
-        c.innerHTML = `<h3>🔔 Update laporanmu (${u.length})</h3>
-          ${u.map(x => `<div class="upd-row"><strong>${esc(x.kategori)}</strong> (${esc(x.lokasi)}): ${x.status === 'selesai' ? '✅ <strong>Selesai</strong>' : '🔵 <strong>Sedang diproses</strong>'}${x.catatan ? `<br><em>Catatan admin: ${esc(x.catatan)}</em>` : ''}</div>`).join('')}
+        c.innerHTML = `<h3>ðŸ”” Update laporanmu (${u.length})</h3>
+          ${u.map(x => `<div class="upd-row"><strong>${esc(x.kategori)}</strong> (${esc(x.lokasi)}): ${x.status === 'selesai' ? 'âœ… <strong>Selesai</strong>' : 'ðŸ”µ <strong>Sedang diproses</strong>'}${x.catatan ? `<br><em>Catatan admin: ${esc(x.catatan)}</em>` : ''}</div>`).join('')}
           <div class="lap-acts"><button class="btn btn-primary btn-sm" id="upd-lihat">Lihat laporan saya</button><button class="btn btn-outline btn-sm" id="upd-baca">Tandai sudah dibaca</button></div>`;
         $('upd-lihat').onclick = () => window.switchTab('lapor', null);
         $('upd-baca').onclick = markAllSeen;
@@ -1051,7 +1051,7 @@ body { font-size: 16px; }
             loadSeen();
             mine = (await fetchLaporan()).filter(x => x.nim === currentUser.nim);
             const n = unread().length;
-            if (n > 0 && (notify || n > lastUnread)) alert(`🔔 Ada ${n} update untuk laporanmu. Lihat di Beranda.`);
+            if (n > 0 && (notify || n > lastUnread)) alert(`ðŸ”” Ada ${n} update untuk laporanmu. Lihat di Beranda.`);
             lastUnread = n; renderMine(); renderUpdateCard(); renderNav();
         } catch (e) { console.error('Gagal memuat laporan:', e); }
     }
@@ -1064,15 +1064,15 @@ body { font-size: 16px; }
         const shown = all.filter(x => filter === 'semua' || (filter === 'baru' ? x.status !== 'selesai' : x.status === 'selesai'));
         $('lap-list').innerHTML = shown.length ? shown.map(x => `
           <div class="lap-item s-${x.status}">
-            <div class="lap-top"><span><span class="lap-cat">${esc(x.kategori)}</span> &nbsp;<strong>${esc(x.nama)}</strong> (${esc(x.nim)}) · <strong>${esc(STAT[x.status] || x.status)}</strong></span><span>${esc(fmt(x.tgl))}</span></div>
+            <div class="lap-top"><span><span class="lap-cat">${esc(x.kategori)}</span> &nbsp;<strong>${esc(x.nama)}</strong> (${esc(x.nim)}) Â· <strong>${esc(STAT[x.status] || x.status)}</strong></span><span>${esc(fmt(x.tgl))}</span></div>
             <small>Bagian: <strong>${esc(x.lokasi)}</strong></small>
             <div class="lap-body">${esc(x.isi)}</div>
             <small style="color:var(--text-muted)">${esc(x.perangkat)}</small>
             <input type="text" class="modern-input" style="margin-top:8px;" data-note="${x.id}" value="${esc(x.catatan || '')}" placeholder="Catatan untuk pelapor (opsional)">
             <div class="lap-acts">
-              ${x.status !== 'proses' ? `<button class="btn btn-sm btn-outline" data-act="proses" data-id="${x.id}">🔵 Proses</button>` : ''}
-              ${x.status !== 'selesai' ? `<button class="btn btn-sm btn-primary" data-act="selesai" data-id="${x.id}">✅ Selesai</button>` : ''}
-              ${x.status !== 'baru' ? `<button class="btn btn-sm btn-outline" data-act="baru" data-id="${x.id}">↩️ Buka lagi</button>` : ''}
+              ${x.status !== 'proses' ? `<button class="btn btn-sm btn-outline" data-act="proses" data-id="${x.id}">ðŸ”µ Proses</button>` : ''}
+              ${x.status !== 'selesai' ? `<button class="btn btn-sm btn-primary" data-act="selesai" data-id="${x.id}">âœ… Selesai</button>` : ''}
+              ${x.status !== 'baru' ? `<button class="btn btn-sm btn-outline" data-act="baru" data-id="${x.id}">â†©ï¸ Buka lagi</button>` : ''}
               <button class="btn btn-sm btn-danger" data-act="del" data-id="${x.id}">Hapus</button>
             </div></div>`).join('') : '<p style="color:var(--text-muted);">Tidak ada laporan di kategori ini.</p>';
         renderNav();
@@ -1083,7 +1083,7 @@ body { font-size: 16px; }
         try {
             dbData.laporan = await fetchLaporan();
             const baru = dbData.laporan.filter(x => x.status !== 'selesai').length;
-            if (baru > 0 && (notify || baru > lastBaru)) alert(`🔔 Ada ${baru} laporan belum selesai. Buka Bantuan, Laporan Masuk.`);
+            if (baru > 0 && (notify || baru > lastBaru)) alert(`ðŸ”” Ada ${baru} laporan belum selesai. Buka Bantuan, Laporan Masuk.`);
             lastBaru = baru; renderAdmin();
         } catch (e) { console.error('Gagal memuat laporan:', e); }
     }
@@ -1122,7 +1122,7 @@ body { font-size: 16px; }
 })();
 
 // ==========================================================================
-// BAGIAN 4 — CBT MODEL UJIAN (SATU SOAL PER HALAMAN) + HASIL TERSIMPAN + PROGRES + GOOGLE DRIVE
+// BAGIAN 4 â€” CBT MODEL UJIAN (SATU SOAL PER HALAMAN) + HASIL TERSIMPAN + PROGRES + GOOGLE DRIVE
 // ==========================================================================
 (function () {
     const $ = id => document.getElementById(id);
@@ -1199,13 +1199,13 @@ body { font-size: 16px; }
         return a.length ? a[a.length - 1].skor : null;
     }
     function apresiasi(skor, prev) {
-        let ico = '🌱', t = 'Terus berlatih!', m = 'Setiap latihan membuatmu lebih siap. Baca pembahasan soal yang salah, lalu coba lagi.';
-        if (skor >= 85) { ico = '🏆'; t = 'Luar biasa!'; m = 'Pemahamanmu sangat baik. Pertahankan, dan bantu temanmu yang masih belajar.'; }
-        else if (skor >= 70) { ico = '👏'; t = 'Bagus sekali!'; m = 'Kamu sudah menguasai sebagian besar materi. Sedikit lagi menuju sempurna.'; }
-        else if (skor >= 50) { ico = '💪'; t = 'Sudah di jalur yang benar!'; m = 'Fokus pada topik yang masih sering salah di rekomendasi belajar.'; }
+        let ico = 'ðŸŒ±', t = 'Terus berlatih!', m = 'Setiap latihan membuatmu lebih siap. Baca pembahasan soal yang salah, lalu coba lagi.';
+        if (skor >= 85) { ico = 'ðŸ†'; t = 'Luar biasa!'; m = 'Pemahamanmu sangat baik. Pertahankan, dan bantu temanmu yang masih belajar.'; }
+        else if (skor >= 70) { ico = 'ðŸ‘'; t = 'Bagus sekali!'; m = 'Kamu sudah menguasai sebagian besar materi. Sedikit lagi menuju sempurna.'; }
+        else if (skor >= 50) { ico = 'ðŸ’ª'; t = 'Sudah di jalur yang benar!'; m = 'Fokus pada topik yang masih sering salah di rekomendasi belajar.'; }
         let cmp = '';
-        if (prev === null) cmp = '🎯 Ini pengerjaan pertamamu, jadikan patokan untuk berikutnya';
-        else if (prev !== undefined) { const d = skor - prev; cmp = d > 0 ? `📈 Naik ${d} poin dari pengerjaan sebelumnya` : d < 0 ? `📉 Turun ${-d} poin dari pengerjaan sebelumnya` : '➖ Sama dengan pengerjaan sebelumnya'; }
+        if (prev === null) cmp = 'ðŸŽ¯ Ini pengerjaan pertamamu, jadikan patokan untuk berikutnya';
+        else if (prev !== undefined) { const d = skor - prev; cmp = d > 0 ? `ðŸ“ˆ Naik ${d} poin dari pengerjaan sebelumnya` : d < 0 ? `ðŸ“‰ Turun ${-d} poin dari pengerjaan sebelumnya` : 'âž– Sama dengan pengerjaan sebelumnya'; }
         return `<div class="apres"><div class="big">${ico}</div><h4>${t}</h4><p>${m}</p>${cmp ? `<span class="cmp">${cmp}</span>` : ''}</div>`;
     }
 
@@ -1236,7 +1236,7 @@ body { font-size: 16px; }
         if (!cbt || cbt.mode !== 'exam') return;
         const rem = Math.max(0, Math.ceil((cbt.endAt - Date.now()) / 1000));
         cbtTimeInSeconds = rem; $('cbt-timer').textContent = cbtFormatTime(rem);
-        if (rem <= 0) { clearInterval(timer); timer = null; alert('⏰ Waktu habis! Jawaban dikumpulkan otomatis.'); finish(); }
+        if (rem <= 0) { clearInterval(timer); timer = null; alert('â° Waktu habis! Jawaban dikumpulkan otomatis.'); finish(); }
     }
 
     function renderCbt() {
@@ -1251,7 +1251,7 @@ body { font-size: 16px; }
         let fb = '';
         if (reveal) {
             const ok = ans === q.answer;
-            const head = ans === undefined ? '⚪ <strong>Tidak dijawab.</strong>' : ok ? '✅ <strong>Benar!</strong>' : '❌ <strong>Salah.</strong>';
+            const head = ans === undefined ? 'âšª <strong>Tidak dijawab.</strong>' : ok ? 'âœ… <strong>Benar!</strong>' : 'âŒ <strong>Salah.</strong>';
             fb = `<div class="cbt-feedback ${ok ? 'feedback-success' : 'feedback-danger'}" style="display:block;">${head}${ok ? '' : ` Jawaban benar: <strong>${esc(q.answer)}</strong>`}${rv && q.topic ? `<br><small>Topik: ${esc(q.topic)}</small>` : ''}<br><br><em>Pembahasan:</em> ${esc(cleanText(q.explanation || 'Belum ada pembahasan untuk soal ini.'))}</div>`;
         }
         const img = q.image ? `<div class="cbt-image-container"><img src="${esc(q.image)}" class="cbt-image" alt="Ilustrasi soal" referrerpolicy="no-referrer" onerror="this.style.display='none'"><small style="display:block;color:var(--text-muted);margin-top:6px;font-size:11px;">${esc(q.image_credit || '')}</small></div>` : '';
@@ -1269,18 +1269,18 @@ body { font-size: 16px; }
             : pr ? sw('var(--bg-card)', 'Belum') + sw('#10b981', 'Benar') + sw('#ef4444', 'Salah') + sw('var(--warning)', 'Ragu')
                 : sw('var(--bg-card)', 'Belum dikerjakan') + sw('var(--primary)', 'Sudah dijawab') + sw('var(--warning)', 'Ragu-ragu');
         const stats = rv ? `Review: ${Object.keys(c.ans).filter(id => { const x = c.qs.find(y => String(y.id) === id); return x && c.ans[id] === x.answer; }).length} benar dari ${n} soal`
-            : `Terjawab <strong>${answered}</strong> · Ragu <strong>${flagged}</strong> · Belum <strong>${n - answered}</strong>`;
-        const acts = rv ? '<button class="btn btn-primary" data-act="back">← Kembali ke laporan</button>'
-            : `<button class="btn btn-outline" data-act="blank">⏭ Ke soal belum dijawab</button><button class="btn btn-primary" data-act="submit">${c.mode === 'exam' ? '📤 Kumpulkan Jawaban' : '✅ Selesai Latihan'}</button>`;
+            : `Terjawab <strong>${answered}</strong> Â· Ragu <strong>${flagged}</strong> Â· Belum <strong>${n - answered}</strong>`;
+        const acts = rv ? '<button class="btn btn-primary" data-act="back">â† Kembali ke laporan</button>'
+            : `<button class="btn btn-outline" data-act="blank">â­ Ke soal belum dijawab</button><button class="btn btn-primary" data-act="submit">${c.mode === 'exam' ? 'ðŸ“¤ Kumpulkan Jawaban' : 'âœ… Selesai Latihan'}</button>`;
 
         $('cbt-question-container').innerHTML = `
         <div class="cbtx">
           <div class="cbtx-main">
             <div class="cbtx-head">
-              <span class="cbtx-title">${rv ? '📖 Review · ' : ''}Soal ${c.idx + 1} dari ${n}</span>
+              <span class="cbtx-title">${rv ? 'ðŸ“– Review Â· ' : ''}Soal ${c.idx + 1} dari ${n}</span>
               <span style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button class="btn btn-outline btn-sm cx-toggle" data-act="side">📋 Daftar soal</button>
-                ${rv ? '' : `<button class="btn btn-outline btn-sm" data-act="flag">${c.flag[q.id] ? '🚩 Ragu-ragu (klik untuk batal)' : '🏳️ Tandai ragu-ragu'}</button>`}
+                <button class="btn btn-outline btn-sm cx-toggle" data-act="side">ðŸ“‹ Daftar soal</button>
+                ${rv ? '' : `<button class="btn btn-outline btn-sm" data-act="flag">${c.flag[q.id] ? 'ðŸš© Ragu-ragu (klik untuk batal)' : 'ðŸ³ï¸ Tandai ragu-ragu'}</button>`}
               </span>
             </div>
             <div class="q-text">${q.text}</div>
@@ -1288,8 +1288,8 @@ body { font-size: 16px; }
             <ul class="options">${opts}</ul>
             ${fb}
             <div class="cbtx-nav">
-              <button class="btn btn-outline" data-act="prev"${c.idx === 0 ? ' disabled' : ''}>◀ Sebelumnya</button>
-              <button class="btn btn-primary" data-act="next"${c.idx === n - 1 ? ' disabled' : ''}>Berikutnya ▶</button>
+              <button class="btn btn-outline" data-act="prev"${c.idx === 0 ? ' disabled' : ''}>â—€ Sebelumnya</button>
+              <button class="btn btn-primary" data-act="next"${c.idx === n - 1 ? ' disabled' : ''}>Berikutnya â–¶</button>
             </div>
           </div>
           <aside class="cbtx-side${c.side ? ' open' : ''}">
@@ -1321,7 +1321,7 @@ body { font-size: 16px; }
     function jumpBlank() {
         const n = cbt.qs.length;
         for (let k = 1; k <= n; k++) { const i = (cbt.idx + k) % n; if (cbt.ans[cbt.qs[i].id] === undefined) { go(i); return; } }
-        alert('Semua soal sudah dijawab 🎉');
+        alert('Semua soal sudah dijawab ðŸŽ‰');
     }
 
     $('cbt-question-container').addEventListener('click', e => {
@@ -1385,16 +1385,16 @@ body { font-size: 16px; }
         const topics = Object.entries(r.wrong).sort((a, b) => b[1] - a[1]);
         $('cbt-report-content').innerHTML = `
           ${apresiasi(r.skor, r.prev)}
-          <div class="report-score"><h4>Nilai Akhir</h4><div class="score-number">${r.skor}</div><small style="color:var(--text-muted);">Skala 0 - 100 · ${c.mode === 'exam' ? 'Mode CBT' : 'Mode Latihan'}</small></div>
+          <div class="report-score"><h4>Nilai Akhir</h4><div class="score-number">${r.skor}</div><small style="color:var(--text-muted);">Skala 0 - 100 Â· ${c.mode === 'exam' ? 'Mode CBT' : 'Mode Latihan'}</small></div>
           <div class="report-row"><span>Jawaban Benar</span><span class="report-value report-correct">${r.benar} Soal</span></div>
           <div class="report-row"><span>Jawaban Salah</span><span class="report-value report-wrong">${r.salah} Soal</span></div>
           <div class="report-row"><span>Tidak Dijawab</span><span class="report-value">${r.kosong} Soal</span></div>
           <div class="report-row"><span>Waktu Pengerjaan</span><span class="report-value">${cbtFormatTime(r.durasi)}</span></div>
-          ${topics.length ? `<div class="report-recommendation"><h5>📚 Rekomendasi Belajar (Fokus Tingkatkan):</h5><ul>${topics.map(([t, k]) => `<li><strong>${esc(t)}</strong> (${k} soal)</li>`).join('')}</ul></div>`
-                : `<div class="report-recommendation" style="background:#ecfdf5;border-color:#10b981;"><h5 style="color:#065f46;">🌟 Luar Biasa!</h5><ul style="color:#065f46;"><li>Semua jawabanmu benar.</li></ul></div>`}
+          ${topics.length ? `<div class="report-recommendation"><h5>ðŸ“š Rekomendasi Belajar (Fokus Tingkatkan):</h5><ul>${topics.map(([t, k]) => `<li><strong>${esc(t)}</strong> (${k} soal)</li>`).join('')}</ul></div>`
+                : `<div class="report-recommendation" style="background:#ecfdf5;border-color:#10b981;"><h5 style="color:#065f46;">ðŸŒŸ Luar Biasa!</h5><ul style="color:#065f46;"><li>Semua jawabanmu benar.</li></ul></div>`}
           <div class="lap-acts" style="margin-top:18px;justify-content:center;">
-            <button class="btn btn-primary" data-rep="review">📖 Review &amp; Pembahasan</button>
-            <button class="btn btn-outline" data-rep="progres">📈 Lihat Progres</button>
+            <button class="btn btn-primary" data-rep="review">ðŸ“– Review &amp; Pembahasan</button>
+            <button class="btn btn-outline" data-rep="progres">ðŸ“ˆ Lihat Progres</button>
           </div>
           ${isGuest() ? '<p style="font-size:12px;color:var(--text-muted);margin-top:12px;text-align:center;">Hasil ini tersimpan otomatis di akunmu.</p>' : ''}`;
         $('cbt-active-area').style.display = 'none'; $('cbt-result-card').style.display = 'block';
@@ -1432,7 +1432,7 @@ body { font-size: 16px; }
     $('tab-lapor').insertAdjacentHTML('afterend', `
     <div id="tab-progres" class="tab-content" style="display:none;">
       <div class="card">
-        <div class="card-header flex-between"><h3 class="card-title">📈 Progres Belajar Saya</h3>
+        <div class="card-header flex-between"><h3 class="card-title">ðŸ“ˆ Progres Belajar Saya</h3>
           <select id="prog-filter" class="modern-input" style="width:auto;margin:0;"><option value="all">Semua pengerjaan</option><option value="cbt-ujian">CBT (Ujian)</option><option value="cbt-latihan">CBT (Latihan)</option><option value="isian">Soal Isian</option></select></div>
         <div id="progres-body"></div>
       </div>
@@ -1453,13 +1453,13 @@ body { font-size: 16px; }
         if (!isGuest()) { el.innerHTML = '<p style="color:var(--text-muted);">Halaman ini menampilkan progres belajar mahasiswa setelah mengerjakan soal.</p>'; return; }
         const f = $('prog-filter').value;
         const arr = myResults.filter(r => f === 'all' || r.jenis === f).sort((a, b) => a.t - b.t);
-        if (!arr.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">🌱</div><h3>Belum ada hasil</h3><p>Kerjakan CBT atau Soal Isian. Nilaimu otomatis tersimpan di sini supaya kamu bisa melihat peningkatannya.</p></div>'; return; }
+        if (!arr.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">ðŸŒ±</div><h3>Belum ada hasil</h3><p>Kerjakan CBT atau Soal Isian. Nilaimu otomatis tersimpan di sini supaya kamu bisa melihat peningkatannya.</p></div>'; return; }
         const avg = a => a.length ? Math.round(a.reduce((s, r) => s + r.skor, 0) / a.length) : 0;
         const last = arr[arr.length - 1], best = Math.max(...arr.map(r => r.skor));
         let trend = 'Kerjakan satu sesi lagi untuk melihat perbandingannya.';
         if (arr.length >= 2) {
             const d = last.skor - arr[arr.length - 2].skor;
-            trend = d > 0 ? `📈 Nilai terakhirmu naik ${d} poin dari sebelumnya. Pertahankan!` : d < 0 ? `📉 Nilai terakhirmu turun ${-d} poin dari sebelumnya. Cek pembahasan soal yang salah.` : '➖ Nilai terakhirmu sama dengan sebelumnya.';
+            trend = d > 0 ? `ðŸ“ˆ Nilai terakhirmu naik ${d} poin dari sebelumnya. Pertahankan!` : d < 0 ? `ðŸ“‰ Nilai terakhirmu turun ${-d} poin dari sebelumnya. Cek pembahasan soal yang salah.` : 'âž– Nilai terakhirmu sama dengan sebelumnya.';
             if (arr.length >= 4) { const a1 = avg(arr.slice(-3)), a0 = avg(arr.slice(Math.max(0, arr.length - 6), arr.length - 3)); const dd = a1 - a0; trend += ` Rata-rata 3 terakhir ${dd >= 0 ? 'naik' : 'turun'} ${Math.abs(dd)} poin dibanding 3 sebelumnya.`; }
         }
         const wrongAgg = {}; arr.forEach(r => Object.entries(r.wrong || {}).forEach(([t, k]) => { wrongAgg[t] = (wrongAgg[t] || 0) + k; }));
@@ -1473,7 +1473,7 @@ body { font-size: 16px; }
           </div>
           <div class="prog-trend">${trend}</div>
           ${chart(arr)}
-          ${weak.length ? `<div class="report-recommendation" style="margin-bottom:16px;"><h5>🎯 Topik yang perlu diperkuat</h5><ul>${weak.map(([t, k]) => `<li><strong>${esc(t)}</strong> (${k} kali salah)</li>`).join('')}</ul></div>` : ''}
+          ${weak.length ? `<div class="report-recommendation" style="margin-bottom:16px;"><h5>ðŸŽ¯ Topik yang perlu diperkuat</h5><ul>${weak.map(([t, k]) => `<li><strong>${esc(t)}</strong> (${k} kali salah)</li>`).join('')}</ul></div>` : ''}
           <div class="table-responsive"><table class="modern-table"><thead><tr><th>Tanggal</th><th>Jenis</th><th>Nilai</th><th>Benar</th><th>Waktu</th></tr></thead><tbody>
             ${arr.slice().reverse().slice(0, 10).map(r => `<tr><td data-label="Tanggal">${esc(fmtTgl(r.t))}</td><td data-label="Jenis">${esc(JENIS[r.jenis] || r.jenis)}</td><td data-label="Nilai"><strong>${r.skor}</strong></td><td data-label="Benar">${r.benar}/${r.total}</td><td data-label="Waktu">${r.durasi ? cbtFormatTime(r.durasi) : '-'}</td></tr>`).join('')}
           </tbody></table></div>`;
@@ -1502,7 +1502,7 @@ body { font-size: 16px; }
         $('preview-title').textContent = 'Pratinjau berkas';
         let bar = $('preview-links');
         if (!bar) { bar = document.createElement('div'); bar.id = 'preview-links'; bar.style.cssText = 'padding:8px 20px;display:flex;gap:16px;font-size:13px;border-bottom:1px solid var(--border-color);'; document.querySelector('#preview-modal .modal-header').after(bar); }
-        bar.innerHTML = `<a href="${esc(info.open)}" target="_blank" rel="noopener">↗ Buka di Drive</a>${info.download ? `<a href="${esc(info.download)}" target="_blank" rel="noopener">⬇ Unduh</a>` : ''}`;
+        bar.innerHTML = `<a href="${esc(info.open)}" target="_blank" rel="noopener">â†— Buka di Drive</a>${info.download ? `<a href="${esc(info.download)}" target="_blank" rel="noopener">â¬‡ Unduh</a>` : ''}`;
     }
     function wireDrive() {
         document.querySelectorAll('#main-app a[href*="google.com"], #main-app a[href*="youtu"]').forEach(a => {
@@ -1524,13 +1524,13 @@ body { font-size: 16px; }
     ['t-link-manual', 'lab-link-manual', 'skills-link-manual', 'tut-link-manual', 'm-link-manual'].forEach(id => {
         const el = $(id); if (!el) return;
         el.placeholder = 'Link Google Drive / URL lainnya';
-        el.insertAdjacentHTML('afterend', '<small style="display:block;color:var(--text-muted);margin:-4px 0 10px;">💡 File besar? Upload ke Google Drive, bagikan "Siapa saja yang memiliki link" (Pelihat), lalu tempel link-nya di sini. Lihat Bantuan, Panduan, Panduan Admin.</small>');
+        el.insertAdjacentHTML('afterend', '<small style="display:block;color:var(--text-muted);margin:-4px 0 10px;">ðŸ’¡ File besar? Upload ke Google Drive, bagikan "Siapa saja yang memiliki link" (Pelihat), lalu tempel link-nya di sini. Lihat Bantuan, Panduan, Panduan Admin.</small>');
     });
     window.renderAll();
 })();
 
 // ==========================================================================
-// BAGIAN 5 — JADWAL, FOLDER & FILTER MATERI, PROGRES MAHASISWA UNTUK ADMIN
+// BAGIAN 5 â€” JADWAL, FOLDER & FILTER MATERI, PROGRES MAHASISWA UNTUK ADMIN
 // ==========================================================================
 (function () {
     const $ = id => document.getElementById(id);
@@ -1578,12 +1578,12 @@ body { font-size: 16px; }
 
     const jCard = $('tab-jadwal').querySelector('.card');
     jCard.querySelector('.table-responsive').style.display = 'none';
-    jCard.querySelector('.card-title').textContent = '📅 Jadwal Kuliah';
+    jCard.querySelector('.card-title').textContent = 'ðŸ“… Jadwal Kuliah';
     jCard.querySelector('.card-header').insertAdjacentHTML('afterend', `
       <div class="chips" id="jd-chips"><button class="chip active" data-v="dekat">Hari ini &amp; besok</button><button class="chip" data-v="minggu">Minggu ini</button><button class="chip" data-v="semua">Semua</button></div>
-      <input type="search" id="jd-search" class="modern-input" placeholder="🔎 Cari kegiatan, dosen, atau hari (contoh: Tutor, Anatomi, Selasa)">
+      <input type="search" id="jd-search" class="modern-input" placeholder="ðŸ”Ž Cari kegiatan, dosen, atau hari (contoh: Tutor, Anatomi, Selasa)">
       <div id="jd-view"></div>
-      <details class="admin-form-box" style="margin-top:20px;"><summary style="cursor:pointer;font-weight:700;">⚙️ Admin: ganti seluruh jadwal (tempel JSON)</summary>
+      <details class="admin-form-box" style="margin-top:20px;"><summary style="cursor:pointer;font-weight:700;">âš™ï¸ Admin: ganti seluruh jadwal (tempel JSON)</summary>
         <p style="font-size:13px;color:var(--text-muted);margin:8px 0;">Tempel isi JSON jadwal. Format array langsung atau {"jadwal": [...]} sama-sama diterima. Ini menggantikan jadwal yang ada.</p>
         <textarea id="jd-json" class="modern-input" style="height:140px;font-family:monospace;font-size:12px;" placeholder='{"jadwal":[{"tgl":"Senin, 21-Sep-26","sesi":[{"jam":"07.50-09.30","kegiatan":"-"}]}]}'></textarea>
         <button class="btn btn-primary" id="jd-save">Simpan jadwal ke database</button></details>`);
@@ -1619,7 +1619,7 @@ body { font-size: 16px; }
         if (!Array.isArray(arr) || !arr.length || arr.some(j => !j || !j.tgl || !Array.isArray(j.sesi))) { alert('Format salah. Tiap hari harus punya "tgl" dan daftar "sesi".'); return; }
         if (!confirm(`Ganti seluruh jadwal dengan ${arr.length} hari dari JSON ini?`)) return;
         dbData.jadwalCustom = arr;
-        if (await saveCategoryData('jadwal')) { $('jd-json').value = ''; alert('Jadwal tersimpan.'); postUpdate('jadwal', '🗓️ Jadwal diperbarui', 'Jadwal kuliah telah diperbarui. Cek menu Kuliah › Jadwal.', { key: 'jadwal' }); }
+        if (await saveCategoryData('jadwal')) { $('jd-json').value = ''; alert('Jadwal tersimpan.'); postUpdate('jadwal', 'ðŸ—“ï¸ Jadwal diperbarui', 'Jadwal kuliah telah diperbarui. Cek menu Kuliah â€º Jadwal.', { key: 'jadwal' }); }
     });
 
     // ======================= FILTER TUGAS =======================
@@ -1641,8 +1641,8 @@ body { font-size: 16px; }
     $('tab-lapor').insertAdjacentHTML('afterend', `
     <div id="tab-progres-admin" class="tab-content" style="display:none;">
       <div class="card">
-        <div class="card-header flex-between"><h3 class="card-title">📊 Progres Mahasiswa</h3><button class="btn btn-outline btn-sm" id="pa-refresh">🔄 Muat ulang</button></div>
-        <div class="fv-bar"><input type="search" id="pa-search" class="modern-input" placeholder="🔎 Cari nama atau NIM...">
+        <div class="card-header flex-between"><h3 class="card-title">ðŸ“Š Progres Mahasiswa</h3><button class="btn btn-outline btn-sm" id="pa-refresh">ðŸ”„ Muat ulang</button></div>
+        <div class="fv-bar"><input type="search" id="pa-search" class="modern-input" placeholder="ðŸ”Ž Cari nama atau NIM...">
           <select id="pa-jenis" class="modern-input"><option value="all">Semua jenis</option><option value="cbt-ujian">CBT (Ujian)</option><option value="cbt-latihan">CBT (Latihan)</option><option value="isian">Soal Isian</option></select></div>
         <div id="pa-body"></div>
         <div id="pa-detail"></div>
@@ -1682,7 +1682,7 @@ body { font-size: 16px; }
           <div class="table-responsive"><table class="modern-table"><thead><tr><th>Nama</th><th>NIM</th><th>Pengerjaan</th><th>Rata-rata</th><th>Terbaik</th><th>Terakhir</th><th>Tren</th><th>Aksi</th></tr></thead><tbody>
           ${rows.map(x => {
             const a = x.arr, last = a[a.length - 1]; let tr = '-';
-            if (a.length >= 2) { const d = last.skor - a[a.length - 2].skor; tr = d > 0 ? `<span class="pa-trend-up">▲ ${d}</span>` : d < 0 ? `<span class="pa-trend-down">▼ ${-d}</span>` : '➖'; }
+            if (a.length >= 2) { const d = last.skor - a[a.length - 2].skor; tr = d > 0 ? `<span class="pa-trend-up">â–² ${d}</span>` : d < 0 ? `<span class="pa-trend-down">â–¼ ${-d}</span>` : 'âž–'; }
             return `<tr><td data-label="Nama"><strong>${esc(x.name)}</strong></td><td data-label="NIM">${esc(x.n)}</td><td data-label="Pengerjaan">${a.length}</td><td data-label="Rata-rata">${a.length ? avg(a) : '-'}</td><td data-label="Terbaik">${a.length ? Math.max(...a.map(r => r.skor)) : '-'}</td><td data-label="Terakhir">${last ? `${last.skor} <small>(${esc(fmtTgl(last.t))})</small>` : '-'}</td><td data-label="Tren">${tr}</td><td data-label="Aksi"><button class="btn btn-outline btn-sm" data-det="${esc(x.n)}">Detail</button></td></tr>`;
         }).join('')}</tbody></table></div>`;
         renderDetail();
@@ -1730,7 +1730,7 @@ body { font-size: 16px; }
 })();
 
 // ==========================================================================
-// BAGIAN 5B — PERPUSTAKAAN MATERI (filter Blok · Sumber · Mata kuliah), PRATINJAU FILE,
+// BAGIAN 5B â€” PERPUSTAKAAN MATERI (filter Blok Â· Sumber Â· Mata kuliah), PRATINJAU FILE,
 //             VIDEO YOUTUBE + RANGKUMAN OTOMATIS
 //   Dipakai oleh: Materi, Lab, Skills Lab, Tutorial. Tiap halaman punya filternya sendiri.
 // ==========================================================================
@@ -1770,10 +1770,10 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
     const fmtT = s => { s = Math.max(0, Math.floor(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); };
 
     const KIND = {
-        youtube: { ico: '▶️', label: 'Video YouTube', g: 'video' }, video: { ico: '🎬', label: 'Video', g: 'video' }, drivevideo: { ico: '🎬', label: 'Video (Drive)', g: 'video' },
-        audio: { ico: '🎧', label: 'Audio', g: 'lain' }, pdf: { ico: '📕', label: 'PDF', g: 'pdf' }, office: { ico: '📊', label: 'Slide / dokumen', g: 'dok' },
-        gdoc: { ico: '📝', label: 'Google Docs', g: 'dok' }, drive: { ico: '📄', label: 'Berkas Drive', g: 'dok' }, folder: { ico: '📁', label: 'Folder Drive', g: 'lain' },
-        image: { ico: '🖼️', label: 'Gambar', g: 'gambar' }, link: { ico: '🔗', label: 'Tautan', g: 'lain' }, none: { ico: '📄', label: 'Tanpa berkas', g: 'lain' }
+        youtube: { ico: 'â–¶ï¸', label: 'Video YouTube', g: 'video' }, video: { ico: 'ðŸŽ¬', label: 'Video', g: 'video' }, drivevideo: { ico: 'ðŸŽ¬', label: 'Video (Drive)', g: 'video' },
+        audio: { ico: 'ðŸŽ§', label: 'Audio', g: 'lain' }, pdf: { ico: 'ðŸ“•', label: 'PDF', g: 'pdf' }, office: { ico: 'ðŸ“Š', label: 'Slide / dokumen', g: 'dok' },
+        gdoc: { ico: 'ðŸ“', label: 'Google Docs', g: 'dok' }, drive: { ico: 'ðŸ“„', label: 'Berkas Drive', g: 'dok' }, folder: { ico: 'ðŸ“', label: 'Folder Drive', g: 'lain' },
+        image: { ico: 'ðŸ–¼ï¸', label: 'Gambar', g: 'gambar' }, link: { ico: 'ðŸ”—', label: 'Tautan', g: 'lain' }, none: { ico: 'ðŸ“„', label: 'Tanpa berkas', g: 'lain' }
     };
     const JENIS = [['', 'Semua jenis'], ['video', 'Video'], ['pdf', 'PDF'], ['dok', 'Slide & dokumen'], ['gambar', 'Gambar'], ['lain', 'Lainnya']];
 
@@ -1891,8 +1891,8 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         const host = c.host(); if (!host || c.root) return;
         const root = document.createElement('div'); root.className = 'lb'; root.id = 'lb-' + c.id;
         root.innerHTML = `
-          <div class="lb-top"><input type="search" class="modern-input fd-search" placeholder="🔎 Cari judul, blok, sumber, mata kuliah..." aria-label="Cari">
-            <div class="fd-views" role="group" aria-label="Tampilan"><button type="button" class="fd-vbtn" data-view="grid" title="Kartu" aria-label="Tampilan kartu">▦</button><button type="button" class="fd-vbtn" data-view="list" title="Daftar" aria-label="Tampilan daftar">☰</button></div></div>
+          <div class="lb-top"><input type="search" class="modern-input fd-search" placeholder="ðŸ”Ž Cari judul, blok, sumber, mata kuliah..." aria-label="Cari">
+            <div class="fd-views" role="group" aria-label="Tampilan"><button type="button" class="fd-vbtn" data-view="grid" title="Kartu" aria-label="Tampilan kartu">â–¦</button><button type="button" class="fd-vbtn" data-view="list" title="Daftar" aria-label="Tampilan daftar">â˜°</button></div></div>
           <div class="lb-filters">
             <label class="lb-f"><span>Blok</span><select class="modern-input" data-f="blok"></select></label>
             <label class="lb-f"><span>Sumber</span><select class="modern-input" data-f="sumber"></select></label>
@@ -1900,7 +1900,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
             <label class="lb-f"><span>Jenis</span><select class="modern-input" data-f="jenis">${JENIS.map(j => `<option value="${j[0]}">${j[1]}</option>`).join('')}</select></label>
             <label class="lb-f"><span>Urutkan</span><select class="modern-input" data-f="sort"><option value="baru">Terbaru</option><option value="nama">Judul A-Z</option><option value="blok">Blok</option></select></label>
           </div>
-          <div class="lb-bar"><span class="lb-count"></span><button type="button" class="chip" data-fav>⭐ Favorit saya</button><button type="button" class="chip" data-reset>Atur ulang filter</button><button type="button" class="btn btn-primary btn-sm" data-add style="display:none;">➕ Tambah ${esc(c.label.toLowerCase())}</button></div>
+          <div class="lb-bar"><span class="lb-count"></span><button type="button" class="chip" data-fav>â­ Favorit saya</button><button type="button" class="chip" data-reset>Atur ulang filter</button><button type="button" class="btn btn-primary btn-sm" data-add style="display:none;">âž• Tambah ${esc(c.label.toLowerCase())}</button></div>
           <div class="lb-content"></div>`;
         host.style.display = 'none'; host.after(root); c.root = root; wire(c);
     }
@@ -1953,17 +1953,17 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
 
         const card = x => {
             const k = KIND[x.kind], yt = x.kind === 'youtube' ? a9YtId(x.link) : null, on = fv.includes(x.key);
-            const thumb = yt ? `<img src="https://i.ytimg.com/vi/${yt}/hqdefault.jpg" alt="" loading="lazy"><span class="lb-play">▶</span>` : (k.g === 'video' ? '<span class="lb-play">▶</span>' : k.ico);
+            const thumb = yt ? `<img src="https://i.ytimg.com/vi/${yt}/hqdefault.jpg" alt="" loading="lazy"><span class="lb-play">â–¶</span>` : (k.g === 'video' ? '<span class="lb-play">â–¶</span>' : k.ico);
             return `<div class="lb-card" data-k="${esc(x.key)}" role="button" tabindex="0" aria-label="Buka ${esc(x.title)}">
               <div class="lb-thumb k-${x.kind}">${thumb}<span class="lb-kind">${esc(k.label)}</span></div>
-              <button type="button" class="lb-fav${on ? ' on' : ''}" data-fav-k="${esc(x.key)}" aria-label="${on ? 'Hapus dari favorit' : 'Tambah ke favorit'}">${on ? '★' : '☆'}</button>${admin ? `<button type="button" class="lb-more" data-more-k="${esc(x.key)}" aria-label="Menu">⋯</button>` : ''}
+              <button type="button" class="lb-fav${on ? ' on' : ''}" data-fav-k="${esc(x.key)}" aria-label="${on ? 'Hapus dari favorit' : 'Tambah ke favorit'}">${on ? 'â˜…' : 'â˜†'}</button>${admin ? `<button type="button" class="lb-more" data-more-k="${esc(x.key)}" aria-label="Menu">â‹¯</button>` : ''}
               <div class="lb-body"><div class="lb-title">${esc(x.title)}</div>${x.matkul ? `<div class="lb-mk">${esc(x.matkul)}</div>` : ''}
                 <div class="lb-tags">${x.blok ? `<span class="lb-tag">${esc(x.blok)}</span>` : ''}${x.sumber ? `<span class="lb-tag s">${esc(x.sumber)}</span>` : ''}</div></div></div>`;
         };
         let html = '';
         if (!filtered) {
             const rec = recents().map(k => all.find(x => x.key === k)).filter(Boolean).slice(0, 4);
-            if (rec.length) html += `<div class="lb-sec">🕘 Terakhir dibuka</div><div class="lb-grid">${rec.map(card).join('')}</div><div class="lb-sec">Semua ${esc(c.label.toLowerCase())}</div>`;
+            if (rec.length) html += `<div class="lb-sec">ðŸ•˜ Terakhir dibuka</div><div class="lb-grid">${rec.map(card).join('')}</div><div class="lb-sec">Semua ${esc(c.label.toLowerCase())}</div>`;
         }
         html += `<div class="lb-grid">${shown.length ? shown.map(card).join('') : `<div class="lb-empty">${all.length ? 'Tidak ada yang cocok dengan filter ini.' : 'Belum ada berkas.'}${admin && !all.length ? '<br><small>Klik tombol Tambah di atas untuk mulai.</small>' : ''}</div>`}</div>`;
         if (c.last !== html) { c.last = html; root.querySelector('.lb-content').innerHTML = html; }
@@ -1978,7 +1978,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
     function openMenu(c, x, px, py) {
         closeMenu();
         const el = document.createElement('div'); el.id = 'fd-menu';
-        el.innerHTML = '<button type="button" data-m="open">↗ Buka</button><button type="button" data-m="edit">✏️ Ubah detail</button><button type="button" data-m="del" class="danger">🗑️ Hapus</button>';
+        el.innerHTML = '<button type="button" data-m="open">â†— Buka</button><button type="button" data-m="edit">âœï¸ Ubah detail</button><button type="button" data-m="del" class="danger">ðŸ—‘ï¸ Hapus</button>';
         document.body.appendChild(el);
         el.style.left = Math.max(8, Math.min(px, window.innerWidth - el.offsetWidth - 8)) + 'px';
         el.style.top = Math.max(8, Math.min(py, window.innerHeight - el.offsetHeight - 8)) + 'px';
@@ -2013,7 +2013,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         if (x) Object.assign(x.it, fields);
         else (dbData[c.cat] = dbData[c.cat] || []).push(Object.assign({ id: Date.now(), ket: '' }, fields));
         if (!(await saveCategoryData(c.cat))) return false;
-        if (!x) postUpdate('file', '📚 ' + c.label + ' baru: ' + fields[c.title], [fields.matkul, fields.blok].filter(Boolean).join(' · ') || 'Berkas baru ditambahkan.', {
+        if (!x) postUpdate('file', 'ðŸ“š ' + c.label + ' baru: ' + fields[c.title], [fields.matkul, fields.blok].filter(Boolean).join(' Â· ') || 'Berkas baru ditambahkan.', {
             key: 'lib:' + c.cat, merge: n => n + ' berkas baru ditambahkan ke ' + c.label + '.'
         });
         alert(x ? 'Perubahan disimpan.' : 'Berkas ditambahkan.');
@@ -2072,10 +2072,10 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         if (V) return V;
         V = document.createElement('div'); V.className = 'vw-ov'; V.hidden = true;
         V.innerHTML = `<div class="vw" role="dialog" aria-modal="true" aria-label="Pratinjau berkas">
-          <div class="vw-h"><button type="button" class="vw-x" data-v="close" aria-label="Tutup">✕</button><div class="vw-t"><b id="vw-title"></b><div class="vw-chips" id="vw-chips"></div></div><span class="vw-pos" id="vw-pos"></span></div>
+          <div class="vw-h"><button type="button" class="vw-x" data-v="close" aria-label="Tutup">âœ•</button><div class="vw-t"><b id="vw-title"></b><div class="vw-chips" id="vw-chips"></div></div><span class="vw-pos" id="vw-pos"></span></div>
           <div class="vw-bar" id="vw-bar"></div>
           <div class="vw-body"><div class="vw-stage" id="vw-stage"></div><div class="vw-help" id="vw-help"></div><div class="vw-extra" id="vw-extra"></div></div>
-          <div class="vw-nav"><button type="button" class="btn btn-outline" data-v="prev">◀ Sebelumnya</button><button type="button" class="btn btn-outline" data-v="next">Berikutnya ▶</button></div></div>`;
+          <div class="vw-nav"><button type="button" class="btn btn-outline" data-v="prev">â—€ Sebelumnya</button><button type="button" class="btn btn-outline" data-v="next">Berikutnya â–¶</button></div></div>`;
         document.body.appendChild(V);
         V.addEventListener('click', e => {
             if (e.target === V || e.target.closest('[data-v="close"]')) return closeViewer();
@@ -2118,14 +2118,14 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
     }
     function barBtns(x) {
         const dr = driveInfo(x.link || ''), fav = favs().includes(x.key);
-        const b = [`<button type="button" class="btn btn-outline btn-sm" data-vb="fav">${fav ? '★ Favorit' : '☆ Favorit'}</button>`];
+        const b = [`<button type="button" class="btn btn-outline btn-sm" data-vb="fav">${fav ? 'â˜… Favorit' : 'â˜† Favorit'}</button>`];
         if (x.link) {
-            b.push(`<a class="btn btn-outline btn-sm" href="${esc(dr ? dr.open : x.link)}" target="_blank" rel="noopener">↗ Buka di tab baru</a>`);
+            b.push(`<a class="btn btn-outline btn-sm" href="${esc(dr ? dr.open : x.link)}" target="_blank" rel="noopener">â†— Buka di tab baru</a>`);
             const dl = dr ? dr.dl : (['pdf', 'office', 'image', 'video', 'audio'].includes(x.kind) ? x.link : null);
-            if (dl) b.push(`<a class="btn btn-outline btn-sm" href="${esc(dl)}" target="_blank" rel="noopener">⬇ Unduh</a>`);
-            b.push('<button type="button" class="btn btn-outline btn-sm" data-vb="copy">🔗 Salin tautan</button>');
+            if (dl) b.push(`<a class="btn btn-outline btn-sm" href="${esc(dl)}" target="_blank" rel="noopener">â¬‡ Unduh</a>`);
+            b.push('<button type="button" class="btn btn-outline btn-sm" data-vb="copy">ðŸ”— Salin tautan</button>');
         }
-        b.push('<button type="button" class="btn btn-outline btn-sm" data-vb="full">⛶ Layar penuh</button>');
+        b.push('<button type="button" class="btn btn-outline btn-sm" data-vb="full">â›¶ Layar penuh</button>');
         return b.join('');
     }
     function show(i) {
@@ -2177,16 +2177,16 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
     }
     function sumHtml(s, canSeek) {
         const src = s.sumber === 'transkrip' ? 'dari transkrip video' : s.sumber === 'teks' ? 'dari teks yang ditempel' : 'dari judul & deskripsi';
-        return `<div class="sm-card"><div class="sm-h"><b>🤖 Rangkuman video</b><span class="sm-badge">dibuat AI · ${src}</span></div>
+        return `<div class="sm-card"><div class="sm-h"><b>ðŸ¤– Rangkuman video</b><span class="sm-badge">dibuat AI Â· ${src}</span></div>
           <p class="sm-ring">${esc(s.ringkasan)}</p>
           ${(s.poin || []).length ? `<h5>Poin penting</h5><ul class="sm-pts">${s.poin.map(p => `<li>${canSeek && p.t != null ? `<button type="button" class="sm-t" data-t="${+p.t}">${fmtT(+p.t)}</button>` : ''}<span>${esc(p.teks)}</span></li>`).join('')}</ul>` : ''}
           ${(s.istilah || []).length ? `<h5>Istilah penting</h5><div class="sm-dl">${s.istilah.map(t => `<div><b>${esc(t.kata)}</b>: ${esc(t.arti)}</div>`).join('')}</div>` : ''}
           ${(s.latihan || []).length ? `<h5>Cek pemahamanmu</h5><ol class="sm-q">${s.latihan.map(q => `<li>${esc(q)}</li>`).join('')}</ol>` : ''}
           <p class="sm-note">Rangkuman dibuat otomatis oleh AI dan bisa keliru. Cocokkan dengan materi resmi sebelum dipakai belajar.</p>
-          <div class="sm-acts"><button type="button" class="btn btn-outline btn-sm" data-sm="copy">📋 Salin rangkuman</button>${isAdmin() ? '<button type="button" class="btn btn-outline btn-sm" data-sm="redo">🔄 Buat ulang</button>' : ''}</div></div>`;
+          <div class="sm-acts"><button type="button" class="btn btn-outline btn-sm" data-sm="copy">ðŸ“‹ Salin rangkuman</button>${isAdmin() ? '<button type="button" class="btn btn-outline btn-sm" data-sm="redo">ðŸ”„ Buat ulang</button>' : ''}</div></div>`;
     }
     const sumText = s => [s.ringkasan, '', 'Poin penting:'].concat((s.poin || []).map(p => '- ' + (p.t != null ? '[' + fmtT(+p.t) + '] ' : '') + p.teks)).join('\n');
-    const skeleton = '<div class="sm-card"><div class="sm-h"><b>🤖 Rangkuman video</b><span class="sm-badge">sedang disusun</span></div><div class="sm-skel"><i></i><i></i><i></i></div><p class="sm-note">Menyusun rangkuman, biasanya 10 sampai 40 detik. Tonton videonya dulu, rangkuman muncul di sini.</p></div>';
+    const skeleton = '<div class="sm-card"><div class="sm-h"><b>ðŸ¤– Rangkuman video</b><span class="sm-badge">sedang disusun</span></div><div class="sm-skel"><i></i><i></i><i></i></div><p class="sm-note">Menyusun rangkuman, biasanya 10 sampai 40 detik. Tonton videonya dulu, rangkuman muncul di sini.</p></div>';
 
     async function summaryFor(x, box, tok) {
         const ref = refOf(x), yt = x.kind === 'youtube';
@@ -2206,7 +2206,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
                 lsSet('a9_sum_' + ref, s); if (tok === vTok) ready(s);
             } catch (e) {
                 console.error(e);
-                paint(`<div class="sm-card"><div class="sm-h"><b>🤖 Rangkuman video</b></div><p class="sm-ring">${esc(isAdmin() ? 'Rangkuman gagal dibuat: ' + (e.message || e) + '. Pastikan fungsi video-summary sudah di-deploy.' : 'Rangkuman belum tersedia untuk video ini.')}</p><div class="sm-acts"><button type="button" class="btn btn-outline btn-sm" data-sm="retry">Coba lagi</button></div></div>`);
+                paint(`<div class="sm-card"><div class="sm-h"><b>ðŸ¤– Rangkuman video</b></div><p class="sm-ring">${esc(isAdmin() ? 'Rangkuman gagal dibuat: ' + (e.message || e) + '. Pastikan fungsi video-summary sudah di-deploy.' : 'Rangkuman belum tersedia untuk video ini.')}</p><div class="sm-acts"><button type="button" class="btn btn-outline btn-sm" data-sm="retry">Coba lagi</button></div></div>`);
                 box.onclick = ev => { if (ev.target.closest('[data-sm="retry"]')) run(false); };
             }
         };
@@ -2215,8 +2215,8 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         if (yt) { run(false); return; }
         // video selain YouTube: tidak ada transkrip otomatis, jadi admin menempelkan transkrip/catatan
         if (!isAdmin()) { paint(''); return; }
-        paint(`<div class="sm-card"><div class="sm-h"><b>🤖 Rangkuman video</b></div><p class="sm-ring">Rangkuman otomatis penuh hanya untuk video YouTube yang punya subtitle. Untuk video ini, tempel transkrip atau catatan isi video, lalu AI akan merangkumnya untuk mahasiswa.</p>
-          <textarea id="sm-paste" class="modern-input" style="height:130px;" placeholder="Tempel transkrip atau catatan video di sini (minimal beberapa paragraf)"></textarea><div class="sm-acts"><button type="button" class="btn btn-primary btn-sm" data-sm="paste">✨ Buat rangkuman</button></div></div>`);
+        paint(`<div class="sm-card"><div class="sm-h"><b>ðŸ¤– Rangkuman video</b></div><p class="sm-ring">Rangkuman otomatis penuh hanya untuk video YouTube yang punya subtitle. Untuk video ini, tempel transkrip atau catatan isi video, lalu AI akan merangkumnya untuk mahasiswa.</p>
+          <textarea id="sm-paste" class="modern-input" style="height:130px;" placeholder="Tempel transkrip atau catatan video di sini (minimal beberapa paragraf)"></textarea><div class="sm-acts"><button type="button" class="btn btn-primary btn-sm" data-sm="paste">âœ¨ Buat rangkuman</button></div></div>`);
         box.onclick = async e => {
             if (!e.target.closest('[data-sm="paste"]')) return;
             const text = ($('sm-paste').value || '').trim(); if (text.length < 200) { alert('Teksnya terlalu pendek. Tempel minimal beberapa paragraf.'); return; }
@@ -2238,7 +2238,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
 })();
 
 // ==========================================================================
-// BAGIAN 6 — ADMIN & OSCE
+// BAGIAN 6 â€” ADMIN & OSCE
 //   1) UI & sub menu (responsif, bottom-bar di HP)
 //   2) Admin: edit jadwal (visual) + kelola folder/berkas
 //   3) Tugas & pengumuman lewat deadline dihapus otomatis
@@ -2387,7 +2387,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
     let jd = null;
     const jdBox = document.createElement('details');
     jdBox.className = 'admin-form-box'; jdBox.id = 'jde'; jdBox.style.cssText = 'display:none;margin-top:20px;';
-    jdBox.innerHTML = '<summary>✏️ Admin: edit jadwal (per hari &amp; sesi)</summary><div id="jde-body"></div>';
+    jdBox.innerHTML = '<summary>âœï¸ Admin: edit jadwal (per hari &amp; sesi)</summary><div id="jde-body"></div>';
     $('jd-view').after(jdBox);
 
     function drawJde() {
@@ -2402,13 +2402,13 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
                   ${day.sesi.map((s, k) => `<div class="jde-ses">
                     <input class="modern-input" data-d="${i}" data-s="${k}" data-f="jam" value="${esc(s.jam)}" placeholder="07.50-09.30" aria-label="Jam">
                     <input class="modern-input" data-d="${i}" data-s="${k}" data-f="kegiatan" value="${esc(s.kegiatan)}" placeholder="Kegiatan / dosen" aria-label="Kegiatan">
-                    <button class="btn btn-outline btn-sm" data-jact="delses" data-d="${i}" data-s="${k}" aria-label="Hapus sesi">✕</button></div>`).join('')}
+                    <button class="btn btn-outline btn-sm" data-jact="delses" data-d="${i}" data-s="${k}" aria-label="Hapus sesi">âœ•</button></div>`).join('')}
                   <button class="btn btn-outline btn-sm" data-jact="addses" data-d="${i}">+ Sesi</button></div>`;
             }).join('') +
             `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
               <button class="btn btn-outline" data-jact="addday">+ Tambah hari</button>
-              <button class="btn btn-primary" data-jact="save">💾 Simpan jadwal</button>
-              <button class="btn btn-outline" data-jact="reset">↩️ Batalkan perubahan</button></div>`;
+              <button class="btn btn-primary" data-jact="save">ðŸ’¾ Simpan jadwal</button>
+              <button class="btn btn-outline" data-jact="reset">â†©ï¸ Batalkan perubahan</button></div>`;
     }
     jdBox.addEventListener('toggle', () => { if (jdBox.open) { jd = null; drawJde(); } });
     $('jde-body').addEventListener('input', e => {
@@ -2430,7 +2430,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
             if (jd.some(d => !String(d.tgl).trim())) { alert('Ada hari yang tanggalnya masih kosong.'); return; }
             jd.sort((x, y) => { const a1 = parseTgl(x.tgl), b1 = parseTgl(y.tgl); return (a1 && b1) ? a1 - b1 : 0; });
             dbData.jadwalCustom = clone(jd);
-            if (await saveCategoryData('jadwal')) { jd = null; drawJde(); alert('Jadwal tersimpan.'); postUpdate('jadwal', '🗓️ Jadwal diperbarui', 'Jadwal kuliah telah diperbarui. Cek menu Kuliah › Jadwal.', { key: 'jadwal' }); }
+            if (await saveCategoryData('jadwal')) { jd = null; drawJde(); alert('Jadwal tersimpan.'); postUpdate('jadwal', 'ðŸ—“ï¸ Jadwal diperbarui', 'Jadwal kuliah telah diperbarui. Cek menu Kuliah â€º Jadwal.', { key: 'jadwal' }); }
         }
     });
 
@@ -2526,7 +2526,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         if (!currentUser) return;
         let b = $('sn-osce');
         if (!b) { b = document.createElement('button'); b.id = 'sn-osce'; b.className = 'nav-pill'; snMain.appendChild(b); }
-        b.innerHTML = '🩺 OSCE' + (S && S.status === 'running' ? '<span class="live-dot"></span>' : '');
+        b.innerHTML = 'ðŸ©º OSCE' + (S && S.status === 'running' ? '<span class="live-dot"></span>' : '');
         const on = curTab === 'osce'; b.classList.toggle('active', on);
         if (on) snMain.querySelectorAll('.nav-pill:not(#sn-osce)').forEach(x => x.classList.remove('active'));
     }
@@ -2555,8 +2555,8 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         const over = d.peserta.length > N;
         const opts = (dbData.skills_lab || []).map((it, i) => it.link && it.link !== '#' ? `<option value="${i}">${esc(it.nama)}</option>` : '').join('');
         return `
-        <div class="card"><div class="card-header"><h3 class="card-title">🩺 OSCE · Pengaturan Sesi</h3></div>
-          <p class="report-hint">Alur: ① atur stase &amp; waktu ② isi soal kasus (manual atau AI) ③ pilih peserta ④ Simpan ⑤ Mulai. Tiap peserta mendapat soal berbeda, lalu berpindah (geser) setiap putaran sampai semua stase terlewati.</p>
+        <div class="card"><div class="card-header"><h3 class="card-title">ðŸ©º OSCE Â· Pengaturan Sesi</h3></div>
+          <p class="report-hint">Alur: â‘  atur stase &amp; waktu â‘¡ isi soal kasus (manual atau AI) â‘¢ pilih peserta â‘£ Simpan â‘¤ Mulai. Tiap peserta mendapat soal berbeda, lalu berpindah (geser) setiap putaran sampai semua stase terlewati.</p>
           <div class="form-group"><label>Judul sesi</label><input class="modern-input" data-g="judul" value="${esc(d.judul)}"></div>
           <div class="osce-row3">
             <div class="form-group"><label>Peringatan geser (detik sebelum habis)</label><input type="number" min="5" class="modern-input" data-g="warnSec" value="${d.warnSec}"></div>
@@ -2565,8 +2565,8 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
             <div class="form-group"><label>Jenis suara</label><select class="modern-input" data-g="soundTheme"><option value="lonceng"${(d.soundTheme || 'lonceng') === 'lonceng' ? ' selected' : ''}>Lonceng lembut</option><option value="gong"${d.soundTheme === 'gong' ? ' selected' : ''}>Gong</option><option value="digital"${d.soundTheme === 'digital' ? ' selected' : ''}>Digital halus</option></select></div>
           </div></div>
 
-        <div class="card"><div class="card-header flex-between"><h3 class="card-title">🧩 Stase (${N})</h3><button class="btn btn-outline btn-sm" data-oact="addStase">+ Tambah stase</button></div>
-          ${d.stase.map((st, i) => `<details class="osce-stase"${i === 0 ? ' open' : ''}><summary><span>${i + 1}. ${esc(st.nama)}</span><span>⏱ ${st.durasi} menit</span></summary>
+        <div class="card"><div class="card-header flex-between"><h3 class="card-title">ðŸ§© Stase (${N})</h3><button class="btn btn-outline btn-sm" data-oact="addStase">+ Tambah stase</button></div>
+          ${d.stase.map((st, i) => `<details class="osce-stase"${i === 0 ? ' open' : ''}><summary><span>${i + 1}. ${esc(st.nama)}</span><span>â± ${st.durasi} menit</span></summary>
             <div class="osce-row3" style="margin-top:12px;">
               <div class="form-group"><label>Nama stase</label><input class="modern-input" data-s="${i}" data-f="nama" value="${esc(st.nama)}"></div>
               <div class="form-group"><label>Durasi (menit)</label><input type="number" min="1" class="modern-input" data-s="${i}" data-f="durasi" value="${st.durasi}"></div></div>
@@ -2578,43 +2578,43 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
             <button class="btn btn-danger btn-sm" data-oact="delStase" data-i="${i}">Hapus stase ini</button></details>`).join('')}
         </div>
 
-        <div class="card"><details><summary style="cursor:pointer;font-weight:700;font-size:16px;">🤖 Buat soal kasus dengan AI (dari berkas Skills Lab)</summary>
+        <div class="card"><details><summary style="cursor:pointer;font-weight:700;font-size:16px;">ðŸ¤– Buat soal kasus dengan AI (dari berkas Skills Lab)</summary>
           <p class="hint">AI membuat <strong>${N} kasus berbeda</strong> (satu per stase) dari materi yang kamu pilih. Hasilnya masuk ke form stase di atas dan <strong>tetap bisa kamu edit</strong> sebelum disimpan. Format berkas yang didukung: PDF atau teks. Berkas Word/PPT: ekspor ke PDF dulu. Link Google Drive tidak bisa dibaca langsung, unduh dulu lalu unggah di kolom kedua.</p>
-          <div class="form-group"><label>① Pilih berkas Skills Lab (yang diunggah ke portal)</label><select id="ai-src" class="modern-input"><option value="">— tidak dipakai —</option>${opts}</select></div>
-          <div class="form-group"><label>② Atau unggah PDF/TXT dari perangkat</label><input type="file" id="ai-file" class="modern-input" accept=".pdf,.txt,.md"></div>
-          <div class="form-group"><label>③ Atau tempel teks materi</label><textarea id="ai-text" class="modern-input" style="height:90px;"></textarea></div>
+          <div class="form-group"><label>â‘  Pilih berkas Skills Lab (yang diunggah ke portal)</label><select id="ai-src" class="modern-input"><option value="">â€” tidak dipakai â€”</option>${opts}</select></div>
+          <div class="form-group"><label>â‘¡ Atau unggah PDF/TXT dari perangkat</label><input type="file" id="ai-file" class="modern-input" accept=".pdf,.txt,.md"></div>
+          <div class="form-group"><label>â‘¢ Atau tempel teks materi</label><textarea id="ai-text" class="modern-input" style="height:90px;"></textarea></div>
           <div class="form-group"><label>Arahan tambahan (opsional)</label><input id="ai-extra" class="modern-input" placeholder="Contoh: fokus keterampilan anamnesis, tingkat semester 5"></div>
-          <button class="btn btn-primary" data-oact="ai">✨ Buat ${N} soal kasus</button> <span id="ai-status" class="hint"></span>
+          <button class="btn btn-primary" data-oact="ai">âœ¨ Buat ${N} soal kasus</button> <span id="ai-status" class="hint"></span>
         </details></div>
 
-        <div class="card"><div class="card-header flex-between"><h3 class="card-title">👥 Peserta (${d.peserta.length}/${N} stase)</h3>
-          <span style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-outline btn-sm" data-oact="selAll">Pilih semua</button><button class="btn btn-outline btn-sm" data-oact="selNone">Kosongkan</button><button class="btn btn-outline btn-sm" data-oact="shuffle">🔀 Acak urutan</button></span></div>
+        <div class="card"><div class="card-header flex-between"><h3 class="card-title">ðŸ‘¥ Peserta (${d.peserta.length}/${N} stase)</h3>
+          <span style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-outline btn-sm" data-oact="selAll">Pilih semua</button><button class="btn btn-outline btn-sm" data-oact="selNone">Kosongkan</button><button class="btn btn-outline btn-sm" data-oact="shuffle">ðŸ”€ Acak urutan</button></span></div>
           <p class="hint">Urutan peserta menentukan soal awal: peserta #1 mulai di stase 1, #2 di stase 2, dst.${over ? ' <strong style="color:#b91c1c;">Jumlah peserta melebihi jumlah stase, kurangi atau tambah stase.</strong>' : ''}</p>
           <div class="osce-peserta">${entries.map(([nim, nama]) => { const o = d.peserta.findIndex(p => p.nim === nim); return `<label class="${o >= 0 ? 'on' : ''}"><input type="checkbox" data-p="${nim}"${o >= 0 ? ' checked' : ''}><span style="flex:1">${esc(nama)}<br><small style="color:var(--text-muted)">${nim}</small></span>${o >= 0 ? `<span class="osce-ord">#${o + 1}</span>` : ''}</label>`; }).join('')}</div>
-          ${d.peserta.length ? `<details><summary style="cursor:pointer;font-weight:600;">Lihat pembagian soal awal</summary><ol style="margin:8px 0 0 20px;font-size:14px;">${d.peserta.map((p, i) => `<li>${esc(p.nama)} → ${d.stase[i] ? esc(d.stase[i].nama) : '⚠️ tidak ada stase'}</li>`).join('')}</ol></details>` : ''}
+          ${d.peserta.length ? `<details><summary style="cursor:pointer;font-weight:600;">Lihat pembagian soal awal</summary><ol style="margin:8px 0 0 20px;font-size:14px;">${d.peserta.map((p, i) => `<li>${esc(p.nama)} â†’ ${d.stase[i] ? esc(d.stase[i].nama) : 'âš ï¸ tidak ada stase'}</li>`).join('')}</ol></details>` : ''}
         </div>
 
         <div class="card"><div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn btn-outline btn-lg" data-oact="save">💾 Simpan setelan</button>
-          <button class="btn btn-primary btn-lg" data-oact="launch">▶️ Mulai OSCE</button>
-          <button class="btn btn-outline btn-lg" data-oact="sound">🔊 Tes suara</button></div>
+          <button class="btn btn-outline btn-lg" data-oact="save">ðŸ’¾ Simpan setelan</button>
+          <button class="btn btn-primary btn-lg" data-oact="launch">â–¶ï¸ Mulai OSCE</button>
+          <button class="btn btn-outline btn-lg" data-oact="sound">ðŸ”Š Tes suara</button></div>
           <p class="hint" style="margin-top:10px;">Saat Mulai ditekan, semua timer stase berjalan bersamaan dan peserta langsung melihat soalnya. Biarkan tab ini tetap terbuka selama sesi supaya alarm berbunyi tepat waktu.</p></div>`;
     }
 
     function runHtml() {
         const N = S.stase.length, last = S.round + 1 >= N;
         return `<div class="card">
-          <div class="card-header flex-between"><h3 class="card-title">🩺 ${esc(S.judul)} <span class="live-tag">LIVE</span></h3><span class="osce-round">Putaran ${S.round + 1} / ${N}</span></div>
+          <div class="card-header flex-between"><h3 class="card-title">ðŸ©º ${esc(S.judul)} <span class="live-tag">LIVE</span></h3><span class="osce-round">Putaran ${S.round + 1} / ${N}</span></div>
           <div id="osce-banner" class="osce-banner" style="display:none"></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
-            <button class="btn btn-primary btn-lg" data-oact="geser">${last ? '🏁 Selesaikan OSCE' : '⏭ Geser ke putaran ' + (S.round + 2)}</button>
-            <button class="btn btn-outline" data-oact="sound">🔊 Tes suara</button>
-            <button class="btn btn-danger" data-oact="stop">⏹ Batalkan sesi</button></div>
+            <button class="btn btn-primary btn-lg" data-oact="geser">${last ? 'ðŸ Selesaikan OSCE' : 'â­ Geser ke putaran ' + (S.round + 2)}</button>
+            <button class="btn btn-outline" data-oact="sound">ðŸ”Š Tes suara</button>
+            <button class="btn btn-danger" data-oact="stop">â¹ Batalkan sesi</button></div>
           <div class="osce-grid">${S.stase.map((st, i) => { const p = occupant(i), nx = nextOcc(i), k = st.kasus || {}; return `
             <div class="osce-st"><div class="osce-st-h"><strong>${esc(st.nama)}</strong><small>${st.durasi} menit</small></div>
               <div class="osce-who">${p ? esc(p.nama) : '<em style="color:var(--text-muted)">kosong</em>'}</div>
               <div class="osce-time" id="tm-${i}">--:--</div><div class="osce-bar"><i id="pb-${i}"></i></div>
-              <small>${last ? 'Putaran terakhir' : 'Setelah geser: ' + (nx ? esc(nx.nama) : '—')}</small>
+              <small>${last ? 'Putaran terakhir' : 'Setelah geser: ' + (nx ? esc(nx.nama) : 'â€”')}</small>
               <details><summary>Soal &amp; checklist penguji</summary>
                 <p class="pre"><strong>${esc(k.judul || '')}</strong>\n${esc(k.skenario || '')}</p>
                 ${lines(k.tugas).length ? '<strong>Tugas</strong><ol>' + lines(k.tugas).map(x => `<li>${esc(x)}</li>`).join('') + '</ol>' : ''}
@@ -2622,12 +2622,12 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
     }
 
     function doneHtml() {
-        return `<div class="card"><div class="empty-state"><div class="empty-icon">🏁</div><h3>OSCE "${esc(S.judul)}" selesai</h3><p>${S.peserta.length} peserta telah melewati ${S.stase.length} stase.</p>
+        return `<div class="card"><div class="empty-state"><div class="empty-icon">ðŸ</div><h3>OSCE "${esc(S.judul)}" selesai</h3><p>${S.peserta.length} peserta telah melewati ${S.stase.length} stase.</p>
           <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px;"><button class="btn btn-primary" data-oact="newSession">Buat sesi baru (pakai setelan ini)</button><button class="btn btn-outline" data-oact="resetAll">Hapus sesi</button></div></div></div>`;
     }
 
     function guestHtml() {
-        const card = (t, m) => `<div class="card"><div class="empty-state"><div class="empty-icon">🩺</div><h3>${t}</h3><p>${m}</p></div></div>`;
+        const card = (t, m) => `<div class="card"><div class="empty-state"><div class="empty-icon">ðŸ©º</div><h3>${t}</h3><p>${m}</p></div></div>`;
         if (!S || S.status === 'setup') {
             const reg = S && S.peserta.some(p => p.nim === currentUser.nim);
             return card('OSCE belum dimulai', reg ? 'Kamu terdaftar sebagai peserta. Soal akan muncul otomatis begitu admin menekan Mulai.' : 'Belum ada sesi OSCE yang berjalan.');
@@ -2662,9 +2662,9 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
                 if (r > 0 && r <= warn && !fired[k + 'w' + i]) { fired[k + 'w' + i] = 1; banner(`${S.stase[i].nama}: sisa ${fmt(r)}`, 'warn'); cue('warn'); }
                 if (r <= 0 && !fired[k + 'e' + i]) { fired[k + 'e' + i] = 1; cue('end'); }
             });
-            if (maxRem > 0 && maxRem <= warn && !fired[k + 'gw']) { fired[k + 'gw'] = 1; banner('⚠️ Bersiap geser, sisa ' + fmt(maxRem) + '. Siapkan peserta berpindah.', 'warn'); cue('geser'); }
+            if (maxRem > 0 && maxRem <= warn && !fired[k + 'gw']) { fired[k + 'gw'] = 1; banner('âš ï¸ Bersiap geser, sisa ' + fmt(maxRem) + '. Siapkan peserta berpindah.', 'warn'); cue('geser'); }
             if (maxRem <= 0) {
-                if (!fired[k + 'ge']) { fired[k + 'ge'] = 1; fired[k + 'gt'] = now; banner('🔔 WAKTU HABIS di semua stase. SILAKAN GESER.', 'end'); cue('geser'); }
+                if (!fired[k + 'ge']) { fired[k + 'ge'] = 1; fired[k + 'gt'] = now; banner('ðŸ”” WAKTU HABIS di semua stase. SILAKAN GESER.', 'end'); cue('geser'); }
                 else if (now - fired[k + 'gt'] > 8000 && !fired[k + 'gr']) { fired[k + 'gr'] = 1; cue('geser'); }
                 if (S.autoGeser && now - fired[k + 'gt'] > 5000 && !fired[k + 'auto']) { fired[k + 'auto'] = 1; geser(true); }
             }
@@ -2715,7 +2715,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         else if (sel !== '') {
             const it = (dbData.skills_lab || [])[+sel];
             try { const r = await fetch(it.link); if (!r.ok) throw new Error(r.status); blob = await r.blob(); name = it.link.split('?')[0]; }
-            catch (e) { return alert('Berkas tidak bisa dibaca langsung (mungkin link Google Drive). Unduh dulu lalu unggah di kolom ②, atau tempel teksnya.'); }
+            catch (e) { return alert('Berkas tidak bisa dibaca langsung (mungkin link Google Drive). Unduh dulu lalu unggah di kolom â‘¡, atau tempel teksnya.'); }
         }
         if (blob) {
             if (/\.pdf$/i.test(name) || blob.type === 'application/pdf') pdf = await toB64(blob);
@@ -2725,7 +2725,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         if (!pdf && !text) return alert('Pilih berkas atau tempel teks materi terlebih dulu.');
         if (pdf && pdf.length > 6000000) return alert('PDF terlalu besar (maks sekitar 4 MB). Pecah atau kompres dulu.');
         if (draft.stase.some(s => String(s.kasus.skenario).trim()) && !confirm('Soal yang sudah terisi akan ditimpa hasil AI. Lanjutkan?')) return;
-        st.textContent = '⏳ AI sedang menyusun soal, tunggu sekitar 20-60 detik...';
+        st.textContent = 'â³ AI sedang menyusun soal, tunggu sekitar 20-60 detik...';
         try {
             const { data, error } = await supabaseClient.functions.invoke('osce-ai', { body: { n, pdf, text, extra: $('ai-extra').value, judul: draft.judul, adminCode: dbData.adminCode || 'A9ACOR' } });
             if (error) throw error; if (!data || !Array.isArray(data.kasus)) throw new Error((data && data.error) || 'Respons tidak valid');
@@ -2783,9 +2783,9 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         if (after !== before) {
             if (!firstLoad && S) {
                 const bs = before.split('|');
-                if (S.status === 'running' && bs[0] !== 'running') { alert('🩺 OSCE dimulai! Buka menu OSCE.'); cue('warn'); }
-                else if (S.status === 'running' && String(S.round) !== bs[1]) { alert('🔄 Geser! Kamu pindah ke stase berikutnya.'); cue('geser'); }
-                else if (S.status === 'finished' && bs[0] === 'running') alert('🏁 OSCE selesai.');
+                if (S.status === 'running' && bs[0] !== 'running') { alert('ðŸ©º OSCE dimulai! Buka menu OSCE.'); cue('warn'); }
+                else if (S.status === 'running' && String(S.round) !== bs[1]) { alert('ðŸ”„ Geser! Kamu pindah ke stase berikutnya.'); cue('geser'); }
+                else if (S.status === 'finished' && bs[0] === 'running') alert('ðŸ OSCE selesai.');
             }
             injectPill(); if (curTab === 'osce') renderOsce();
         }
@@ -2817,7 +2817,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
 })();
 
 // ==========================================================================
-// BAGIAN 8 — BERANDA CERDAS: PENGINGAT (tugas mepet + jadwal besok paling krusial)
+// BAGIAN 8 â€” BERANDA CERDAS: PENGINGAT (tugas mepet + jadwal besok paling krusial)
 //            & TEMPLATE PENGUMUMAN UNTUK ADMIN
 // ==========================================================================
 (function () {
@@ -2898,21 +2898,21 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
     const dm = d => d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short' });
 
     function reminderHtml(R) {
-        let h = '<h3>🔔 Pengingat</h3>';
-        h += `<div class="rem-sec"><h4>Besok · ${esc(dm(R.tmr))}</h4>`;
+        let h = '<h3>ðŸ”” Pengingat</h3>';
+        h += `<div class="rem-sec"><h4>Besok Â· ${esc(dm(R.tmr))}</h4>`;
         if (R.besok === null) h += '<p class="rem-empty">Jadwal besok belum diisi.</p>';
-        else if (!R.besok.length) h += '<p class="rem-empty">Tidak ada kegiatan terjadwal besok. Waktu yang pas untuk mengulang materi. 📖</p>';
+        else if (!R.besok.length) h += '<p class="rem-empty">Tidak ada kegiatan terjadwal besok. Waktu yang pas untuk mengulang materi. ðŸ“–</p>';
         else {
             const top = R.besok[0];
-            h += `<div class="rem-top ${top.sc >= 3 ? 'lv' + top.sc : ''}"><small>${top.sc >= 3 ? '⭐ Paling krusial besok' : 'Kegiatan pertama besok'} · <span class="rem-pill ${top.sc >= 3 ? 'lv' + top.sc : ''}">${esc(top.lb)}</span></small><b>${esc(top.kegiatan)}</b><small>🕒 ${esc(top.jam)}</small></div>`;
-            h += R.besok.slice(1).map(x => `<div class="rem-row"><span>${esc(x.kegiatan)}<br><small style="color:var(--text-muted)">🕒 ${esc(x.jam)}</small></span><span class="rem-pill ${x.sc >= 3 ? 'lv' + x.sc : ''}">${esc(x.lb)}</span></div>`).join('');
+            h += `<div class="rem-top ${top.sc >= 3 ? 'lv' + top.sc : ''}"><small>${top.sc >= 3 ? 'â­ Paling krusial besok' : 'Kegiatan pertama besok'} Â· <span class="rem-pill ${top.sc >= 3 ? 'lv' + top.sc : ''}">${esc(top.lb)}</span></small><b>${esc(top.kegiatan)}</b><small>ðŸ•’ ${esc(top.jam)}</small></div>`;
+            h += R.besok.slice(1).map(x => `<div class="rem-row"><span>${esc(x.kegiatan)}<br><small style="color:var(--text-muted)">ðŸ•’ ${esc(x.jam)}</small></span><span class="rem-pill ${x.sc >= 3 ? 'lv' + x.sc : ''}">${esc(x.lb)}</span></div>`).join('');
         }
         h += '</div>';
         h += '<div class="rem-sec"><h4>Tugas yang deadline-nya mepet</h4>';
-        h += R.tugas.length ? R.tugas.map(t => { const [lb, cl] = pillDays(t.days); return `<div class="rem-row"><span>${esc(t.nama)}</span><span class="rem-pill ${cl}">${lb}</span></div>`; }).join('') : '<p class="rem-empty">Tidak ada tugas yang mepet. 🎉</p>';
+        h += R.tugas.length ? R.tugas.map(t => { const [lb, cl] = pillDays(t.days); return `<div class="rem-row"><span>${esc(t.nama)}</span><span class="rem-pill ${cl}">${lb}</span></div>`; }).join('') : '<p class="rem-empty">Tidak ada tugas yang mepet. ðŸŽ‰</p>';
         h += '</div>';
         if (R.next.length) {
-            h += '<div class="rem-sec"><h4>Segera (7 hari ke depan)</h4>' + R.next.map(x => `<div class="rem-row"><span>${esc(x.kegiatan)}<br><small style="color:var(--text-muted)">${esc(dm(x.d))} · ${esc(x.jam)}</small></span><span class="rem-pill lv${x.sc}">${esc(x.lb)} · ${x.off} hari</span></div>`).join('') + '</div>';
+            h += '<div class="rem-sec"><h4>Segera (7 hari ke depan)</h4>' + R.next.map(x => `<div class="rem-row"><span>${esc(x.kegiatan)}<br><small style="color:var(--text-muted)">${esc(dm(x.d))} Â· ${esc(x.jam)}</small></span><span class="rem-pill lv${x.sc}">${esc(x.lb)} Â· ${x.off} hari</span></div>`).join('') + '</div>';
         }
         return h;
     }
@@ -2933,7 +2933,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         const R = reminderData(), parts = [];
         if (R.besok && R.besok.length) { const t = R.besok[0]; parts.push(`Besok: ${t.lb} ${t.jam}`); }
         if (R.tugas.length) parts.push(`${R.tugas.length} tugas mepet`);
-        if (parts.length) alert('🔔 ' + parts.join(' · '));
+        if (parts.length) alert('ðŸ”” ' + parts.join(' Â· '));
     }
 
     const prevRender = window.renderAll;
@@ -2958,76 +2958,76 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
     const opt = (s, k) => s ? `\n${k}${s}` : '';
     const TPL = {
         tugas: {
-            label: '📝 Tugas baru', kind: 'tugas',
+            label: 'ðŸ“ Tugas baru', kind: 'tugas',
             fields: [['mk', 'Mata kuliah / blok'], ['nama', 'Nama tugas'], ['dl', 'Deadline', 'date'], ['cara', 'Cara mengumpulkan (opsional)'], ['cat', 'Catatan (opsional)']],
             need: ['mk', 'nama', 'dl'],
             build: (f, t) => ({
-                judul: `📝 Tugas ${f.mk}: ${f.nama}`, until: f.dl,
+                judul: `ðŸ“ Tugas ${f.mk}: ${f.nama}`, until: f.dl,
                 isi: t === 'santai'
-                    ? `Halo A9! 👋 Ada tugas ${f.mk}: "${f.nama}". Deadline ${tglIndo(f.dl)}.${f.cara ? ' Kumpulkan lewat ' + f.cara + '.' : ''}${opt(f.cat, 'Catatan: ')}\nJangan ditunda ya, semangat! 💪`
+                    ? `Halo A9! ðŸ‘‹ Ada tugas ${f.mk}: "${f.nama}". Deadline ${tglIndo(f.dl)}.${f.cara ? ' Kumpulkan lewat ' + f.cara + '.' : ''}${opt(f.cat, 'Catatan: ')}\nJangan ditunda ya, semangat! ðŸ’ª`
                     : `Diberitahukan kepada seluruh mahasiswa A9 bahwa terdapat tugas ${f.mk} berjudul "${f.nama}". Batas pengumpulan: ${tglIndo(f.dl)}.${f.cara ? ' Pengumpulan melalui ' + f.cara + '.' : ''}${opt(f.cat, 'Catatan: ')}\nMohon dikerjakan dan dikumpulkan tepat waktu. Terima kasih.`
             })
         },
         ujian: {
-            label: '📌 UB / Responsi / Praktikum / Ujian', kind: 'ujian',
+            label: 'ðŸ“Œ UB / Responsi / Praktikum / Ujian', kind: 'ujian',
             fields: [['jenis', 'Jenis kegiatan', 'select', JENIS], ['materi', 'Materi / cakupan (opsional)'], ['tgl', 'Tanggal', 'date'], ['jam', 'Jam (contoh 07.50-09.30)'], ['tempat', 'Tempat (opsional)'], ['bawa', 'Yang perlu dibawa (opsional)'], ['cat', 'Catatan (opsional)']],
             need: ['jenis', 'tgl'],
             build: (f, t) => ({
-                judul: `📌 ${f.jenis} · ${tglIndo(f.tgl)}`, until: f.tgl,
+                judul: `ðŸ“Œ ${f.jenis} Â· ${tglIndo(f.tgl)}`, until: f.tgl,
                 isi: t === 'santai'
-                    ? `Heads up A9! 📣 ${f.jenis} pada ${tglIndo(f.tgl)}${f.jam ? ', jam ' + f.jam : ''}${f.tempat ? ', di ' + f.tempat : ''}.${opt(f.materi, 'Materi: ')}${opt(f.bawa, 'Bawa: ')}${opt(f.cat, 'Catatan: ')}\nYuk siap-siap dari sekarang, kamu pasti bisa! 🔥`
+                    ? `Heads up A9! ðŸ“£ ${f.jenis} pada ${tglIndo(f.tgl)}${f.jam ? ', jam ' + f.jam : ''}${f.tempat ? ', di ' + f.tempat : ''}.${opt(f.materi, 'Materi: ')}${opt(f.bawa, 'Bawa: ')}${opt(f.cat, 'Catatan: ')}\nYuk siap-siap dari sekarang, kamu pasti bisa! ðŸ”¥`
                     : `${f.jenis} akan dilaksanakan pada ${tglIndo(f.tgl)}${f.jam ? ', pukul ' + f.jam : ''}${f.tempat ? ', bertempat di ' + f.tempat : ''}.${opt(f.materi, 'Materi: ')}${opt(f.bawa, 'Yang perlu dibawa/disiapkan: ')}${opt(f.cat, 'Catatan: ')}\nMohon hadir tepat waktu dan mempersiapkan diri dengan baik.`
             })
         },
         jadwal: {
-            label: '🗓️ Perubahan jadwal', kind: 'jadwal',
+            label: 'ðŸ—“ï¸ Perubahan jadwal', kind: 'jadwal',
             fields: [['keg', 'Kegiatan'], ['lama', 'Jadwal lama (opsional)'], ['tgl', 'Tanggal baru', 'date'], ['jam', 'Jam baru'], ['tempat', 'Tempat (opsional)'], ['alasan', 'Alasan (opsional)']],
             need: ['keg', 'tgl'],
             build: (f, t) => ({
-                judul: `🗓️ Perubahan jadwal: ${f.keg}`, until: f.tgl,
+                judul: `ðŸ—“ï¸ Perubahan jadwal: ${f.keg}`, until: f.tgl,
                 isi: t === 'santai'
-                    ? `Info perubahan jadwal ya, A9! 🔄 ${f.keg}${f.lama ? ' (sebelumnya ' + f.lama + ')' : ''} dipindah ke ${tglIndo(f.tgl)}${f.jam ? ', jam ' + f.jam : ''}${f.tempat ? ', di ' + f.tempat : ''}.${opt(f.alasan, 'Alasan: ')}\nMohon dicatat ulang, ya!`
+                    ? `Info perubahan jadwal ya, A9! ðŸ”„ ${f.keg}${f.lama ? ' (sebelumnya ' + f.lama + ')' : ''} dipindah ke ${tglIndo(f.tgl)}${f.jam ? ', jam ' + f.jam : ''}${f.tempat ? ', di ' + f.tempat : ''}.${opt(f.alasan, 'Alasan: ')}\nMohon dicatat ulang, ya!`
                     : `Diinformasikan bahwa jadwal ${f.keg}${f.lama ? ', yang semula ' + f.lama + ',' : ''} diubah menjadi ${tglIndo(f.tgl)}${f.jam ? ', pukul ' + f.jam : ''}${f.tempat ? ', bertempat di ' + f.tempat : ''}.${opt(f.alasan, 'Alasan: ')}\nMohon menyesuaikan jadwal masing-masing.`
             })
         },
         tiada: {
-            label: '🚫 Kelas ditiadakan / diganti', kind: 'jadwal',
+            label: 'ðŸš« Kelas ditiadakan / diganti', kind: 'jadwal',
             fields: [['keg', 'Kegiatan'], ['tgl', 'Tanggal', 'date'], ['ganti', 'Pengganti / tindak lanjut (opsional)'], ['alasan', 'Alasan (opsional)']],
             need: ['keg', 'tgl'],
             build: (f, t) => ({
-                judul: `🚫 ${f.keg} ditiadakan (${tglIndo(f.tgl)})`, until: f.tgl,
+                judul: `ðŸš« ${f.keg} ditiadakan (${tglIndo(f.tgl)})`, until: f.tgl,
                 isi: t === 'santai'
-                    ? `Kabar baik/buruk, A9! ${f.keg} pada ${tglIndo(f.tgl)} ditiadakan.${opt(f.alasan, 'Alasan: ')}${opt(f.ganti, 'Gantinya: ')}\nManfaatkan waktunya untuk belajar mandiri ya! 📚`
+                    ? `Kabar baik/buruk, A9! ${f.keg} pada ${tglIndo(f.tgl)} ditiadakan.${opt(f.alasan, 'Alasan: ')}${opt(f.ganti, 'Gantinya: ')}\nManfaatkan waktunya untuk belajar mandiri ya! ðŸ“š`
                     : `Diberitahukan bahwa ${f.keg} pada ${tglIndo(f.tgl)} ditiadakan.${opt(f.alasan, 'Alasan: ')}${opt(f.ganti, 'Pengganti/tindak lanjut: ')}\nTerima kasih atas perhatiannya.`
             })
         },
         materi: {
-            label: '📚 Materi baru', kind: 'materi',
+            label: 'ðŸ“š Materi baru', kind: 'materi',
             fields: [['mk', 'Mata kuliah / blok'], ['topik', 'Topik materi'], ['lokasi', 'Lokasi di portal (opsional)']],
             need: ['mk', 'topik'],
             build: (f, t) => ({
-                judul: `📚 Materi baru: ${f.topik}`, until: '',
+                judul: `ðŸ“š Materi baru: ${f.topik}`, until: '',
                 isi: t === 'santai'
-                    ? `Materi baru sudah naik, A9! 📚 ${f.mk}: ${f.topik}. Cek di ${f.lokasi || 'menu Kuliah › Materi'}. Selamat belajar! ✨`
-                    : `Materi ${f.mk} dengan topik "${f.topik}" telah diunggah dan dapat diakses di ${f.lokasi || 'menu Kuliah › Materi'}. Silakan dipelajari. Terima kasih.`
+                    ? `Materi baru sudah naik, A9! ðŸ“š ${f.mk}: ${f.topik}. Cek di ${f.lokasi || 'menu Kuliah â€º Materi'}. Selamat belajar! âœ¨`
+                    : `Materi ${f.mk} dengan topik "${f.topik}" telah diunggah dan dapat diakses di ${f.lokasi || 'menu Kuliah â€º Materi'}. Silakan dipelajari. Terima kasih.`
             })
         },
         penting: {
-            label: '⚠️ Penting / mendesak', kind: 'penting',
+            label: 'âš ï¸ Penting / mendesak', kind: 'penting',
             fields: [['isi', 'Isi informasi'], ['tgl', 'Berlaku sampai (opsional)', 'date']],
             need: ['isi'],
             build: (f, t) => ({
-                judul: '⚠️ PENTING: mohon dibaca', until: f.tgl || '',
-                isi: t === 'santai' ? `Perhatian A9! ⚠️\n${f.isi}\nMohon segera ditindaklanjuti ya. Terima kasih!` : `Perhatian kepada seluruh mahasiswa.\n${f.isi}\nMohon segera ditindaklanjuti. Terima kasih.`
+                judul: 'âš ï¸ PENTING: mohon dibaca', until: f.tgl || '',
+                isi: t === 'santai' ? `Perhatian A9! âš ï¸\n${f.isi}\nMohon segera ditindaklanjuti ya. Terima kasih!` : `Perhatian kepada seluruh mahasiswa.\n${f.isi}\nMohon segera ditindaklanjuti. Terima kasih.`
             })
         },
         umum: {
-            label: '📢 Pengumuman umum', kind: 'info',
+            label: 'ðŸ“¢ Pengumuman umum', kind: 'info',
             fields: [['judul', 'Judul'], ['isi', 'Isi pengumuman'], ['tgl', 'Berlaku sampai (opsional)', 'date']],
             need: ['judul', 'isi'],
             build: (f, t) => ({
                 judul: f.judul, until: f.tgl || '',
-                isi: t === 'santai' ? `Halo A9! 👋\n${f.isi}\nTerima kasih, semangat terus! 💪` : `Kepada seluruh mahasiswa A9,\n${f.isi}\nDemikian disampaikan. Terima kasih.`
+                isi: t === 'santai' ? `Halo A9! ðŸ‘‹\n${f.isi}\nTerima kasih, semangat terus! ðŸ’ª` : `Kepada seluruh mahasiswa A9,\n${f.isi}\nDemikian disampaikan. Terima kasih.`
             })
         }
     };
@@ -3036,8 +3036,8 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
     if (jf) {
         const box = document.createElement('div');
         box.className = 'tpl-box';
-        box.innerHTML = `<label for="tpl-type">✨ Pakai template (opsional)</label>
-          <div class="tpl-row"><select id="tpl-type" class="modern-input"><option value="">— pilih jenis pengumuman —</option>${Object.entries(TPL).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('')}</select>
+        box.innerHTML = `<label for="tpl-type">âœ¨ Pakai template (opsional)</label>
+          <div class="tpl-row"><select id="tpl-type" class="modern-input"><option value="">â€” pilih jenis pengumuman â€”</option>${Object.entries(TPL).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('')}</select>
             <select id="tpl-tone" class="modern-input" aria-label="Gaya bahasa"><option value="resmi">Gaya resmi</option><option value="santai">Gaya santai</option></select></div>
           <div id="tpl-fields"></div>
           <button type="button" class="btn btn-outline btn-sm" id="tpl-fill" style="display:none;">Isi otomatis ke form di bawah</button>
@@ -3065,8 +3065,8 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
 })();
 
 // ==========================================================================
-// BAGIAN 9 — GAME SANTAI: Memory Medis, Ular, 2048
-//   Menu: Latihan › Game Santai. Skor terbaik tersimpan di perangkat, per akun.
+// BAGIAN 9 â€” GAME SANTAI: Memory Medis, Ular, 2048
+//   Menu: Latihan â€º Game Santai. Skor terbaik tersimpan di perangkat, per akun.
 //   Jeda otomatis saat pindah menu, dan ada pengingat lembut setelah 5 menit.
 // ==========================================================================
 
@@ -3153,12 +3153,12 @@ function moveBoard(b, dir) {
     document.querySelector('.main-content').insertAdjacentHTML('beforeend', `
     <div id="tab-game" class="tab-content" style="display:none;">
       <div class="card">
-        <div class="card-header"><h3 class="card-title">🎮 Game santai</h3></div>
+        <div class="card-header"><h3 class="card-title">ðŸŽ® Game santai</h3></div>
         <p class="hint">Istirahat sebentar biar otak segar lagi. Skor terbaikmu tersimpan di perangkat ini.</p>
         <div class="gm-chips" id="gm-chips" role="tablist">
-          <button class="chip active" data-g="memory" role="tab">🧠 Memory medis</button>
-          <button class="chip" data-g="snake" role="tab">🐍 Ular</button>
-          <button class="chip" data-g="g2048" role="tab">🔢 2048</button>
+          <button class="chip active" data-g="memory" role="tab">ðŸ§  Memory medis</button>
+          <button class="chip" data-g="snake" role="tab">ðŸ Ular</button>
+          <button class="chip" data-g="g2048" role="tab">ðŸ”¢ 2048</button>
         </div>
         <div id="gm-stage" class="gm-stage"></div>
       </div>
@@ -3167,7 +3167,7 @@ function moveBoard(b, dir) {
 
     // ======================= MEMORY MEDIS =======================
     function memory() {
-        const EMO = ['🫀', '🫁', '🧠', '🦴', '🦷', '👁️', '💉', '💊', '🩺', '🧬', '🔬', '🩸'];
+        const EMO = ['ðŸ«€', 'ðŸ«', 'ðŸ§ ', 'ðŸ¦´', 'ðŸ¦·', 'ðŸ‘ï¸', 'ðŸ’‰', 'ðŸ’Š', 'ðŸ©º', 'ðŸ§¬', 'ðŸ”¬', 'ðŸ©¸'];
         const LV = { mudah: { c: 4, r: 3, l: 'Mudah' }, sedang: { c: 4, r: 4, l: 'Sedang' }, sulit: { c: 6, r: 4, l: 'Sulit' } };
         let lv = 'sedang', cards = [], first = null, lock = false, moves = 0, matched = 0, sec = 0, ti = null, to = null;
 
@@ -3181,7 +3181,7 @@ function moveBoard(b, dir) {
               <div class="mm-grid" id="mm-grid" style="grid-template-columns:repeat(${L.c},1fr)">${cards.map((e, i) => `<button type="button" class="mm-card" data-i="${i}" aria-label="Kartu ${i + 1}"><span class="mm-in"><span class="mm-b">?</span><span class="mm-f">${e}</span></span></button>`).join('')}</div>
               <div class="gm-msg" id="mm-msg" aria-live="polite"></div>
               <p class="gm-hint">Cari pasangan gambar yang sama dengan langkah sesedikit mungkin.</p>
-              <div class="gm-actions"><button class="btn btn-outline" id="mm-new">🔄 Acak ulang</button></div>`;
+              <div class="gm-actions"><button class="btn btn-outline" id="mm-new">ðŸ”„ Acak ulang</button></div>`;
         }
         function stats() { $('mm-moves').textContent = moves; $('mm-time').textContent = fmt(sec); }
         function stop() { clearInterval(ti); ti = null; clearTimeout(to); to = null; }
@@ -3211,7 +3211,7 @@ function moveBoard(b, dir) {
             stop();
             const fresh = setBest('memory_' + lv, moves, true);
             $('mm-best').textContent = bests()['memory_' + lv];
-            $('mm-msg').textContent = `🎉 Selesai dalam ${moves} langkah, ${fmt(sec)}.${fresh ? ' Rekor baru!' : ''}`;
+            $('mm-msg').textContent = `ðŸŽ‰ Selesai dalam ${moves} langkah, ${fmt(sec)}.${fresh ? ' Rekor baru!' : ''}`;
         }
         stage.onclick = click;
         return { init: build, stop, key() { } };
@@ -3227,8 +3227,8 @@ function moveBoard(b, dir) {
               <div class="gm-stats"><div class="gm-stat">Skor<b id="sn-score">0</b></div><div class="gm-stat">Terbaik<b id="sn-best">${bests().snake ?? 0}</b></div></div>
               <canvas id="sn-cv" width="${N * CELL}" height="${N * CELL}" aria-label="Papan permainan ular"></canvas>
               <div class="gm-msg" id="sn-msg" aria-live="polite"></div>
-              <div class="gm-actions"><button class="btn btn-primary" id="sn-go">▶ Mulai</button></div>
-              <div class="sn-pad"><button data-d="up" aria-label="Atas">▲</button><button data-d="left" aria-label="Kiri">◀</button><button data-d="down" aria-label="Bawah">▼</button><button data-d="right" aria-label="Kanan">▶</button></div>
+              <div class="gm-actions"><button class="btn btn-primary" id="sn-go">â–¶ Mulai</button></div>
+              <div class="sn-pad"><button data-d="up" aria-label="Atas">â–²</button><button data-d="left" aria-label="Kiri">â—€</button><button data-d="down" aria-label="Bawah">â–¼</button><button data-d="right" aria-label="Kanan">â–¶</button></div>
               <p class="gm-hint">Pakai panah atau WASD, geser jari di papan, atau tombol arah. Spasi untuk jeda. Makan titik merah, jangan menabrak dinding atau badan sendiri.</p>`;
             cv = $('sn-cv'); g = cv.getContext('2d');
             const cs = getComputedStyle(document.body);
@@ -3254,9 +3254,9 @@ function moveBoard(b, dir) {
         function loop() { clearInterval(timer); timer = setInterval(step, speed); }
         function start() {
             if (over || !body) reset();
-            running = true; loop(); $('sn-go').textContent = '⏸ Jeda'; $('sn-msg').textContent = '';
+            running = true; loop(); $('sn-go').textContent = 'â¸ Jeda'; $('sn-msg').textContent = '';
         }
-        function pause() { running = false; clearInterval(timer); timer = null; const b = $('sn-go'); if (b && !over) b.textContent = '▶ Lanjut'; }
+        function pause() { running = false; clearInterval(timer); timer = null; const b = $('sn-go'); if (b && !over) b.textContent = 'â–¶ Lanjut'; }
         function setDir(dx, dy) {
             if (over) return;
             const last = queue.length ? queue[queue.length - 1] : dir;
@@ -3281,8 +3281,8 @@ function moveBoard(b, dir) {
             over = true; pause(); draw();
             const fresh = setBest('snake', score, false);
             $('sn-best').textContent = bests().snake ?? 0;
-            $('sn-msg').textContent = `Permainan selesai. Skor ${score}.${fresh && score > 0 ? ' Rekor baru! 🎉' : ''}`;
-            $('sn-go').textContent = '🔄 Main lagi';
+            $('sn-msg').textContent = `Permainan selesai. Skor ${score}.${fresh && score > 0 ? ' Rekor baru! ðŸŽ‰' : ''}`;
+            $('sn-go').textContent = 'ðŸ”„ Main lagi';
         }
         function draw() {
             if (!g) return;
@@ -3322,7 +3322,7 @@ function moveBoard(b, dir) {
               <div id="g48" aria-label="Papan 2048"></div>
               <div class="gm-msg" id="g48-msg" aria-live="polite"></div>
               <p class="gm-hint">Geser atau pakai panah/WASD. Gabungkan angka yang sama sampai mencapai 2048.</p>
-              <div class="gm-actions"><button class="btn btn-outline" id="g48-new">🔄 Mulai baru</button></div>`;
+              <div class="gm-actions"><button class="btn btn-outline" id="g48-new">ðŸ”„ Mulai baru</button></div>`;
             let sx = 0, sy = 0; const el = $('g48');
             el.addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
             el.addEventListener('touchend', e => {
@@ -3360,7 +3360,7 @@ function moveBoard(b, dir) {
             b = r.b; score += r.gain;
             const p = add(); draw(p);
             const m = $('g48-msg');
-            if (!won && b.flat().includes(2048)) { won = true; m.textContent = '🎉 Kamu mencapai 2048! Boleh lanjut atau mulai baru.'; }
+            if (!won && b.flat().includes(2048)) { won = true; m.textContent = 'ðŸŽ‰ Kamu mencapai 2048! Boleh lanjut atau mulai baru.'; }
             if (stuck()) { over = true; m.textContent = `Tidak ada gerakan lagi. Skor ${score}.`; }
             if (setBest('g2048', score, false)) $('g48-best').textContent = score;
         }
@@ -3399,7 +3399,7 @@ function moveBoard(b, dir) {
         if (t === 'game') {
             show(cur);
             clearTimeout(nudge);
-            nudge = setTimeout(() => alert('☕ Sudah 5 menit istirahat. Sudah segar? Yuk lanjut belajar sebentar.'), 5 * 60 * 1000);
+            nudge = setTimeout(() => alert('â˜• Sudah 5 menit istirahat. Sudah segar? Yuk lanjut belajar sebentar.'), 5 * 60 * 1000);
         } else {
             if (inst) inst.stop();
             clearTimeout(nudge);
@@ -3408,8 +3408,8 @@ function moveBoard(b, dir) {
 })();
 
 // ==========================================================================
-// BAGIAN 10 — ALAT BELAJAR: fokus belajar (Pomodoro), catatan cepat, kalkulator IPS/IPK
-//             + ekspor jadwal ke kalender (.ics). Menu: Kuliah › Alat Belajar.
+// BAGIAN 10 â€” ALAT BELAJAR: fokus belajar (Pomodoro), catatan cepat, kalkulator IPS/IPK
+//             + ekspor jadwal ke kalender (.ics). Menu: Kuliah â€º Alat Belajar.
 //             Semua data pribadi tersimpan di perangkat ini, terpisah per akun.
 // ==========================================================================
 (function () {
@@ -3452,25 +3452,25 @@ function moveBoard(b, dir) {
     <div id="tab-alat" class="tab-content" style="display:none;">
       <div class="al-grid">
         <div class="card">
-          <div class="card-header"><h3 class="card-title">⏱️ Fokus belajar</h3></div>
+          <div class="card-header"><h3 class="card-title">â±ï¸ Fokus belajar</h3></div>
           <div class="pm-sel" id="pm-sel"><button class="chip active" data-p="25,5">25 / 5 menit</button><button class="chip" data-p="45,10">45 / 10 menit</button><button class="chip" data-p="50,10">50 / 10 menit</button></div>
           <div class="pm-mode" id="pm-mode">Fokus</div>
           <div class="pm-time" id="pm-time" aria-live="off">25:00</div>
           <div class="pm-bar"><i id="pm-fill"></i></div>
-          <div class="pm-acts"><button class="btn btn-primary" id="pm-go">▶ Mulai</button><button class="btn btn-outline" id="pm-skip">⏭ Lewati</button><button class="btn btn-outline" id="pm-reset">↺ Reset</button></div>
+          <div class="pm-acts"><button class="btn btn-primary" id="pm-go">â–¶ Mulai</button><button class="btn btn-outline" id="pm-skip">â­ Lewati</button><button class="btn btn-outline" id="pm-reset">â†º Reset</button></div>
           <div class="pm-stats"><div><b id="pm-today">0</b>menit fokus hari ini</div><div style="text-align:right;"><b id="pm-week">0</b>menit 7 hari terakhir</div></div>
           <svg class="pm-chart" id="pm-chart" viewBox="0 0 280 90" role="img" aria-label="Grafik menit fokus 7 hari terakhir"></svg>
         </div>
         <div class="card">
-          <div class="card-header"><h3 class="card-title">🗒️ Catatan cepat</h3></div>
-          <div class="nt-top"><select id="nt-sel" class="modern-input" aria-label="Pilih catatan"></select><button class="btn btn-outline btn-sm" id="nt-new">➕ Baru</button><button class="btn btn-danger btn-sm" id="nt-del">Hapus</button></div>
+          <div class="card-header"><h3 class="card-title">ðŸ—’ï¸ Catatan cepat</h3></div>
+          <div class="nt-top"><select id="nt-sel" class="modern-input" aria-label="Pilih catatan"></select><button class="btn btn-outline btn-sm" id="nt-new">âž• Baru</button><button class="btn btn-danger btn-sm" id="nt-del">Hapus</button></div>
           <textarea id="nt-text" class="modern-input" placeholder="Tulis catatan belajar, rumus, atau daftar hafalan di sini. Tersimpan otomatis."></textarea>
           <p class="nt-hint" id="nt-hint">Catatan tersimpan otomatis di perangkat ini.</p>
         </div>
         <div class="card">
-          <div class="card-header"><h3 class="card-title">🧮 Kalkulator IPS / IPK</h3></div>
+          <div class="card-header"><h3 class="card-title">ðŸ§® Kalkulator IPS / IPK</h3></div>
           <table class="ip-table"><thead><tr><th>Mata kuliah</th><th style="width:70px;">SKS</th><th style="width:90px;">Nilai</th><th style="width:36px;"></th></tr></thead><tbody id="ip-rows"></tbody></table>
-          <button class="btn btn-outline btn-sm" id="ip-add" style="margin-top:8px;">➕ Tambah mata kuliah</button>
+          <button class="btn btn-outline btn-sm" id="ip-add" style="margin-top:8px;">âž• Tambah mata kuliah</button>
           <div class="ip-prev"><div><label for="ip-pi">IPK sebelumnya (opsional)</label><input id="ip-pi" class="modern-input" type="number" step="0.01" min="0" max="4" inputmode="decimal"></div><div><label for="ip-ps">Total SKS sebelumnya</label><input id="ip-ps" class="modern-input" type="number" min="0" inputmode="numeric"></div></div>
           <div class="ip-res"><div class="ip-box"><b id="ip-ips">0.00</b>IPS semester ini</div><div class="ip-box"><b id="ip-ipk">-</b>IPK gabungan</div></div>
           <p class="nt-hint" style="margin-top:10px;">Memakai skala 4,0: A=4, A-=3,7, B+=3,3, B=3, B-=2,7, C+=2,3, C=2, D=1, E=0. Skala kampus bisa berbeda, anggap ini perkiraan.</p>
@@ -3497,10 +3497,10 @@ function moveBoard(b, dir) {
     function paintP() {
         const left = P.running ? (P.end - Date.now()) / 1000 : P.left;
         $('pm-time').textContent = mmss(left);
-        $('pm-mode').textContent = P.mode === 'fokus' ? '🎯 Fokus' : '☕ Istirahat';
+        $('pm-mode').textContent = P.mode === 'fokus' ? 'ðŸŽ¯ Fokus' : 'â˜• Istirahat';
         $('pm-fill').style.width = Math.min(100, Math.max(0, (1 - left / total()) * 100)) + '%';
-        $('pm-go').textContent = P.running ? '⏸ Jeda' : (P.left < total() ? '▶ Lanjut' : '▶ Mulai');
-        document.title = P.running ? '⏱ ' + mmss(left) + ' · ' + baseTitle : baseTitle;
+        $('pm-go').textContent = P.running ? 'â¸ Jeda' : (P.left < total() ? 'â–¶ Lanjut' : 'â–¶ Mulai');
+        document.title = P.running ? 'â± ' + mmss(left) + ' Â· ' + baseTitle : baseTitle;
     }
     function paintStats() {
         const log = lsGet(logKey(), {}), days = [];
@@ -3515,7 +3515,7 @@ function moveBoard(b, dir) {
     function finishP(auto) {
         if (P.mode === 'fokus' && auto) { const log = lsGet(logKey(), {}); log[dayKey()] = (log[dayKey()] || 0) + P.f; lsSet(logKey(), log); }
         P.running = false; P.mode = P.mode === 'fokus' ? 'istirahat' : 'fokus'; P.left = total();
-        if (auto) { chime(); alert(P.mode === 'istirahat' ? '🎉 Sesi fokus selesai. Waktunya istirahat sebentar.' : '☕ Istirahat selesai. Siap fokus lagi?'); }
+        if (auto) { chime(); alert(P.mode === 'istirahat' ? 'ðŸŽ‰ Sesi fokus selesai. Waktunya istirahat sebentar.' : 'â˜• Istirahat selesai. Siap fokus lagi?'); }
         paintP(); paintStats();
     }
     setInterval(() => { if (!P.running) return; if (P.end - Date.now() <= 0) finishP(true); else paintP(); }, 500);
@@ -3543,7 +3543,7 @@ function moveBoard(b, dir) {
     }
     $('nt-text').addEventListener('input', () => {
         const n = notes.find(x => x.id === curN); if (!n) return; n.text = $('nt-text').value;
-        clearTimeout(saveT); saveT = setTimeout(() => { lsSet(nKey(), notes); const o = $('nt-sel').selectedOptions[0]; if (o) o.textContent = titleOf(n); $('nt-hint').textContent = 'Tersimpan ✓ di perangkat ini.'; }, 500);
+        clearTimeout(saveT); saveT = setTimeout(() => { lsSet(nKey(), notes); const o = $('nt-sel').selectedOptions[0]; if (o) o.textContent = titleOf(n); $('nt-hint').textContent = 'Tersimpan âœ“ di perangkat ini.'; }, 500);
     });
     $('nt-sel').addEventListener('change', () => { curN = +$('nt-sel').value; paintNotes(); });
     $('nt-new').addEventListener('click', () => { const n = { id: Date.now(), text: '' }; notes.unshift(n); curN = n.id; lsSet(nKey(), notes); paintNotes(); $('nt-text').focus(); });
@@ -3561,7 +3561,7 @@ function moveBoard(b, dir) {
         $('ip-rows').innerHTML = ip.rows.map((r, i) => `<tr><td><input class="modern-input" data-i="${i}" data-k="mk" value="${esc(r.mk)}" placeholder="Nama mata kuliah" aria-label="Mata kuliah ${i + 1}"></td>
           <td><input class="modern-input" type="number" min="0" step="1" inputmode="numeric" data-i="${i}" data-k="sks" value="${esc(r.sks)}" aria-label="SKS"></td>
           <td><select class="modern-input" data-i="${i}" data-k="n" aria-label="Nilai">${Object.keys(GRADE).map(g => `<option${g === r.n ? ' selected' : ''}>${g}</option>`).join('')}</select></td>
-          <td><button class="btn btn-danger btn-sm" data-del="${i}" aria-label="Hapus baris" style="min-height:36px;padding:4px 10px;">✕</button></td></tr>`).join('');
+          <td><button class="btn btn-danger btn-sm" data-del="${i}" aria-label="Hapus baris" style="min-height:36px;padding:4px 10px;">âœ•</button></td></tr>`).join('');
         calcIp();
     }
     function calcIp() {
@@ -3594,7 +3594,7 @@ function moveBoard(b, dir) {
             const d = parseTgl(day.tgl); if (!d || d < today || !Array.isArray(day.sesi)) return;
             day.sesi.forEach((s, si) => {
                 if (!s || !s.kegiatan || s.kegiatan.trim() === '-') return;
-                const m = String(s.jam || '').match(/(\d{1,2})[.:](\d{2})\s*[-–]\s*(\d{1,2})[.:](\d{2})/);
+                const m = String(s.jam || '').match(/(\d{1,2})[.:](\d{2})\s*[-â€“]\s*(\d{1,2})[.:](\d{2})/);
                 L.push('BEGIN:VEVENT', `UID:a9-${di}-${si}-${d.getTime()}@portal-a9`, 'DTSTAMP:' + stamp);
                 if (m) {
                     // jam di jadwal adalah WIB (UTC+7)
@@ -3605,7 +3605,7 @@ function moveBoard(b, dir) {
                     const nx = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1), ymd2 = nx.getFullYear() + String(nx.getMonth() + 1).padStart(2, '0') + String(nx.getDate()).padStart(2, '0');
                     L.push('DTSTART;VALUE=DATE:' + ymd, 'DTEND;VALUE=DATE:' + ymd2);
                 }
-                L.push('SUMMARY:' + icsEsc(s.kegiatan), 'DESCRIPTION:' + icsEsc('Jadwal kuliah A9' + (s.jam ? ' · ' + s.jam + ' WIB' : '')), 'BEGIN:VALARM', 'TRIGGER:-PT30M', 'ACTION:DISPLAY', 'DESCRIPTION:' + icsEsc(s.kegiatan), 'END:VALARM', 'END:VEVENT');
+                L.push('SUMMARY:' + icsEsc(s.kegiatan), 'DESCRIPTION:' + icsEsc('Jadwal kuliah A9' + (s.jam ? ' Â· ' + s.jam + ' WIB' : '')), 'BEGIN:VALARM', 'TRIGGER:-PT30M', 'ACTION:DISPLAY', 'DESCRIPTION:' + icsEsc(s.kegiatan), 'END:VALARM', 'END:VEVENT');
                 n++;
             });
         });
@@ -3614,7 +3614,7 @@ function moveBoard(b, dir) {
     }
     const chips = $('jd-chips');
     if (chips) {
-        chips.insertAdjacentHTML('afterend', '<div style="margin-bottom:12px;"><button type="button" class="btn btn-outline btn-sm" id="jd-ics">📅 Tambahkan ke kalender HP / laptop (.ics)</button></div>');
+        chips.insertAdjacentHTML('afterend', '<div style="margin-bottom:12px;"><button type="button" class="btn btn-outline btn-sm" id="jd-ics">ðŸ“… Tambahkan ke kalender HP / laptop (.ics)</button></div>');
         $('jd-ics').addEventListener('click', () => {
             const r = buildIcs(); if (!r.n) { alert('Belum ada jadwal ke depan yang bisa diekspor.'); return; }
             const url = URL.createObjectURL(new Blob([r.text], { type: 'text/calendar;charset=utf-8' }));
@@ -3631,7 +3631,7 @@ function moveBoard(b, dir) {
 })();
 
 // ==========================================================================
-// BAGIAN 7 — DESAIN v3 & PERFORMA KETIK
+// BAGIAN 7 â€” DESAIN v3 & PERFORMA KETIK
 // ==========================================================================
 
 // Tunda (debounce) semua kolom pencarian supaya daftar tidak digambar ulang di setiap huruf
