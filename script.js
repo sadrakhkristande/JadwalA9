@@ -24,7 +24,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_-NTQ0VL2xQmIYJ_ieREXkg_WUcU3L0t";
 
 // URL Web App Google Apps Script milik kelompok.a9.2026@gmail.com (lihat drive-uploader.gs dan langkah pasang).
 // Kalau masih kosong, unggahan memakai penyimpanan Supabase seperti sebelumnya.
-const DRIVE_UPLOAD_URL = 'https://script.google.com/macros/s/AKfycbxm0IeQ1szMn1b_qptmCnolrFOAIrW1siJPJoH3EHkKiKq2iAnFwXSYoca0Mou9oUaM/exec';
+const DRIVE_UPLOAD_URL = '';
 
 let supabaseClient = null;
 try {
@@ -137,6 +137,23 @@ async function saveCategoryData(categoryKey) {
         // upsert: baris dibuat otomatis kalau belum ada
         const { error } = await supabaseClient.from('portal_db').upsert({ key: categoryKey, value: payload }, { onConflict: 'key' });
         if (error) throw error;
+        // Cek ulang: pastikan server benar-benar menyimpan (izin tabel yang salah kadang tidak memberi error)
+        if (Array.isArray(payload)) {
+            const chk = await supabaseClient.from('portal_db').select('value').eq('key', categoryKey).maybeSingle();
+            let sv = chk && chk.data && chk.data.value;
+            if (typeof sv === 'string') { try { sv = JSON.parse(sv); } catch (e) { sv = null; } }
+            if (!chk.error && Array.isArray(sv) && sv.length !== payload.length) {
+                alert('Server tidak menerima perubahan (data di server masih ' + sv.length + ' item, seharusnya ' + payload.length + '). Cek izin (policy) tabel portal_db di Supabase.');
+                return false;
+            }
+        }
+        // Samakan cache lokal supaya data lama tidak muncul lagi saat server lambat
+        try {
+            const c = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}') || {};
+            if (categoryKey === 'config') c.config = { maintenance: payload.maintenance, theme: payload.theme, globalAnnouncement: payload.globalAnnouncement };
+            else c[categoryKey] = payload;
+            localStorage.setItem(CACHE_KEY, JSON.stringify(c));
+        } catch (e) { }
         return true;
     } catch (err) {
         console.error(`Gagal simpan ${categoryKey}:`, err);
@@ -211,7 +228,7 @@ function postUpdate(kind, judul, isi, opt) {
 }
 
 // Unggah ke Google Drive kelompok (lewat Apps Script). Mengembalikan tautan file, atau null bila gagal.
-const DRIVE_MAX = 100 * 1024 * 1024;
+const DRIVE_MAX = 20 * 1024 * 1024;
 async function uploadToDrive(file, path) {
     if (file.size > DRIVE_MAX) { alert('File ' + file.name + ' lebih dari 20 MB. Unggah manual ke Drive lalu tempel tautannya.'); return null; }
     let key = '';
@@ -442,7 +459,7 @@ window.deleteItem = async function (category, index) {
     if (!Array.isArray(dbData[category])) return;
     const item = dbData[category][index];
     dbData[category].splice(index, 1);
-    if (!(await saveCategoryData(category))) return;
+    if (!(await saveCategoryData(category))) { dbData[category].splice(index, 0, item); renderAll(); return; }
     alert('Data berhasil dihapus.' + await purgeFileOf(item));
 };
 
@@ -2119,9 +2136,13 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         if (a === 'edit') await editFlow(c, x);
         else if (a === 'del') {
             if (!confirm(`Hapus "${x.title}"? Berkas yang diunggah lewat portal (Google Drive / penyimpanan portal) ikut dihapus.`)) return;
-            const i = (dbData[c.cat] || []).indexOf(x.it); if (i < 0) return;
-            dbData[c.cat].splice(i, 1);
-            if (await saveCategoryData(c.cat)) alert('Berkas dihapus.' + await purgeFileOf(x.it));
+            const lst = dbData[c.cat] || [];
+            let i = lst.indexOf(x.it);
+            if (i < 0 && x.it && x.it.id != null) i = lst.findIndex(z => z && z.id === x.it.id && z.link === x.it.link);
+            if (i < 0) { alert('Data tidak ditemukan (daftar baru saja diperbarui). Coba klik Hapus sekali lagi.'); return; }
+            const removed = lst.splice(i, 1)[0];
+            if (await saveCategoryData(c.cat)) alert('Berkas dihapus.' + await purgeFileOf(removed));
+            else { lst.splice(i, 0, removed); renderAll(); }
         }
     }
     function openKey(c, k) {
@@ -3985,8 +4006,9 @@ button.option-label.picked { border-color: var(--primary); background: var(--pri
     css.id = 'a9-mobile-fix';
     css.textContent = `
 /* Halaman selalu boleh digulir; tidak ada elemen yang mengunci tinggi/posisi body */
-html { height: auto !important; overflow-y: auto !important; overflow-x: hidden; }
-body { height: auto !important; min-height: 100%; position: static !important; overflow-y: auto !important; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+html { height: auto !important; }
+body { height: auto !important; min-height: 100%; position: static !important; overscroll-behavior-y: auto !important; touch-action: pan-y pinch-zoom; }
+@supports (overflow: clip) { html, body { overflow-x: clip; } }
 .main-content, .tab-content, .card { overflow: visible; min-width: 0; max-width: 100%; }
 img, video, canvas, iframe, svg { max-width: 100%; }
 .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; }
@@ -4032,4 +4054,67 @@ img, video, canvas, iframe, svg { max-width: 100%; }
         const viewerOpen = [...document.querySelectorAll('.vw-ov')].some(x => !x.hidden);
         if (!viewerOpen && document.body.style.overflow === 'hidden') document.body.style.overflow = '';
     }, 600);
+})();
+
+// ==========================================================================
+// BAGIAN 13 - SAMAKAN PRAKTIKUM (Lab, Skills Lab, Tutorial) DENGAN MATERI + RAPIKAN LAPTOP
+//   Ditaruh paling akhir. Tidak mengubah data, hanya tampilan dan pemasangan perpustakaan.
+// ==========================================================================
+(function () {
+    const css = document.createElement('style');
+    css.id = 'a9-fix13';
+    css.textContent = `
+/* Perpustakaan selalu selebar kartu induknya, walau induknya grid/flex */
+.lb { grid-column: 1 / -1; width: 100%; max-width: 100%; min-width: 0; flex: 1 1 100%; display: block; }
+.lb-content, .lb-grid { min-width: 0; }
+.lb-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.lb-list .lb-grid { grid-template-columns: 1fr; }
+.lb-card { width: 100%; min-width: 0; }
+@media (min-width: 1024px) { .lb-grid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); } .lb-list .lb-grid { grid-template-columns: 1fr; } }
+@media (max-width: 700px) { .lb-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .lb-list .lb-grid { grid-template-columns: 1fr; } }
+@media (max-width: 380px) { .lb-grid { grid-template-columns: 1fr; } }
+`;
+    document.head.appendChild(css);
+
+    // tab (menu) tempat tiap daftar berada, ditentukan dari elemen daftarnya, bukan dari tebakan id
+    const HOSTS = [
+        () => document.getElementById('materi-table-body'),
+        () => document.getElementById('lab-list'),
+        () => document.getElementById('skills-list'),
+        () => document.getElementById('tutorial-list')
+    ];
+
+    function tidy() {
+        try {
+            // pasang perpustakaan di halaman yang belum terpasang
+            if (typeof window.finderRender === 'function') window.finderRender();
+            HOSTS.forEach(get => {
+                const el = get(); if (!el) return;
+                const tab = el.closest('.tab-content'); if (!tab) return;
+                // form unggah lama disembunyikan (admin memakai tombol Tambah di perpustakaan)
+                tab.querySelectorAll('.admin-form-box').forEach(b => b.classList.add('lb-legacy'));
+                // daftar lama (tabel / kartu lama) tetap tersembunyi
+                const legacy = el.id === 'materi-table-body' ? el.closest('.table-responsive') : el;
+                if (legacy && tab.querySelector('.lb') && legacy.style.display !== 'none') legacy.style.display = 'none';
+            });
+            // pengaman gulir: tidak ada yang boleh mengunci halaman saat tidak ada dialog terbuka
+            const dialogOpen = [...document.querySelectorAll('.vw-ov')].some(x => !x.hidden) || !!document.querySelector('.fd-ov');
+            if (!dialogOpen) {
+                if (document.body.style.overflow === 'hidden') document.body.style.overflow = '';
+                if (document.documentElement.style.overflow === 'hidden') document.documentElement.style.overflow = '';
+                if (document.body.style.position === 'fixed') document.body.style.position = '';
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    // setelah pindah menu, pasang ulang (menu Praktikum baru dibuka belum tentu sudah terpasang)
+    const prev = window.switchTab;
+    window.switchTab = function (t, b) {
+        const r = prev ? prev(t, b) : undefined;
+        setTimeout(tidy, 0);
+        return r;
+    };
+    // Navigasi sederhana (Bagian 3) memanggil switchTab lewat window, jadi pembungkus ini ikut berlaku
+    tidy();
+    setInterval(tidy, 800);
 })();
