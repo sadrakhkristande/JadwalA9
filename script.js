@@ -3975,3 +3975,61 @@ button.option-label.picked { border-color: var(--primary); background: var(--pri
         ['materi', 'lab', 'skills', 'tutorial'].forEach(t => document.querySelectorAll('#tab-' + t + ' .admin-form-box').forEach(el => el.classList.add('lb-legacy')));
     }, 500);
 })();
+
+// ==========================================================================
+// BAGIAN 12 - PERBAIKAN TAMPILAN HP (scroll terkunci, tata letak melebar/aneh)
+//   Ditaruh paling akhir supaya aturannya menang atas aturan sebelumnya.
+// ==========================================================================
+(function () {
+    const css = document.createElement('style');
+    css.id = 'a9-mobile-fix';
+    css.textContent = `
+/* Halaman selalu boleh digulir; tidak ada elemen yang mengunci tinggi/posisi body */
+html { height: auto !important; overflow-y: auto !important; overflow-x: hidden; }
+body { height: auto !important; min-height: 100%; position: static !important; overflow-y: auto !important; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+.main-content, .tab-content, .card { overflow: visible; min-width: 0; max-width: 100%; }
+img, video, canvas, iframe, svg { max-width: 100%; }
+.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; }
+.q-text, .option-label, .lb-title, .vw-t b { overflow-wrap: anywhere; word-break: normal; }
+
+@media (max-width: 900px) {
+  .cbtx { grid-template-columns: minmax(0, 1fr) !important; gap: 14px; }
+  .cbtx-main { min-width: 0; }
+  .cbtx-side { position: static !important; max-height: none; }
+  .cx-grid { max-height: 36vh; overscroll-behavior: contain; }
+  .cbtx-nav { flex-wrap: wrap; gap: 8px; bottom: calc(72px + env(safe-area-inset-bottom)) !important; }
+  .cbtx-nav .btn { flex: 1 1 120px; padding-inline: 10px; }
+  .cbtx-head { gap: 8px; }
+  #cbt-question-container { scroll-margin-top: 110px; }
+}
+
+@media (max-width: 768px) {
+  body { padding-bottom: calc(88px + env(safe-area-inset-bottom)) !important; }
+  .main-content { padding-inline: 12px; margin: 12px auto; }
+  .card { padding: 14px; }
+  /* Menu bawah: 6 tombol muat satu baris, tidak terpotong */
+  #sn-main { overflow-x: auto; scrollbar-width: none; justify-content: space-between; }
+  #sn-main::-webkit-scrollbar { display: none; }
+  #sn-main .nav-pill { flex: 1 1 0; min-width: 52px; padding: 6px 2px; font-size: 10.5px; }
+  .simple-nav { position: sticky; top: 0; }
+  #sn-sub { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  #sn-sub::-webkit-scrollbar { display: none; }
+  .osce-big #g-timer { font-size: clamp(44px, 16vw, 64px); }
+  .lb-top { flex-wrap: wrap; }
+  .jd-row { grid-template-columns: 1fr; }
+  .fd-modal { max-height: 86vh; }
+}
+@media (max-width: 480px) {
+  .cbtx-title { font-size: 15px; }
+  .option-label { padding: 12px 14px; min-height: 48px; }
+  .q-text { font-size: 16px; }
+}
+`;
+    document.head.appendChild(css);
+
+    // Pengaman: kalau pratinjau/dialog sudah tertutup tapi gulir masih terkunci, buka lagi
+    setInterval(() => {
+        const viewerOpen = [...document.querySelectorAll('.vw-ov')].some(x => !x.hidden);
+        if (!viewerOpen && document.body.style.overflow === 'hidden') document.body.style.overflow = '';
+    }, 600);
+})();
