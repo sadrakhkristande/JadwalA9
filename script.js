@@ -159,11 +159,11 @@ function askDialog(title, fields, okText) {
             if (f.type === 'textarea') return `<div class="form-group"><label>${h(f.label)}</label><textarea class="modern-input" data-k="${f.id}" style="height:120px;" placeholder="${h(f.placeholder || '')}">${h(f.value || '')}</textarea></div>`;
             const lid = f.list && f.list.length ? 'dl-' + f.id : '';
             if (lid) lists.push(`<datalist id="${lid}">${f.list.map(o => `<option value="${h(o)}">`).join('')}</datalist>`);
-            return `<div class="form-group"><label>${h(f.label)}</label><input class="modern-input" data-k="${f.id}" type="${f.type || 'text'}"${f.type === 'file' ? '' : ` value="${h(f.value || '')}"`} placeholder="${h(f.placeholder || '')}"${lid ? ` list="${lid}"` : ''}></div>`;
+            return `<div class="form-group"><label>${h(f.label)}</label><input class="modern-input" data-k="${f.id}" type="${f.type || 'text'}"${f.multiple ? ' multiple' : ''}${f.type === 'file' ? '' : ` value="${h(f.value || '')}"`} placeholder="${h(f.placeholder || '')}"${lid ? ` list="${lid}"` : ''}></div>`;
         }).join('');
         ov.innerHTML = `<div class="fd-modal" role="dialog" aria-modal="true" aria-label="${h(title)}"><h3>${h(title)}</h3>${body}${lists.join('')}` +
             `<div class="fd-modal-acts"><button type="button" class="btn btn-outline" data-x>Batal</button><button type="button" class="btn btn-primary" data-ok>${h(okText || 'Simpan')}</button></div></div>`;
-        const collect = () => { const o = {}; ov.querySelectorAll('[data-k]').forEach(el => { o[el.dataset.k] = el.type === 'file' ? (el.files[0] || null) : el.value; }); return o; };
+        const collect = () => { const o = {}; ov.querySelectorAll('[data-k]').forEach(el => { o[el.dataset.k] = el.type === 'file' ? (el.multiple ? Array.from(el.files) : (el.files[0] || null)) : el.value; }); return o; };
         const close = v => { document.removeEventListener('keydown', onKey, true); ov.remove(); resolve(v); };
         const onKey = e => {
             if (e.key === 'Escape') { e.stopPropagation(); close(null); }
@@ -257,6 +257,52 @@ async function uploadFileToSupabaseStorage(fileInputId, path) {
     const input = document.getElementById(fileInputId);
     if (!input || !input.files || input.files.length === 0) return null;
     return await uploadFileObj(input.files[0], path);
+}
+
+// ===== Hapus berkas dari penyimpanannya (Google Drive via Apps Script, atau Supabase Storage) =====
+function driveIdOf(u) {
+    const m = String(u || '').match(/drive\.google\.com\/file\/d\/([\w-]+)/) || String(u || '').match(/drive\.google\.com\/(?:open|uc)\?(?:[^#]*&)?id=([\w-]+)/);
+    return m ? m[1] : null;
+}
+const linkInUse = url => ['tugas', 'materi', 'laboratorium', 'skills_lab', 'tutorial'].some(k => (dbData[k] || []).some(it => it && it.link === url));
+
+async function deleteStoredFile(url) {
+    url = String(url || '');
+    const id = driveIdOf(url);
+    if (id) {
+        if (!DRIVE_UPLOAD_URL) return { ok: false, why: 'DRIVE_UPLOAD_URL belum diisi' };
+        let key = ''; try { key = localStorage.getItem('a9_drive_key') || ''; } catch (e) { }
+        if (!key) {
+            const r = await askDialog('Kunci unggah ke Drive', [
+                { type: 'note', text: 'Masukkan UPLOAD_KEY dari Apps Script untuk menghapus berkas di Drive. Cukup sekali di perangkat ini.' },
+                { id: 'k', label: 'Kunci unggah', type: 'password' }], 'Simpan');
+            if (!r || !r.k.trim()) return { ok: false, why: 'kunci tidak diisi' };
+            key = r.k.trim(); try { localStorage.setItem('a9_drive_key', key); } catch (e) { }
+        }
+        try {
+            const r = await fetch(DRIVE_UPLOAD_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key, action: 'delete', id }) });
+            const j = await r.json();
+            if (!j.ok) { if (/kunci/i.test(j.error || '')) { try { localStorage.removeItem('a9_drive_key'); } catch (e) { } } return { ok: false, why: j.error || 'gagal' }; }
+            return { ok: true };
+        } catch (e) { return { ok: false, why: e.message || 'koneksi gagal' }; }
+    }
+    const m = url.match(/\/storage\/v1\/object\/public\/portal-files\/([^?#]+)/);
+    if (m && supabaseClient) {
+        const { error } = await supabaseClient.storage.from('portal-files').remove([decodeURIComponent(m[1])]);
+        return error ? { ok: false, why: error.message } : { ok: true };
+    }
+    return { ok: true, skipped: true };   // tautan luar (YouTube, folder, dll.) tidak dihapus
+}
+
+// Mengembalikan kalimat tambahan untuk notifikasi. Tidak menghapus bila berkas masih dipakai data lain.
+async function purgeFileOf(it) {
+    const url = it && typeof it === 'object' ? it.link : '';
+    if (!url || url === '#' || linkInUse(url)) return '';
+    const done = busy('Menghapus berkas...');
+    try {
+        const r = await deleteStoredFile(url);
+        return r.ok ? (r.skipped ? '' : ' Berkasnya ikut terhapus.') : ' Data terhapus, tapi berkas belum terhapus dari penyimpanan (' + r.why + ').';
+    } finally { done(); }
 }
 
 window.handleLogin = async function () {
@@ -390,13 +436,14 @@ window.toggleThemeSwitch = function () {
     applyTheme(next);
 };
 
-// FITUR HAPUS (ADMIN)
+// FITUR HAPUS (ADMIN): berkas yang diunggah lewat portal ikut terhapus
 window.deleteItem = async function (category, index) {
-    if (!confirm('Apakah Anda yakin ingin menghapus data ini secara permanen?')) return;
-    if (Array.isArray(dbData[category])) {
-        dbData[category].splice(index, 1);
-        if (await saveCategoryData(category)) alert('Data berhasil dihapus.');
-    }
+    if (!confirm('Hapus data ini secara permanen? Berkas yang diunggah lewat portal (Google Drive / penyimpanan portal) ikut dihapus.')) return;
+    if (!Array.isArray(dbData[category])) return;
+    const item = dbData[category][index];
+    dbData[category].splice(index, 1);
+    if (!(await saveCategoryData(category))) return;
+    alert('Data berhasil dihapus.' + await purgeFileOf(item));
 };
 
 function applyBanners() {
@@ -879,21 +926,21 @@ body { font-size: 16px; }
         <details><summary>5. Latihan soal isian</summary>
           <ol><li>Buka <strong>Latihan, Soal Isian</strong>, lalu klik <strong>Mulai Latihan</strong>.</li><li>Ketik jawaban. Huruf besar-kecil dan awalan "Os", "M.", "N." tidak berpengaruh.</li><li>Klik <strong>Submit Jawaban</strong> untuk melihat skor dan pembahasan.</li></ol></details>
         <details><summary>6. Simulasi CBT</summary>
-          <ul><li><strong>Tampilan:</strong> satu soal per halaman. Pakai tombol Sebelumnya/Berikutnya, atau klik nomor di <strong>Daftar Soal</strong> untuk memilih soal mana yang mau dikerjakan.</li><li><strong>Warna nomor:</strong> abu-abu = belum dikerjakan, hijau = sudah dijawab, titik oranye = ditandai ragu-ragu.</li><li><strong>Mode Latihan:</strong> tanpa waktu. Setelah memilih jawaban, benar/salah dan pembahasan langsung muncul.</li><li><strong>Mode CBT:</strong> ada waktu 100 menit (timer merah di 10 menit terakhir). Jawaban boleh diubah sebelum dikumpulkan. Pembahasan bisa dilihat setelah dikumpulkan lewat tombol <em>Review &amp; Pembahasan</em>.</li><li><strong>Tombol cepat:</strong> A-E atau 1-5 untuk memilih jawaban, panah kiri/kanan untuk pindah soal, F untuk tandai ragu.</li><li>Di akhir sesi kamu mendapat apresiasi, laporan nilai, dan rekomendasi topik belajar. Hasilnya otomatis tersimpan.</li></ul></details>
+          <ul><li><strong>Tampilan:</strong> satu soal per halaman. Pakai tombol Sebelumnya/Berikutnya, atau klik nomor di <strong>Daftar Soal</strong> untuk memilih soal mana yang mau dikerjakan.</li><li><strong>Warna nomor:</strong> abu-abu = belum dikerjakan, hijau = sudah dijawab, titik oranye = ditandai ragu-ragu.</li><li><strong>Mode Latihan:</strong> tanpa waktu. Jawaban yang kamu pilih disimpan dulu dan bisa diganti. Tekan <em>Periksa jawaban</em> untuk melihat benar/salah dan pembahasan soal itu. Menu lain tetap bisa dibuka.</li><li><strong>Mode CBT:</strong> ada waktu 100 menit (timer merah di 10 menit terakhir). Jawaban boleh diubah sebelum dikumpulkan, dan <strong>menu lain terkunci</strong> sampai jawaban dikumpulkan. Pembahasan bisa dilihat setelah dikumpulkan lewat tombol <em>Review &amp; Pembahasan</em>.</li><li><strong>Ganti mode:</strong> tombol <em>Beranda CBT</em> membawamu kembali ke pilihan mode (latihan atau ujian yang sedang jalan dibatalkan).</li><li><strong>Tombol cepat:</strong> A-E atau 1-5 untuk memilih jawaban, panah kiri/kanan untuk pindah soal, F untuk tandai ragu.</li><li>Di akhir sesi kamu mendapat apresiasi, laporan nilai, dan rekomendasi topik belajar. Hasilnya otomatis tersimpan.</li></ul></details>
         <details class="guest-guide"><summary>\ud83d\udcc8 Progres dan hasil belajar</summary>
           <ol><li>Setiap selesai CBT atau Soal Isian, nilaimu tersimpan otomatis di akunmu (NIM), jadi bisa dilihat dari HP atau laptop mana pun.</li><li>Buka <strong>Latihan, Progres Saya</strong> untuk melihat grafik nilai, rata-rata, nilai terbaik, dan apakah kamu meningkat dibanding pengerjaan sebelumnya.</li><li>Bagian <em>Topik yang perlu diperkuat</em> menunjukkan topik yang paling sering salah, sebagai panduan belajar.</li></ol></details>
         <details class="guest-guide"><summary>7. Melapor masalah dan melihat perkembangannya</summary>
           <ol><li>Buka <strong>Bantuan, Lapor Masalah</strong>, isi jenis, bagian, dan penjelasan, lalu klik <strong>Kirim Laporan</strong>.</li><li>Di halaman yang sama, bagian <strong>Laporan Saya</strong> menunjukkan perkembangannya: Terkirim, Sedang diproses, lalu Selesai.</li><li>Kalau admin mengubah status atau menulis catatan, kamu mendapat notifikasi dan kartu <strong>\ud83d\udd14 Update laporanmu</strong> di Beranda. Klik <em>Tandai sudah dibaca</em> kalau sudah dilihat.</li></ol></details>
         <details class="admin-guide" style="display:none;"><summary>\ud83d\udee0\ufe0f Panduan Admin</summary>
-          <ol><li><strong>Menambah konten:</strong> form berwarna putus-putus di tiap halaman (pengumuman, tugas, materi, lab, dan seterusnya) hanya terlihat oleh admin. Isi lalu klik Simpan. Tombol Hapus muncul di tiap data.</li>
+          <ol><li><strong>Menambah konten:</strong> form berwarna putus-putus di tiap halaman (pengumuman, tugas, dan seterusnya) hanya terlihat oleh admin. Isi lalu klik Simpan. Tombol Hapus muncul di tiap data, dan berkas yang diunggah lewat portal ikut terhapus.</li>
           <li><strong>Menu Laporan:</strong> buka <em>Bantuan, Laporan Masuk</em>. Angka merah di menu menunjukkan laporan yang belum selesai.</li>
           <li><strong>Mengolah laporan:</strong> tulis catatan untuk pelapor (opsional), lalu klik <em>Proses</em> saat mulai dikerjakan, dan <em>Selesai</em> kalau sudah beres. Mahasiswa pelapor otomatis mendapat notifikasi di Beranda.</li>
           <li><strong>Filter:</strong> pakai tombol Belum selesai, Selesai, atau Semua. Klik Muat ulang untuk mengecek laporan baru.</li>
           <li><strong>Setelan:</strong> tombol \u2699\ufe0f Setelan di kanan atas untuk mode maintenance, pengumuman global, dan mengganti kode admin.</li></ol></details>
         <details class="admin-guide" style="display:none;"><summary>\ud83d\udcc1 Upload materi dan file besar lewat Google Drive (Admin)</summary>
-          <ol><li>Buka <strong>drive.google.com</strong> dan buat folder, misalnya "Portal A9", dengan subfolder per mata kuliah. Drive gratis 15 GB dan bisa menyimpan PDF, PPT, atau video besar.</li><li>Upload filenya. Klik kanan file atau folder, pilih <strong>Bagikan</strong>, ubah Akses umum menjadi <strong>Siapa saja yang memiliki link</strong> dengan peran <strong>Pelihat</strong>, lalu <strong>Salin link</strong>.</li><li>Di portal, buka halaman tujuan (Materi, Tugas, Lab, Skills Lab, atau Tutorial), isi nama, lalu tempel link tadi di kolom <strong>Link</strong> dan klik Simpan.</li><li>Mahasiswa yang klik <em>Buka</em> akan melihat pratinjau file di jendela portal, dengan tombol <em>Buka di Drive</em> dan <em>Unduh</em>. Link folder juga didukung, isinya tampil sebagai daftar.</li><li>Kalau mahasiswa melihat "Anda memerlukan akses", berarti akses umum belum diatur ke "Siapa saja yang memiliki link". Perbaiki di Drive, tidak perlu mengubah data di portal.</li><li>Kolom upload file langsung dari komputer tetap ada untuk file kecil (maksimal 50 MB). Untuk file besar, pakai Drive.</li></ol></details>
+          <ol><li>Buka <strong>drive.google.com</strong> dan buat folder, misalnya "Portal A9". Drive gratis 15 GB dan bisa menyimpan PDF, PPT, atau video besar.</li><li>Cara termudah: di halaman Materi, Lab, Skills Lab, atau Tutorial, klik <strong>Tambah</strong>, pilih satu atau banyak file, isi <strong>Kategori</strong>, lalu klik Tambah. Judul otomatis memakai nama file, dan file masuk ke folder Drive sesuai kategori (setelah Apps Script dipasang).</li><li>Untuk file yang sudah ada di Drive: klik kanan file, pilih <strong>Bagikan</strong>, ubah Akses umum menjadi <strong>Siapa saja yang memiliki link</strong> dengan peran <strong>Pelihat</strong>, <strong>Salin link</strong>, lalu tempel di kolom tautan (satu per baris, boleh <em>Judul | tautan</em>).</li><li>Mahasiswa yang klik kartu akan melihat pratinjau file di jendela portal, dengan tombol <em>Buka di Drive</em> dan <em>Unduh</em>. Link folder juga didukung, isinya tampil sebagai daftar.</li><li>Kalau mahasiswa melihat "Anda memerlukan akses", berarti akses umum belum diatur ke "Siapa saja yang memiliki link". Perbaiki di Drive, tidak perlu mengubah data di portal.</li><li><strong>Menghapus:</strong> menghapus berkas di portal juga memindahkan file yang diunggah lewat portal ke Sampah Drive (bisa dipulihkan 30 hari). File Drive milik orang lain atau di luar folder portal tidak ikut terhapus.</li></ol></details>
         <details><summary>\ud83d\udd0e Filter materi, pencarian, dan favorit</summary>
-          <ul><li><strong>Materi, Lab, Skills Lab, dan Tutorial</strong> punya filter sendiri: <strong>Blok</strong>, <strong>Sumber</strong>, <strong>Mata kuliah</strong>, <strong>Jenis</strong> berkas, dan urutan. Pilihannya otomatis mengikuti data di halaman itu.</li><li>Ketik di kolom cari untuk mencari judul, blok, sumber, atau mata kuliah. Tombol <em>Atur ulang filter</em> mengosongkan semuanya.</li><li>Klik kartu untuk <strong>pratinjau</strong>: PDF, slide, gambar, dan video tampil langsung. Pakai panah kiri/kanan atau tombol Sebelumnya/Berikutnya untuk pindah berkas. Tekan \u2606 untuk menyimpan ke <em>Favorit saya</em>; berkas yang baru dibuka muncul di <em>Terakhir dibuka</em>.</li><li><strong>Video YouTube</strong> diputar di dalam portal, dan di bawahnya muncul <strong>rangkuman otomatis</strong> (ringkasan, poin penting dengan waktu yang bisa diklik, istilah, dan pertanyaan latihan). Rangkuman dibuat AI dari subtitle video, jadi cocokkan lagi dengan materi resmi.</li><li class="admin-guide" style="display:none;"><strong>Admin:</strong> tombol <em>Tambah</em> di tiap halaman untuk mengisi judul, blok, sumber, mata kuliah, dan tautan atau file. Menu \u22ef di kartu untuk ubah atau hapus.</li><li><strong>Alat Belajar</strong> (menu Kuliah): timer fokus, catatan cepat, dan kalkulator IPS/IPK. Di halaman Jadwal ada tombol untuk menambahkan jadwal ke kalender HP.</li><li><strong>Tugas:</strong> pakai tombol Semua atau Akan datang, dan kolom pencarian.</li><li><strong>Jadwal:</strong> pilih Hari ini &amp; besok, Minggu ini, atau Semua, atau ketik kata kunci seperti "Tutor" atau nama dosen.</li></ul></details>
+          <ul><li><strong>Materi, Lab, Skills Lab, dan Tutorial</strong> punya filter sendiri: <strong>Kategori</strong>, <strong>Jenis</strong> berkas, dan urutan. Pilihan kategori otomatis mengikuti data di halaman itu.</li><li>Ketik di kolom cari untuk mencari judul atau kategori. Tombol <em>Atur ulang filter</em> mengosongkan semuanya.</li><li>Klik kartu untuk <strong>pratinjau</strong>: PDF, slide, gambar, dan video tampil langsung. Pakai panah kiri/kanan atau tombol Sebelumnya/Berikutnya untuk pindah berkas. Tekan \u2606 untuk menyimpan ke <em>Favorit saya</em>; berkas yang baru dibuka muncul di <em>Terakhir dibuka</em>.</li><li><strong>Video YouTube</strong> diputar di dalam portal, dan di bawahnya muncul <strong>rangkuman otomatis</strong> (ringkasan, poin penting dengan waktu yang bisa diklik, istilah, dan pertanyaan latihan). Rangkuman dibuat AI dari subtitle video, jadi cocokkan lagi dengan materi resmi.</li><li class="admin-guide" style="display:none;"><strong>Admin:</strong> tombol <em>Tambah</em> di tiap halaman: pilih satu atau banyak file, isi kategori, selesai. Menu \u22ef di kartu untuk ubah atau hapus.</li><li><strong>Alat Belajar</strong> (menu Kuliah): timer fokus, catatan cepat, dan kalkulator IPS/IPK. Di halaman Jadwal ada tombol untuk menambahkan jadwal ke kalender HP.</li><li><strong>Tugas:</strong> pakai tombol Semua atau Akan datang, dan kolom pencarian.</li><li><strong>Jadwal:</strong> pilih Hari ini &amp; besok, Minggu ini, atau Semua, atau ketik kata kunci seperti "Tutor" atau nama dosen.</li></ul></details>
         <details class="admin-guide" style="display:none;"><summary>\ud83d\udcca Progres mahasiswa dan jadwal (Admin)</summary>
           <ol><li>Buka <strong>Latihan, Progres Mahasiswa</strong> untuk melihat jumlah pengerjaan, rata-rata, nilai terbaik, nilai terakhir, dan tren tiap mahasiswa. Gunakan pencarian dan filter jenis latihan.</li><li>Klik <strong>Detail</strong> untuk melihat semua pengerjaan satu mahasiswa. Tombol <em>Hapus</em> di tiap baris menghapus satu pengerjaan, dan <em>Hapus semua progres</em> mengosongkan progres mahasiswa itu. Pakai ini kalau terjadi kesalahan sistem. Penghapusan tidak bisa dibatalkan.</li><li><strong>Jadwal:</strong> buka Kuliah, Jadwal, lalu tempel isi JSON jadwal di kotak admin dan klik <em>Simpan jadwal ke database</em>. Format array langsung atau berbentuk {"jadwal": [...]} sama-sama diterima.</li></ol></details>
         <details><summary>\ud83c\udfae Game santai</summary>
@@ -1142,7 +1189,7 @@ body { font-size: 16px; }
     button.option-label { width: 100%; text-align: left; font: inherit; color: inherit; }
     button.option-label:disabled { opacity: 1; cursor: default; }
     button.option-label.picked { border-color: var(--primary); background: var(--primary-light); }
-    .cbtx-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 22px; }
+    .cbtx-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
     .cbtx-side { background: var(--bg-base); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 16px; position: sticky; top: 150px; }
     .cbtx-side h4 { font-size: 15px; margin-bottom: 4px; }
     .cx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 6px; margin: 12px 0; max-height: 44vh; overflow-y: auto; padding: 2px; }
@@ -1220,7 +1267,7 @@ body { font-size: 16px; }
         if (!bank.length) { alert('Soal CBT belum tersedia di database (key: cbt_soal).'); return; }
         const qs = bank.slice();
         for (let i = qs.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [qs[i], qs[j]] = [qs[j], qs[i]]; }
-        cbt = { mode, qs: qs.slice(0, 100), idx: 0, ans: {}, flag: {}, review: false, side: false, startedAt: Date.now(), endAt: mode === 'exam' ? Date.now() + EXAM_DURATION * 1000 : 0 };
+        cbt = { mode, qs: qs.slice(0, 100), idx: 0, ans: {}, flag: {}, chk: {}, leaves: 0, away: false, review: false, side: false, startedAt: Date.now(), endAt: mode === 'exam' ? Date.now() + EXAM_DURATION * 1000 : 0 };
         cbtStarted = true; cbtMode = mode; cbtTimeInSeconds = mode === 'exam' ? EXAM_DURATION : 0;
         const tm = $('cbt-timer'); tm.style.display = mode === 'exam' ? '' : 'none'; tm.textContent = cbtFormatTime(cbtTimeInSeconds);
         $('cbt-start-card').style.display = 'none'; $('cbt-result-card').style.display = 'none'; $('cbt-active-area').style.display = 'block';
@@ -1241,7 +1288,8 @@ body { font-size: 16px; }
 
     function renderCbt() {
         const c = cbt, q = c.qs[c.idx], n = c.qs.length, ans = c.ans[q.id], rv = c.review, pr = c.mode === 'practice';
-        const reveal = rv || (pr && ans !== undefined);
+        // Mode latihan: jawaban disimpan dulu, benar/salah baru tampil setelah "Periksa jawaban"
+        const reveal = rv || (pr && !!c.chk[q.id]);
         const opts = q.options.map((o, i) => {
             let cls = 'option-label';
             if (reveal) { if (o === q.answer) cls += ' correct-answer'; else if (o === ans) cls += ' wrong-answer'; }
@@ -1260,13 +1308,13 @@ body { font-size: 16px; }
         const grid = c.qs.map((x, i) => {
             const a = c.ans[x.id]; let s = '';
             if (rv) s = a === undefined ? 'blank' : a === x.answer ? 'ok' : 'bad';
-            else if (pr && a !== undefined) s = a === x.answer ? 'ok' : 'bad';
+            else if (pr && c.chk[x.id]) s = a === x.answer ? 'ok' : 'bad';
             else if (a !== undefined) s = 'done';
             return `<button type="button" class="cx-btn ${s}${c.flag[x.id] ? ' flag' : ''}${i === c.idx ? ' cur' : ''}" data-go="${i}" aria-label="Soal ${i + 1}">${i + 1}</button>`;
         }).join('');
         const sw = (bg, t) => `<span><i style="background:${bg}"></i>${t}</span>`;
         const legend = rv ? sw('#10b981', 'Benar') + sw('#ef4444', 'Salah') + sw('var(--border-color)', 'Kosong')
-            : pr ? sw('var(--bg-card)', 'Belum') + sw('#10b981', 'Benar') + sw('#ef4444', 'Salah') + sw('var(--warning)', 'Ragu')
+            : pr ? sw('var(--bg-card)', 'Belum') + sw('var(--primary)', 'Terjawab (belum diperiksa)') + sw('#10b981', 'Benar') + sw('#ef4444', 'Salah') + sw('var(--warning)', 'Ragu')
                 : sw('var(--bg-card)', 'Belum dikerjakan') + sw('var(--primary)', 'Sudah dijawab') + sw('var(--warning)', 'Ragu-ragu');
         const stats = rv ? `Review: ${Object.keys(c.ans).filter(id => { const x = c.qs.find(y => String(y.id) === id); return x && c.ans[id] === x.answer; }).length} benar dari ${n} soal`
             : `Terjawab <strong>${answered}</strong> \u00b7 Ragu <strong>${flagged}</strong> \u00b7 Belum <strong>${n - answered}</strong>`;
@@ -1279,6 +1327,7 @@ body { font-size: 16px; }
             <div class="cbtx-head">
               <span class="cbtx-title">${rv ? '\ud83d\udcd6 Review \u00b7 ' : ''}Soal ${c.idx + 1} dari ${n}</span>
               <span style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn btn-outline btn-sm" data-act="exit">\ud83c\udfe0 Beranda CBT</button>
                 <button class="btn btn-outline btn-sm cx-toggle" data-act="side">\ud83d\udccb Daftar soal</button>
                 ${rv ? '' : `<button class="btn btn-outline btn-sm" data-act="flag">${c.flag[q.id] ? '\ud83d\udea9 Ragu-ragu (klik untuk batal)' : '\ud83c\udff3\ufe0f Tandai ragu-ragu'}</button>`}
               </span>
@@ -1289,6 +1338,7 @@ body { font-size: 16px; }
             ${fb}
             <div class="cbtx-nav">
               <button class="btn btn-outline" data-act="prev"${c.idx === 0 ? ' disabled' : ''}>\u25c0 Sebelumnya</button>
+              ${pr && !rv ? `<button class="btn btn-primary" data-act="check"${ans === undefined || c.chk[q.id] ? ' disabled' : ''}>\u2714 Periksa jawaban</button>` : ''}
               <button class="btn btn-primary" data-act="next"${c.idx === n - 1 ? ' disabled' : ''}>Berikutnya \u25b6</button>
             </div>
           </div>
@@ -1309,13 +1359,27 @@ body { font-size: 16px; }
         const nx = cbt.qs[cbt.idx + 1]; if (nx && nx.image) { new Image().src = nx.image; }
         $('cbt-question-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+    // Memilih jawaban hanya menyimpannya (bisa diganti atau dibatalkan dengan klik lagi)
     function pick(i) {
         if (!cbt || cbt.review) return;
         const c = cbt, q = c.qs[c.idx];
         const o = q.options[i]; if (o === undefined) return;
-        if (c.mode === 'practice' && c.ans[q.id] !== undefined) return;
-        if (c.ans[q.id] === o && c.mode === 'exam') delete c.ans[q.id]; else c.ans[q.id] = o;
+        if (c.mode === 'practice' && c.chk[q.id]) return;      // sudah diperiksa: terkunci
+        if (c.ans[q.id] === o) delete c.ans[q.id]; else c.ans[q.id] = o;
         renderCbt();
+    }
+    function checkAns() {
+        if (!cbt || cbt.mode !== 'practice' || cbt.review) return;
+        const q = cbt.qs[cbt.idx];
+        if (cbt.ans[q.id] === undefined) { alert('Pilih jawaban dulu.'); return; }
+        cbt.chk[q.id] = true; renderCbt();
+    }
+    function exitCbt() {
+        if (!cbt) return;
+        if (!cbt.review && !confirm(cbt.mode === 'exam'
+            ? 'Keluar dari CBT? Ujian dibatalkan, jawabanmu tidak dinilai dan tidak tersimpan.'
+            : 'Kembali ke beranda CBT? Latihan ini tidak dinilai dan tidak tersimpan.')) return;
+        window.resetCBT();   // kembali ke kartu pilihan mode
     }
     function toggleFlag() { const q = cbt.qs[cbt.idx]; if (cbt.flag[q.id]) delete cbt.flag[q.id]; else cbt.flag[q.id] = true; renderCbt(); }
     function jumpBlank() {
@@ -1336,6 +1400,8 @@ body { font-size: 16px; }
         else if (act === 'blank') jumpBlank();
         else if (act === 'submit') window.submitCBT();
         else if (act === 'back') showReport();
+        else if (act === 'check') checkAns();
+        else if (act === 'exit') exitCbt();
         else if (act === 'side') { cbt.side = !cbt.side; renderCbt(); }
     });
 
@@ -1347,6 +1413,13 @@ body { font-size: 16px; }
         else if (k === 'arrowleft') { go(cbt.idx - 1); e.preventDefault(); }
         else if (k === 'f' && !cbt.review) toggleFlag();
         else if (k.length === 1) { const n = 'abcde'.indexOf(k) >= 0 ? 'abcde'.indexOf(k) : '12345'.indexOf(k); if (n >= 0) pick(n); }
+    });
+
+    // Mode ujian: catat berapa kali peserta meninggalkan halaman (browser tidak bisa mencegahnya)
+    document.addEventListener('visibilitychange', () => {
+        if (!cbt || cbt.mode !== 'exam' || !cbtStarted) return;
+        if (document.hidden) { cbt.leaves++; cbt.away = true; }
+        else if (cbt.away) { cbt.away = false; alert(`\u26a0\ufe0f Kamu meninggalkan halaman ujian (${cbt.leaves}\u00d7). Tetap fokus di CBT ya.`); }
     });
 
     window.submitCBT = function () {
@@ -1374,7 +1447,7 @@ body { font-size: 16px; }
         const skor = n ? Math.round(benar / n * 100) : 0;
         const durasi = Math.min(Math.round((Date.now() - c.startedAt) / 1000), c.mode === 'exam' ? EXAM_DURATION : 1e9);
         const jenis = c.mode === 'exam' ? 'cbt-ujian' : 'cbt-latihan';
-        c.result = { benar, salah, kosong, skor, durasi, wrong, jenis, prev: prevScore(jenis) };
+        c.result = { benar, salah, kosong, skor, durasi, wrong, jenis, leaves: c.leaves || 0, prev: prevScore(jenis) };
         if (isGuest()) saveResult({ t: Date.now(), jenis, skor, benar, total: n, kosong, durasi, wrong });
         showReport();
     }
@@ -1390,6 +1463,7 @@ body { font-size: 16px; }
           <div class="report-row"><span>Jawaban Salah</span><span class="report-value report-wrong">${r.salah} Soal</span></div>
           <div class="report-row"><span>Tidak Dijawab</span><span class="report-value">${r.kosong} Soal</span></div>
           <div class="report-row"><span>Waktu Pengerjaan</span><span class="report-value">${cbtFormatTime(r.durasi)}</span></div>
+          ${r.leaves ? `<div class="report-row"><span>Keluar dari halaman ujian</span><span class="report-value report-wrong">${r.leaves}\u00d7</span></div>` : ''}
           ${topics.length ? `<div class="report-recommendation"><h5>\ud83d\udcda Rekomendasi Belajar (Fokus Tingkatkan):</h5><ul>${topics.map(([t, k]) => `<li><strong>${esc(t)}</strong> (${k} soal)</li>`).join('')}</ul></div>`
                 : `<div class="report-recommendation" style="background:#ecfdf5;border-color:#10b981;"><h5 style="color:#065f46;">\ud83c\udf1f Luar Biasa!</h5><ul style="color:#065f46;"><li>Semua jawabanmu benar.</li></ul></div>`}
           <div class="lap-acts" style="margin-top:18px;justify-content:center;">
@@ -1730,9 +1804,10 @@ body { font-size: 16px; }
 })();
 
 // ==========================================================================
-// BAGIAN 5B - PERPUSTAKAAN MATERI (filter Blok - Sumber - Mata kuliah), PRATINJAU FILE,
+// BAGIAN 5B - PERPUSTAKAAN MATERI (filter Kategori), PRATINJAU FILE,
 //             VIDEO YOUTUBE + RANGKUMAN OTOMATIS
 //   Dipakai oleh: Materi, Lab, Skills Lab, Tutorial. Tiap halaman punya filternya sendiri.
+//   Admin: satu tombol Tambah (1 atau banyak file, judul = nama file, pilih/buat kategori).
 // ==========================================================================
 
 // ---- fungsi murni (tanpa DOM) supaya mudah diuji ----
@@ -1875,10 +1950,12 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         { id: 'tut', cat: 'tutorial', label: 'Tutorial', title: 'nama', lg: 'skenario', host: () => $('tutorial-list') }
     ];
     const savedView = lsGet('a9_lb_view', 'grid');
-    CATS.forEach(c => { c.f = { blok: '', sumber: '', matkul: '', jenis: '', fav: false, q: '', sort: 'baru' }; c.view = savedView; c.root = null; c.last = ''; c.lastSel = ''; c.shown = []; c.all = []; });
+    CATS.forEach(c => { c.f = { kategori: '', jenis: '', fav: false, q: '', sort: 'baru' }; c.view = savedView; c.root = null; c.last = ''; c.lastSel = ''; c.shown = []; c.all = []; });
 
+    // kategori: data baru memakai "kategori"; data lama memakai mata kuliah / blok / sumber sebagai cadangan
     const meta = (c, it) => ({
         title: String(it[c.title] || 'Tanpa judul'), link: it.link && it.link !== '#' ? it.link : '',
+        kategori: String(it.kategori || it.matkul || it[c.lg] || it.blok || it.sumber || '').trim(),
         blok: String(it.blok || '').trim(), sumber: String(it.sumber || '').trim(), matkul: String(it.matkul || it[c.lg] || '').trim(), tipe: it.tipe || ''
     });
     const keyOf = (c, it) => c.cat + ':' + (it.id != null ? it.id : (it[c.title] + '|' + (it.link || '')));
@@ -1891,14 +1968,12 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         const host = c.host(); if (!host || c.root) return;
         const root = document.createElement('div'); root.className = 'lb'; root.id = 'lb-' + c.id;
         root.innerHTML = `
-          <div class="lb-top"><input type="search" class="modern-input fd-search" placeholder="\ud83d\udd0e Cari judul, blok, sumber, mata kuliah..." aria-label="Cari">
+          <div class="lb-top"><input type="search" class="modern-input fd-search" placeholder="\ud83d\udd0e Cari judul atau kategori..." aria-label="Cari">
             <div class="fd-views" role="group" aria-label="Tampilan"><button type="button" class="fd-vbtn" data-view="grid" title="Kartu" aria-label="Tampilan kartu">\u25a6</button><button type="button" class="fd-vbtn" data-view="list" title="Daftar" aria-label="Tampilan daftar">\u2630</button></div></div>
           <div class="lb-filters">
-            <label class="lb-f"><span>Blok</span><select class="modern-input" data-f="blok"></select></label>
-            <label class="lb-f"><span>Sumber</span><select class="modern-input" data-f="sumber"></select></label>
-            <label class="lb-f"><span>Mata kuliah</span><select class="modern-input" data-f="matkul"></select></label>
+            <label class="lb-f"><span>Kategori</span><select class="modern-input" data-f="kategori"></select></label>
             <label class="lb-f"><span>Jenis</span><select class="modern-input" data-f="jenis">${JENIS.map(j => `<option value="${j[0]}">${j[1]}</option>`).join('')}</select></label>
-            <label class="lb-f"><span>Urutkan</span><select class="modern-input" data-f="sort"><option value="baru">Terbaru</option><option value="nama">Judul A-Z</option><option value="blok">Blok</option></select></label>
+            <label class="lb-f"><span>Urutkan</span><select class="modern-input" data-f="sort"><option value="baru">Terbaru</option><option value="nama">Judul A-Z</option><option value="kategori">Kategori</option></select></label>
           </div>
           <div class="lb-bar"><span class="lb-count"></span><button type="button" class="chip" data-fav>\u2b50 Favorit saya</button><button type="button" class="chip" data-reset>Atur ulang filter</button><button type="button" class="btn btn-primary btn-sm" data-add style="display:none;">\u2795 Tambah ${esc(c.label.toLowerCase())}</button></div>
           <div class="lb-content"></div>`;
@@ -1912,23 +1987,17 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         all.forEach(x => { x.kind = a9KindOf(x.link, x.tipe); });
         c.all = all;
 
-        // pilihan filter diisi dari data yang ada, jadi tiap halaman punya filternya sendiri
-        const opts = (field, sortFn) => {
-            const set = {}; let none = 0;
-            all.forEach(x => { if (x[field]) set[x[field]] = (set[x[field]] || 0) + 1; else none++; });
-            return { names: Object.keys(set).sort(sortFn || ((a, b) => a.localeCompare(b, 'id'))), set, none };
-        };
-        const O = { blok: opts('blok', a9CmpBlok), sumber: opts('sumber'), matkul: opts('matkul') };
-        const labels = { blok: 'Semua blok', sumber: 'Semua sumber', matkul: 'Semua mata kuliah' };
-        ['blok', 'sumber', 'matkul'].forEach(k => { if (f[k] && f[k] !== '__none' && !O[k].set[f[k]]) f[k] = ''; });
-        const sig = JSON.stringify([O.blok, O.sumber, O.matkul, f.blok, f.sumber, f.matkul, f.jenis, f.sort]);
+        // pilihan kategori diisi dari data yang ada, jadi tiap halaman punya daftarnya sendiri
+        const set = {}; let none = 0;
+        all.forEach(x => { if (x.kategori) set[x.kategori] = (set[x.kategori] || 0) + 1; else none++; });
+        const names = Object.keys(set).sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
+        if (f.kategori && f.kategori !== '__none' && !set[f.kategori]) f.kategori = '';
+        const sig = JSON.stringify([names, set, none, f.kategori, f.jenis, f.sort]);
         if (sig !== c.lastSel) {
             c.lastSel = sig;
-            ['blok', 'sumber', 'matkul'].forEach(k => {
-                const s = root.querySelector(`[data-f="${k}"]`), o = O[k];
-                s.innerHTML = `<option value="">${labels[k]}</option>` + o.names.map(n => `<option value="${esc(n)}">${esc(n)} (${o.set[n]})</option>`).join('') + (o.none && o.names.length ? `<option value="__none">(Belum diisi) (${o.none})</option>` : '');
-                s.value = f[k];
-            });
+            const s = root.querySelector('[data-f="kategori"]');
+            s.innerHTML = '<option value="">Semua kategori</option>' + names.map(n => `<option value="${esc(n)}">${esc(n)} (${set[n]})</option>`).join('') + (none && names.length ? `<option value="__none">(Tanpa kategori) (${none})</option>` : '');
+            s.value = f.kategori;
             root.querySelector('[data-f="jenis"]').value = f.jenis; root.querySelector('[data-f="sort"]').value = f.sort;
         }
         root.classList.toggle('lb-list', c.view === 'list');
@@ -1937,17 +2006,15 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         root.querySelector('[data-fav]').classList.toggle('active', f.fav);
 
         const q = lc(f.q);
-        const pass = x => (!f.blok || (f.blok === '__none' ? !x.blok : x.blok === f.blok))
-            && (!f.sumber || (f.sumber === '__none' ? !x.sumber : x.sumber === f.sumber))
-            && (!f.matkul || (f.matkul === '__none' ? !x.matkul : x.matkul === f.matkul))
+        const pass = x => (!f.kategori || (f.kategori === '__none' ? !x.kategori : x.kategori === f.kategori))
             && (!f.jenis || KIND[x.kind].g === f.jenis) && (!f.fav || fv.includes(x.key))
-            && (!q || lc([x.title, x.blok, x.sumber, x.matkul].join(' ')).includes(q));
+            && (!q || lc([x.title, x.kategori, x.blok, x.sumber, x.matkul].join(' ')).includes(q));
         const shown = all.filter(pass);
         shown.sort(f.sort === 'nama' ? (a, b) => a.title.localeCompare(b.title, 'id', { numeric: true })
-            : f.sort === 'blok' ? (a, b) => a9CmpBlok(a.blok, b.blok) || a.title.localeCompare(b.title, 'id', { numeric: true })
+            : f.sort === 'kategori' ? (a, b) => a.kategori.localeCompare(b.kategori, 'id', { numeric: true }) || a.title.localeCompare(b.title, 'id', { numeric: true })
                 : (a, b) => (Number(b.it.id) || b.idx) - (Number(a.it.id) || a.idx));
         c.shown = shown;
-        const filtered = !!(f.blok || f.sumber || f.matkul || f.jenis || f.fav || q);
+        const filtered = !!(f.kategori || f.jenis || f.fav || q);
         root.querySelector('.lb-count').textContent = filtered ? `${shown.length} dari ${all.length} berkas` : `${all.length} berkas`;
         root.querySelector('[data-reset]').style.display = filtered ? 'inline-flex' : 'none';
 
@@ -1957,8 +2024,8 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
             return `<div class="lb-card" data-k="${esc(x.key)}" role="button" tabindex="0" aria-label="Buka ${esc(x.title)}">
               <div class="lb-thumb k-${x.kind}">${thumb}<span class="lb-kind">${esc(k.label)}</span></div>
               <button type="button" class="lb-fav${on ? ' on' : ''}" data-fav-k="${esc(x.key)}" aria-label="${on ? 'Hapus dari favorit' : 'Tambah ke favorit'}">${on ? '\u2605' : '\u2606'}</button>${admin ? `<button type="button" class="lb-more" data-more-k="${esc(x.key)}" aria-label="Menu">\u22ef</button>` : ''}
-              <div class="lb-body"><div class="lb-title">${esc(x.title)}</div>${x.matkul ? `<div class="lb-mk">${esc(x.matkul)}</div>` : ''}
-                <div class="lb-tags">${x.blok ? `<span class="lb-tag">${esc(x.blok)}</span>` : ''}${x.sumber ? `<span class="lb-tag s">${esc(x.sumber)}</span>` : ''}</div></div></div>`;
+              <div class="lb-body"><div class="lb-title">${esc(x.title)}</div>
+                <div class="lb-tags">${x.kategori ? `<span class="lb-tag">${esc(x.kategori)}</span>` : ''}</div></div></div>`;
         };
         let html = '';
         if (!filtered) {
@@ -1987,48 +2054,74 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
     }
 
     // ---------- tambah / ubah / hapus (admin) ----------
-    const SUMBER_DEF = ['Dosen', 'Buku', 'Jurnal', 'YouTube', 'Mandiri', 'Praktikum'];
-    function formFields(c, x) {
-        const all = dbData[c.cat] || [];
-        const uniq = k => [...new Set(all.map(i => String(i[k] || '').trim()).filter(Boolean))];
-        return [
-            { id: 'judul', label: 'Judul', value: x ? x.title : '' },
-            { id: 'blok', label: 'Blok', value: x ? x.blok : '', placeholder: 'Contoh: Blok 5', list: uniq('blok') },
-            { id: 'sumber', label: 'Sumber', value: x ? x.sumber : '', placeholder: 'Contoh: Dosen, Buku, YouTube', list: [...new Set(uniq('sumber').concat(SUMBER_DEF))] },
-            { id: 'matkul', label: 'Nama mata kuliah', value: x ? x.matkul : '', placeholder: 'Contoh: Anatomi', list: [...new Set(all.map(i => String(i.matkul || i[c.lg] || '').trim()).filter(Boolean))] },
-            { id: 'link', label: 'Tautan (Google Drive, YouTube, atau URL lain)', value: x ? x.link : '', placeholder: 'https://' },
-            { id: 'file', label: x ? 'Atau ganti dengan file baru' : 'Atau unggah file', type: 'file' },
-            { id: 'tipe', label: 'Jenis konten', type: 'select', value: x ? x.tipe : '', options: [{ v: '', t: 'Otomatis' }, { v: 'video', t: 'Video (tautan Drive)' }, { v: 'dokumen', t: 'Dokumen' }] }
-        ];
-    }
-    async function save(c, r, x) {
-        if (!r.judul.trim()) { alert('Judul wajib diisi.'); return false; }
-        let link = r.link.trim();
-        if (r.file) {
-            const path = [c.label, r.blok.trim() || 'Tanpa blok', r.matkul.trim() || 'Umum'].join('/');
-            const url = await uploadFileObj(r.file, path); if (!url) return false; link = url;
-        }
-        if (!link) { alert('Isi tautan atau pilih file.'); return false; }
-        const fields = { [c.title]: r.judul.trim(), [c.lg]: r.matkul.trim(), matkul: r.matkul.trim(), blok: r.blok.trim(), sumber: r.sumber.trim(), link, tipe: r.tipe || '' };
-        if (x) Object.assign(x.it, fields);
-        else (dbData[c.cat] = dbData[c.cat] || []).push(Object.assign({ id: Date.now(), ket: '' }, fields));
-        if (!(await saveCategoryData(c.cat))) return false;
-        if (!x) postUpdate('file', '\ud83d\udcda ' + c.label + ' baru: ' + fields[c.title], [fields.matkul, fields.blok].filter(Boolean).join(' \u00b7 ') || 'Berkas baru ditambahkan.', {
-            key: 'lib:' + c.cat, merge: n => n + ' berkas baru ditambahkan ke ' + c.label + '.'
+    const nameOf = f => String(f.name || '').replace(/\.[^.]+$/, '').replace(/_+/g, ' ').replace(/\s+/g, ' ').trim() || String(f.name || 'Berkas');
+    const linkTitle = u => {
+        if (a9YtId(u)) return 'Video YouTube';
+        if (/google\.com/.test(u)) return 'Berkas Google Drive';
+        try { return nameOf({ name: decodeURIComponent(new URL(u).pathname.split('/').pop() || '') }) || new URL(u).hostname; } catch (e) { return 'Tautan'; }
+    };
+    const catList = c => [...new Set((dbData[c.cat] || []).map(i => meta(c, i).kategori).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
+
+    // Satu pintu tambah: 1 atau banyak file, judul = nama file, admin cukup isi kategori
+    async function addFlow(c) {
+        const r = await askDialog('Tambah ' + c.label.toLowerCase(), [
+            { type: 'note', text: 'Pilih satu atau banyak file sekaligus. Judul otomatis memakai nama file.' },
+            { id: 'files', label: 'File (boleh lebih dari satu)', type: 'file', multiple: true },
+            { id: 'links', label: 'Atau tempel tautan, satu per baris (boleh "Judul | tautan")', type: 'textarea', placeholder: 'https://drive.google.com/...' },
+            { id: 'kategori', label: 'Kategori', value: c.f.kategori && c.f.kategori !== '__none' ? c.f.kategori : '', placeholder: 'Pilih dari daftar, atau ketik nama baru', list: catList(c) }
+        ], 'Tambah');
+        if (!r) return;
+        const kategori = r.kategori.trim();
+        if (!kategori) return alert('Isi kategori dulu. Ketik nama baru kalau belum ada.');
+        const jobs = (r.files || []).map(f => ({ title: nameOf(f), file: f }));
+        String(r.links || '').split('\n').map(s => s.trim()).filter(Boolean).forEach(ln => {
+            const i = ln.indexOf('|'), url = (i > 0 ? ln.slice(i + 1) : ln).trim(), t = i > 0 ? ln.slice(0, i).trim() : '';
+            jobs.push({ title: t || linkTitle(url), url });
         });
-        alert(x ? 'Perubahan disimpan.' : 'Berkas ditambahkan.');
-        return true;
+        if (!jobs.length) return alert('Pilih file atau tempel tautan dulu.');
+
+        let ok = 0, last = '';
+        for (const j of jobs) {
+            let link = j.url;
+            if (j.file) {
+                link = await uploadFileObj(j.file, c.label + '/' + kategori);
+                if (!link) { if (confirm(`"${j.title}" gagal diunggah. Lanjut ke file berikutnya?`)) continue; break; }
+            }
+            (dbData[c.cat] = dbData[c.cat] || []).push({ id: Date.now() + ok, ket: '', [c.title]: j.title, [c.lg]: kategori, kategori, link, tipe: j.file && /^video\//.test(j.file.type) ? 'video' : '' });
+            ok++; last = j.title;
+        }
+        if (!ok) return;
+        if (!(await saveCategoryData(c.cat))) return;
+        alert(ok + ' berkas ditambahkan.');
+        postUpdate('file', '\ud83d\udcda ' + c.label + ' baru', ok === 1 ? last + ' ditambahkan ke ' + kategori + '.' : ok + ' berkas baru di kategori ' + kategori + '.', { key: 'lib:' + c.cat, merge: n => n + ' berkas baru ditambahkan ke ' + c.label + '.' });
     }
+
+    async function editFlow(c, x) {
+        const r = await askDialog('Ubah berkas', [
+            { id: 'judul', label: 'Judul', value: x.title },
+            { id: 'kategori', label: 'Kategori', value: x.kategori, placeholder: 'Pilih atau ketik kategori baru', list: catList(c) },
+            { id: 'link', label: 'Tautan', value: x.link },
+            { id: 'file', label: 'Atau ganti dengan file baru', type: 'file' }
+        ], 'Simpan');
+        if (!r) return;
+        if (!r.judul.trim()) return alert('Judul wajib diisi.');
+        const kategori = r.kategori.trim(), old = x.link; let link = r.link.trim();
+        if (r.file) { const u = await uploadFileObj(r.file, c.label + '/' + (kategori || 'Umum')); if (!u) return; link = u; }
+        if (!link) return alert('Tautan tidak boleh kosong.');
+        Object.assign(x.it, { [c.title]: r.judul.trim(), [c.lg]: kategori, kategori, link });
+        if (!(await saveCategoryData(c.cat))) return;
+        alert('Perubahan disimpan.' + (old && old !== link ? await purgeFileOf({ link: old }) : ''));
+    }
+
     async function act(c, x, a) {
         if (a === 'open') { openKey(c, x.key); return; }
         if (!isAdmin()) return;
-        if (a === 'edit') {
-            const r = await askDialog('Ubah detail', formFields(c, x), 'Simpan'); if (r) await save(c, r, x);
-        } else if (a === 'del') {
-            if (!confirm(`Hapus "${x.title}"? (File di Google Drive tidak ikut terhapus.)`)) return;
+        if (a === 'edit') await editFlow(c, x);
+        else if (a === 'del') {
+            if (!confirm(`Hapus "${x.title}"? Berkas yang diunggah lewat portal (Google Drive / penyimpanan portal) ikut dihapus.`)) return;
             const i = (dbData[c.cat] || []).indexOf(x.it); if (i < 0) return;
             dbData[c.cat].splice(i, 1);
-            if (await saveCategoryData(c.cat)) alert('Berkas dihapus.');
+            if (await saveCategoryData(c.cat)) alert('Berkas dihapus.' + await purgeFileOf(x.it));
         }
     }
     function openKey(c, k) {
@@ -2044,8 +2137,8 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         root.addEventListener('click', async e => {
             const v = e.target.closest('[data-view]'); if (v) { CATS.forEach(x => { x.view = v.dataset.view; if (x.root) draw(x); }); lsSet('a9_lb_view', v.dataset.view); return; }
             if (e.target.closest('[data-fav]')) { c.f.fav = !c.f.fav; draw(c); return; }
-            if (e.target.closest('[data-reset]')) { Object.assign(c.f, { blok: '', sumber: '', matkul: '', jenis: '', fav: false, q: '', sort: 'baru' }); root.querySelector('.fd-search').value = ''; c.lastSel = ''; draw(c); return; }
-            if (e.target.closest('[data-add]')) { const r = await askDialog('Tambah ' + c.label.toLowerCase(), formFields(c, null), 'Tambah'); if (r) await save(c, r, null); return; }
+            if (e.target.closest('[data-reset]')) { Object.assign(c.f, { kategori: '', jenis: '', fav: false, q: '', sort: 'baru' }); root.querySelector('.fd-search').value = ''; c.lastSel = ''; draw(c); return; }
+            if (e.target.closest('[data-add]')) { await addFlow(c); return; }
             const fav = e.target.closest('[data-fav-k]'); if (fav) { e.stopPropagation(); toggleFav(fav.dataset.favK); draw(c); return; }
             const more = e.target.closest('[data-more-k]');
             if (more) { e.stopPropagation(); const x = byKey(more.dataset.moreK), r = more.getBoundingClientRect(); if (x) openMenu(c, x, r.left, r.bottom + 4); return; }
@@ -2131,7 +2224,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
     function show(i) {
         cur.i = i; const x = cur.list[i], tok = ++vTok;
         $('vw-title').textContent = x.title;
-        $('vw-chips').innerHTML = [x.blok && `<span class="lb-tag">${esc(x.blok)}</span>`, x.sumber && `<span class="lb-tag s">${esc(x.sumber)}</span>`, x.matkul && `<span class="lb-tag s">${esc(x.matkul)}</span>`, `<span class="lb-tag s">${esc(KIND[x.kind].label)}</span>`].filter(Boolean).join('');
+        $('vw-chips').innerHTML = [x.kategori && `<span class="lb-tag">${esc(x.kategori)}</span>`, `<span class="lb-tag s">${esc(KIND[x.kind].label)}</span>`].filter(Boolean).join('');
         $('vw-pos').textContent = cur.list.length > 1 ? (i + 1) + ' / ' + cur.list.length : '';
         $('vw-bar').innerHTML = barBtns(x);
         const st = $('vw-stage'); st.classList.remove('scroll'); st.innerHTML = stageHtml(x);
@@ -2202,7 +2295,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         const run = async force => {
             paint(skeleton); box.onclick = null;
             try {
-                const s = await generate({ ref, videoId: yt ? a9YtId(x.link) : null, title: x.title, matkul: x.matkul, force: !!force });
+                const s = await generate({ ref, videoId: yt ? a9YtId(x.link) : null, title: x.title, matkul: x.kategori, force: !!force });
                 lsSet('a9_sum_' + ref, s); if (tok === vTok) ready(s);
             } catch (e) {
                 console.error(e);
@@ -2221,14 +2314,14 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
             if (!e.target.closest('[data-sm="paste"]')) return;
             const text = ($('sm-paste').value || '').trim(); if (text.length < 200) { alert('Teksnya terlalu pendek. Tempel minimal beberapa paragraf.'); return; }
             paint(skeleton);
-            try { const s = await generate({ ref, title: x.title, matkul: x.matkul, transcriptText: text, adminCode: dbData.adminCode }); lsSet('a9_sum_' + ref, s); if (tok === vTok) ready(s); }
+            try { const s = await generate({ ref, title: x.title, matkul: x.kategori, transcriptText: text, adminCode: dbData.adminCode }); lsSet('a9_sum_' + ref, s); if (tok === vTok) ready(s); }
             catch (er) { console.error(er); alert('Gagal: ' + (er.message || er)); }
         };
     }
 
     // tautan Drive/YouTube di halaman lain (Tugas, dll.) ikut memakai pratinjau baru
     window.openViewer = function (o) {
-        const link = o.url || '', x = { title: o.title || 'Berkas', link, blok: '', sumber: '', matkul: '', tipe: '', key: 'x:' + a9Hash(link), it: {} };
+        const link = o.url || '', x = { title: o.title || 'Berkas', link, kategori: '', blok: '', sumber: '', matkul: '', tipe: '', key: 'x:' + a9Hash(link), it: {} };
         x.kind = a9KindOf(link, '');
         viewerOpen({ root: null }, [x], 0);
     };
@@ -3860,4 +3953,25 @@ button.option-label.picked { border-color: var(--primary); background: var(--pri
 
     // Terapkan ulang tema (supaya warna meta & kelas gelap ikut sistem desain baru)
     try { window.applyTheme(document.body.classList.contains('theme-dark') ? 'dark' : (window.dbData && dbData.theme) || 'light'); } catch (e) { }
+})();
+
+// ==========================================================================
+// BAGIAN 11 - KUNCI MENU SAAT CBT UJIAN + SEMBUNYIKAN FORM UNGGAH LAMA
+//   Ditaruh paling akhir supaya pembungkus switchTab ini yang paling luar.
+// ==========================================================================
+(function () {
+    const locked = () => { try { return cbtStarted && cbtMode === 'exam'; } catch (e) { return false; } };
+    const st = document.createElement('style');
+    st.textContent = '.lb-legacy{display:none !important} body.cbt-locked #sn-main, body.cbt-locked #sn-sub{opacity:.45}';
+    document.head.appendChild(st);
+
+    const prev = window.switchTab;
+    window.switchTab = function (t, b) {
+        if (locked() && t !== 'cbt') { alert('\ud83d\udd12 Mode CBT sedang berjalan. Kumpulkan jawaban dulu sebelum pindah menu.'); return; }
+        return prev(t, b);
+    };
+    setInterval(() => {
+        document.body.classList.toggle('cbt-locked', locked());
+        ['materi', 'lab', 'skills', 'tutorial'].forEach(t => document.querySelectorAll('#tab-' + t + ' .admin-form-box').forEach(el => el.classList.add('lb-legacy')));
+    }, 500);
 })();
