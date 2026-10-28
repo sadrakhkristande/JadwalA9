@@ -211,7 +211,7 @@ function postUpdate(kind, judul, isi, opt) {
 }
 
 // Unggah ke Google Drive kelompok (lewat Apps Script). Mengembalikan tautan file, atau null bila gagal.
-const DRIVE_MAX = 20 * 1024 * 1024;
+const DRIVE_MAX = 100 * 1024 * 1024;
 async function uploadToDrive(file, path) {
     if (file.size > DRIVE_MAX) { alert('File ' + file.name + ' lebih dari 20 MB. Unggah manual ke Drive lalu tempel tautannya.'); return null; }
     let key = '';
