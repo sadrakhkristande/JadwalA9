@@ -1,5 +1,5 @@
 // ==========================================================================
-// PORTAL AKADEMIK A9 - SATU FILE (script.js + tambahan-v2.js + desain v3)
+// PORTAL AKADEMIK A9 - SATU FILE (script.js + tambahan-v2.js + desain v3 + tutorial per blok + tema klasik)
 // Urutan: inti portal -> tampilan dasar & fitur kecil -> navigasi/panduan/laporan
 //         -> CBT/progres/Drive -> jadwal/folder/progres admin -> OSCE/admin -> desain v3
 // ==========================================================================
@@ -443,7 +443,7 @@ function applyTheme(theme) {
     document.body.classList.toggle('theme-dark', dark);
     let m = document.querySelector('meta[name="theme-color"]');
     if (!m) { m = document.createElement('meta'); m.name = 'theme-color'; document.head.appendChild(m); }
-    m.content = dark ? '#0b1220' : '#f4f6f9';
+    m.content = dark ? '#16120d' : '#efe6d2';
 }
 
 // Tema hanya mengubah tampilan di perangkat ini, tidak menulis ke database
@@ -4332,15 +4332,47 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
 })();
 
 // ==========================================================================
-// BAGIAN 16 - TUTORIAL: SEVEN JUMP PER SKENARIO + EKSPOR KE GOOGLE DOCS
-//   Ditaruh paling akhir. Data disimpan di portal_db, key: tutorial_sj_1..4 dan tutorial_sj_docs.
+// BAGIAN 16 - TUTORIAL: MENU BLOK -> SEVEN JUMP PER SKENARIO + MODE COBA + EKSPOR KE GOOGLE DOCS
+//   Ditaruh paling akhir (sebelum Bagian 17). Data disimpan di portal_db:
+//     Blok 1.3 (lama) : tutorial_sj_1..4 dan tutorial_sj_docs   (tidak berubah, data lama aman)
+//     Blok baru       : tutorial_sj_<key>_<no> dan tutorial_sj_docs_<key>
 //   Semua mahasiswa yang login bisa mengisi bersama; draft yang belum disimpan aman di perangkat.
+//   Mode Coba: isian hanya di perangkat ini (localStorage), tidak menyentuh data kelompok.
 // ==========================================================================
 (function () {
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const $ = id => document.getElementById(id);
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-    const SCEN = [
+    // ======================================================================
+    // DAFTAR BLOK  <<<  SATU-SATUNYA TEMPAT YANG PERLU DIUBAH SAAT MENAMBAH BLOK BARU
+    //
+    // Cara menambah blok baru: salin template di bawah, tempel DI ATAS garis ">>> BLOK BARU"
+    // (setelah koma penutup blok sebelumnya), lalu isi. Nomor skenario terisi otomatis.
+    //
+    //   {
+    //       key: '1_4',                  // kode unik, tanpa titik/spasi. JANGAN diubah setelah mulai dipakai
+    //       label: 'Blok 1.4',           // tulisan di tombol menu blok
+    //       judul: 'Nama blok',          // judul lengkap blok
+    //       skenario: [
+    //           {
+    //               judul: 'Judul skenario',
+    //               topik: 'Topik / bidang ilmu skenario ini',
+    //               teks: ['Paragraf 1 skenario.', 'Paragraf 2 skenario.'],
+    //               hint: ['Istilah 1', 'Istilah 2']   // saran istilah untuk Langkah 1 (boleh kosong: [])
+    //           },
+    //           // skenario berikutnya ditempel di sini
+    //       ]
+    //   },
+    //
+    // Blok 1.3 memakai legacy: true supaya tetap membaca data lama (tutorial_sj_1..4). Jangan dipakai di blok baru.
+    // ======================================================================
+    const BLOK = [
+        {
+            key: '1_3', legacy: true,
+            label: 'Blok 1.3',
+            judul: 'Sistem Pencernaan dan Metabolisme',
+            skenario: [
         {
             n: 1, judul: 'Perut Terasa Penuh Setelah Makan',
             topik: 'Anatomi-histologi-fisiologi dan biokimia saluran pencernaan atas',
@@ -4383,25 +4415,46 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
             ],
             hint: ['Rapat pleno', 'Pandangan mengabur', 'Berdebar-debar', 'Pingsan', 'Siuman', 'Kadar gula darah', 'Nilai normal']
         }
+            ]
+        },
+        // >>> BLOK BARU DITEMPEL DI ATAS GARIS INI <<<
     ];
 
-    const KEY = n => 'tutorial_sj_' + n;
-    const DOCS_KEY = 'tutorial_sj_docs';
-    const DRAFT = n => 'a9_sj_draft_' + n;
+    BLOK.forEach(b => {
+        b.skenario.forEach((s, i) => { s.n = i + 1; s.hint = s.hint || []; s.teks = s.teks || []; });
+        b.folder = b.legacy ? 'Tutorial/Seven Jump' : 'Tutorial/Seven Jump/' + b.label;
+    });
+    const skey = (b, n) => b.legacy ? 'tutorial_sj_' + n : 'tutorial_sj_' + b.key + '_' + n;
+    const docsKey = b => b.legacy ? 'tutorial_sj_docs' : 'tutorial_sj_docs_' + b.key;
+    const INFO = {};
+    BLOK.forEach(b => b.skenario.forEach(s => {
+        const k = skey(b, s.n);
+        if (INFO[k]) console.error('Seven Jump: key blok dobel, data bisa bertabrakan:', b.key);
+        INFO[k] = { b, n: s.n, s };
+    }));
+    // simpanan draf di perangkat: terpisah untuk mode asli dan Mode Coba
+    const DRK = (k, m) => ((m || (trial ? 'trial' : 'real')) === 'trial' ? 'a9_sjT_draft_' : 'a9_sj_draft_') + (INFO[k].b.legacy ? INFO[k].n : INFO[k].b.key + '_' + INFO[k].n);
+    const TRK = k => 'a9_sjT_srv_' + k;
+
     const blank = () => ({ istilah: [{ t: '', d: '' }], soal: [], lo: '', belajar: '', sumber: '', gambar: [], by: '', ts: 0 });
     const me = () => (currentUser && (currentUser.name || currentUser.nim)) || 'Anonim';
     const AUTOSAVE_MS = 5000;
     const NAMES = Array.from(new Set(Object.values(typeof allowedUsers !== 'undefined' ? allowedUsers : {})));
 
     // srv: versi di server | draft: perubahan belum tersimpan | base: ts server saat draft dimulai | conflict: versi teman yang lebih baru
-    let cur = 1, srv = {}, draft = {}, base = {}, conflict = {}, docs = [], lastDoc = null;
-    let lastFetch = 0, fetching = false, timer = null, saving = false, booted = false;
+    // Semua dikunci dengan key penyimpanan (mis. tutorial_sj_2), dan dipisah untuk mode asli vs Mode Coba.
+    const mk = () => ({ srv: {}, draft: {}, base: {}, conflict: {}, docs: {} });
+    const MODES = { real: mk(), trial: mk() };
+    let trial = false; try { trial = sessionStorage.getItem('a9_sj_trial') === '1'; } catch (e) { }
+    let srv, draft, base, conflict, docs;
+    function useMode() { const o = MODES[trial ? 'trial' : 'real']; srv = o.srv; draft = o.draft; base = o.base; conflict = o.conflict; docs = o.docs; }
 
-    // draft yang belum disimpan dibaca dari perangkat
-    [1, 2, 3, 4].forEach(n => { try { const d = JSON.parse(localStorage.getItem(DRAFT(n)) || 'null'); if (d && d.data) { draft[n] = norm(d.data); base[n] = d.base || 0; } } catch (e) { } });
+    let curB = 0, cur = 1, lastDoc = null;
+    let lastFetch = 0, fetching = false, timer = null, saving = false, booted = false;
+    const curKey = () => skey(BLOK[curB], cur);
 
     const clone = o => JSON.parse(JSON.stringify(o));
-    const view = n => draft[n] || srv[n] || blank();
+    const view = k => draft[k] || srv[k] || blank();
     const lines = s => String(s || '').split(/\n+/).map(x => x.trim()).filter(Boolean);
     const parse = v => { if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { v = null; } } return v; };
     // data versi lama (masalah & jawaban berupa teks) dipindah ke bentuk baru: masalah -> daftar jawaban
@@ -4420,7 +4473,11 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
     const hhmm = () => new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     const toast = m => { const done = busy(m); setTimeout(done, 2500); };
     const imgSrc = g => g.id ? 'https://drive.google.com/thumbnail?id=' + g.id + '&sz=w800' : g.url;
-    const metaText = n => srv[n] && srv[n].ts ? 'Tersimpan oleh ' + srv[n].by + ' \u00b7 ' + fmtTs(srv[n].ts) : 'Belum ada yang tersimpan';
+    const metaText = k => (srv[k] && srv[k].ts)
+        ? ((trial ? 'Disimpan (coba) \u00b7 ' : 'Tersimpan oleh ' + srv[k].by + ' \u00b7 ') + fmtTs(srv[k].ts))
+        : (trial ? 'Belum ada isian coba' : 'Belum ada yang tersimpan');
+    const mark = (b, n) => { const k = skey(b, n); return draft[k] ? ' \u2022' : (srv[k] && srv[k].ts ? ' \u2713' : ''); };
+    const blokDirty = b => b.skenario.some(s => draft[skey(b, s.n)]);
 
     const cleanData = d => ({
         istilah: (d.istilah || []).map(x => ({ t: String(x.t || '').trim(), d: String(x.d || '').trim() })).filter(x => x.t || x.d),
@@ -4431,6 +4488,16 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
     });
     const same = (a, b) => JSON.stringify(cleanData(a || blank())) === JSON.stringify(cleanData(b || blank()));
 
+    // muat draf dari perangkat (mode asli & Mode Coba) dan isian Mode Coba yang sudah "tersimpan" di perangkat
+    BLOK.forEach(b => b.skenario.forEach(s => {
+        const k = skey(b, s.n);
+        ['real', 'trial'].forEach(m => {
+            try { const d = JSON.parse(localStorage.getItem(DRK(k, m)) || 'null'); if (d && d.data) { MODES[m].draft[k] = norm(d.data); MODES[m].base[k] = d.base || 0; } } catch (e) { }
+        });
+        try { const v = parse(localStorage.getItem(TRK(k))); if (v && typeof v === 'object') MODES.trial.srv[k] = Object.assign(blank(), norm(v)); } catch (e) { }
+    }));
+    useMode();
+
     // ---------- CSS ----------
     const css = document.createElement('style');
     css.id = 'a9-sj-css';
@@ -4438,6 +4505,12 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
 #sj-root { margin: 0 0 22px; }
 .sj-head { display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; margin-bottom:10px; }
 .sj-head h3 { margin:0; color:var(--text-main); }
+.sj-bloks { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px; }
+.sj-bloks button { display:flex; flex-direction:column; align-items:flex-start; text-align:left; gap:2px; min-width:150px; max-width:100%; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-main); border-radius:var(--radius-md, 10px); padding:9px 14px; cursor:pointer; font:inherit; }
+.sj-bloks button.on { background:var(--primary, #2563eb); color:#fff; border-color:transparent; }
+.sj-bl { font-weight:700; font-size:14px; } .sj-bj { font-size:12px; opacity:.85; } .sj-bc { font-size:11px; opacity:.7; }
+.sj-blokinfo { margin:0 0 10px; }
+.sj-trial { border:1.5px dashed #b45309; background:rgba(180,83,9,.09); border-radius:var(--radius-md, 10px); padding:10px 12px; margin-bottom:12px; font-size:13px; color:var(--text-main); line-height:1.5; }
 .sj-tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
 .sj-tabs button { border:1px solid var(--border-color); background:var(--bg-base); color:var(--text-main); border-radius:999px; padding:7px 14px; cursor:pointer; font:inherit; font-size:13px; }
 .sj-tabs button.on { background:var(--primary, #2563eb); color:#fff; border-color:transparent; }
@@ -4470,7 +4543,7 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
 .sj-link strong { color:var(--text-main); }
 .sj-link .sj-linkrow { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; align-items:center; }
 .sj-link input { flex:1 1 220px; min-width:0; }
-@media (max-width:640px) { .sj-row, .sj-qhead, .sj-a { grid-template-columns:1fr; } .sj-ans { margin-left:4px; } }
+@media (max-width:640px) { .sj-row, .sj-qhead, .sj-a { grid-template-columns:1fr; } .sj-ans { margin-left:4px; } .sj-bloks button { flex:1 1 100%; } }
 `;
     document.head.appendChild(css);
 
@@ -4483,16 +4556,41 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
         return r;
     }
 
-    // ---------- Pengambilan dari server ----------
+    // ---------- Penyimpanan: server (mode asli) atau perangkat (Mode Coba) ----------
+    async function remoteGet(k) {
+        if (trial) { try { return parse(localStorage.getItem(TRK(k))); } catch (e) { return null; } }
+        const r = await supabaseClient.from('portal_db').select('value').eq('key', k).maybeSingle();
+        if (r.error) throw r.error;
+        return r.data ? parse(r.data.value) : null;
+    }
+    async function remotePut(k, v) {
+        if (trial) { localStorage.setItem(TRK(k), JSON.stringify(v)); return; }
+        const w = await supabaseClient.from('portal_db').upsert({ key: k, value: v }, { onConflict: 'key' });
+        if (w.error) throw w.error;
+    }
+    const canStore = () => trial || !!supabaseClient;
+
+    // ---------- Pengambilan dari server (hanya blok yang sedang dibuka, satu permintaan) ----------
     async function fetchAll(force) {
-        if (!supabaseClient || !currentUser || fetching) return;
+        if (!currentUser || fetching || !canStore()) return;
         if (!force && Date.now() - lastFetch < 20000) return;
         fetching = true;
+        const isTrial = trial, o = MODES[isTrial ? 'trial' : 'real'], b = BLOK[curB], dk = docsKey(b);
         try {
-            const keys = [1, 2, 3, 4].map(KEY).concat(DOCS_KEY);
-            const res = await Promise.all(keys.map(k => supabaseClient.from('portal_db').select('value').eq('key', k).maybeSingle().then(r => r, () => null)));
-            [1, 2, 3, 4].forEach((n, i) => { const r = res[i]; const v = r && !r.error && r.data ? parse(r.data.value) : null; if (v && typeof v === 'object') srv[n] = Object.assign(blank(), norm(v)); });
-            const dr = res[4]; const dv = dr && !dr.error && dr.data ? parse(dr.data.value) : null; if (Array.isArray(dv)) docs = dv;
+            const keys = b.skenario.map(s => skey(b, s.n)).concat(dk);
+            let rows = [];
+            if (isTrial) {
+                keys.forEach(k => { try { const v = localStorage.getItem(TRK(k)); if (v) rows.push({ key: k, value: v }); } catch (e) { } });
+            } else {
+                const r = await supabaseClient.from('portal_db').select('key,value').in('key', keys);
+                if (r.error) throw r.error;
+                rows = r.data || [];
+            }
+            rows.forEach(row => {
+                const v = parse(row.value);
+                if (row.key === dk) { if (Array.isArray(v)) o.docs[b.key] = v; }
+                else if (v && typeof v === 'object') o.srv[row.key] = Object.assign(blank(), norm(v));
+            });
             lastFetch = Date.now();
         } catch (e) { console.error('Seven Jump: gagal memuat', e); }
         fetching = false;
@@ -4501,27 +4599,24 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
         if (r && !r.contains(document.activeElement)) render();
     }
 
-    // ---------- Penyimpanan (manual & autosave) ----------
-    function persistDraft(n) { try { localStorage.setItem(DRAFT(n), JSON.stringify({ data: draft[n], base: base[n] || 0, ts: Date.now() })); } catch (e) { } }
-    function dropDraft(n) { delete draft[n]; delete base[n]; try { localStorage.removeItem(DRAFT(n)); } catch (e) { } }
-    function setDraft(n, d) { if (!draft[n]) base[n] = (srv[n] && srv[n].ts) || 0; draft[n] = d; persistDraft(n); schedule(); }
+    // ---------- Draf, penyimpanan manual & autosave ----------
+    function persistDraft(k) { try { localStorage.setItem(DRK(k), JSON.stringify({ data: draft[k], base: base[k] || 0, ts: Date.now() })); } catch (e) { } }
+    function dropDraft(k) { delete draft[k]; delete base[k]; try { localStorage.removeItem(DRK(k)); } catch (e) { } }
+    function setDraft(k, d) { if (!draft[k]) base[k] = (srv[k] && srv[k].ts) || 0; draft[k] = d; persistDraft(k); schedule(); }
     function setState(msg, cls) { const st = $('sj-state'); if (st) { st.textContent = msg; st.className = 'sj-status ' + (cls || ''); } }
 
     // Tulis satu skenario ke server. force=true: timpa walau teman sudah menyimpan versi lebih baru.
-    async function push(n, force) {
-        const d = draft[n]; if (!d) return { none: true };
-        if (same(d, srv[n])) { dropDraft(n); return { none: true }; }
+    async function push(k, force) {
+        const d = draft[k]; if (!d) return { none: true };
+        if (same(d, srv[k])) { dropDraft(k); return { none: true }; }
         const snap = JSON.stringify(cleanData(d));
-        const r = await supabaseClient.from('portal_db').select('value').eq('key', KEY(n)).maybeSingle();
-        if (r.error) throw r.error;
-        const latest = r.data ? parse(r.data.value) : null;
-        if (!force && latest && (latest.ts || 0) > (base[n] || 0) && latest.by !== me()) { conflict[n] = latest; return { conflict: latest }; }
+        const latest = await remoteGet(k);
+        if (!force && latest && (latest.ts || 0) > (base[k] || 0) && latest.by !== me()) { conflict[k] = latest; return { conflict: latest }; }
         const out = Object.assign(cleanData(d), { by: me(), ts: Date.now() });
-        const w = await supabaseClient.from('portal_db').upsert({ key: KEY(n), value: out }, { onConflict: 'key' });
-        if (w.error) throw w.error;
-        srv[n] = Object.assign(blank(), out); delete conflict[n];
+        await remotePut(k, out);
+        srv[k] = Object.assign(blank(), out); delete conflict[k];
         // bila selama menyimpan ada ketikan baru, draft tetap dipertahankan
-        if (draft[n] && JSON.stringify(cleanData(draft[n])) === snap) dropDraft(n); else { base[n] = out.ts; persistDraft(n); }
+        if (draft[k] && JSON.stringify(cleanData(draft[k])) === snap) dropDraft(k); else { base[k] = out.ts; persistDraft(k); }
         return { ok: out.ts };
     }
 
@@ -4530,20 +4625,21 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
     async function autosave() {
         clearTimeout(timer);
         if (saving) { schedule(); return; }
-        const ns = Object.keys(draft).map(Number).filter(n => !conflict[n]);
-        if (!ns.length || !supabaseClient || !currentUser) return;
+        const ks = Object.keys(draft).filter(k => !conflict[k] && INFO[k]);
+        if (!ks.length || !canStore() || !currentUser) return;
         saving = true;
-        for (const n of ns) {
-            if (n === cur) setState('Menyimpan otomatis...', 'dirty');
+        for (const k of ks) {
+            const here = k === curKey();
+            if (here) setState('Menyimpan otomatis...', 'dirty');
             try {
-                const res = await push(n, false);
-                if (n === cur) {
+                const res = await push(k, false);
+                if (here) {
                     if (res.conflict) setState('\u26a0 ' + (res.conflict.by || 'Teman') + ' menyimpan versi lebih baru. Autosave dihentikan: klik Simpan (menimpa) atau Muat ulang.', 'warn');
-                    else if (res.ok) { setState(draft[n] ? 'Perubahan akan disimpan otomatis...' : 'Tersimpan otomatis ' + hhmm(), draft[n] ? 'dirty' : ''); const m = $('sj-meta'); if (m) m.textContent = metaText(n); }
+                    else if (res.ok) { setState(draft[k] ? 'Perubahan akan disimpan otomatis...' : 'Tersimpan otomatis ' + hhmm(), draft[k] ? 'dirty' : ''); const m = $('sj-meta'); if (m) m.textContent = metaText(k); }
                 }
             } catch (e) {
                 console.error('Autosave gagal', e);
-                if (n === cur) setState('Autosave gagal (draf aman di perangkat). Akan dicoba lagi.', 'warn');
+                if (here) setState('Autosave gagal (draf aman di perangkat). Akan dicoba lagi.', 'warn');
                 schedule();
             }
         }
@@ -4555,34 +4651,67 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
 
     async function save() {
         collect();
-        const n = cur;
-        if (!draft[n]) { toast('Semua perubahan sudah tersimpan.'); return; }
-        if (!supabaseClient) { alert('Server belum terhubung. Perubahan belum tersimpan.'); return; }
+        const k = curKey(), n = cur;
+        if (!draft[k]) { toast('Semua perubahan sudah tersimpan.'); return; }
+        if (!canStore()) { alert('Server belum terhubung. Perubahan belum tersimpan.'); return; }
         clearTimeout(timer);
-        while (saving) await new Promise(r => setTimeout(r, 150));
+        while (saving) await sleep(150);
         const done = busy('Menyimpan skenario ' + n + '...');
         try {
-            let res = await push(n, false);
+            let res = await push(k, false);
             if (res.conflict) {
                 done();
                 if (!confirm('Skenario ' + n + ' baru disimpan oleh ' + (res.conflict.by || 'teman') + ' pukul ' + fmtTs(res.conflict.ts) + '. Timpa dengan versimu?\n\nOK = timpa, Batal = tidak (muat ulang dulu).')) { render(); return; }
-                res = await push(n, true);
+                res = await push(k, true);
             }
-            toast('Skenario ' + n + ' tersimpan.');
+            toast((trial ? '(Coba) ' : '') + 'Skenario ' + n + ' tersimpan.');
         } catch (e) { console.error(e); alert('Gagal menyimpan. Draf tetap aman di perangkat ini, coba lagi sebentar.'); }
         finally { done(); }
         render();
     }
 
+    // ---------- Mode Coba ----------
+    async function setTrial(on) {
+        collect();
+        while (saving) await sleep(120);
+        await autosaveNow();                        // simpan dulu isian mode yang sedang dipakai
+        while (saving) await sleep(120);
+        trial = !!on; try { sessionStorage.setItem('a9_sj_trial', on ? '1' : '0'); } catch (e) { }
+        useMode(); lastDoc = null; lastFetch = 0;
+        render(); fetchAll(true);
+    }
+    function resetTrial() {
+        const b = BLOK[curB];
+        if (!confirm('Kosongkan semua isian coba untuk ' + b.label + ' di perangkat ini? Data kelompok yang asli tidak tersentuh.')) return;
+        const o = MODES.trial;
+        b.skenario.forEach(s => {
+            const k = skey(b, s.n);
+            delete o.srv[k]; delete o.draft[k]; delete o.base[k]; delete o.conflict[k];
+            try { localStorage.removeItem(TRK(k)); localStorage.removeItem(DRK(k, 'trial')); } catch (e) { }
+        });
+        render();
+    }
+
     // ---------- Tampilan ----------
     function stateText() {
-        if (conflict[cur]) return ['\u26a0 ' + (conflict[cur].by || 'Teman') + ' menyimpan versi lebih baru. Autosave dihentikan: klik Simpan (menimpa) atau Muat ulang.', 'warn'];
-        if (draft[cur]) return ['Perubahan akan disimpan otomatis...', 'dirty'];
+        const k = curKey();
+        if (conflict[k]) return ['\u26a0 ' + (conflict[k].by || 'Teman') + ' menyimpan versi lebih baru. Autosave dihentikan: klik Simpan (menimpa) atau Muat ulang.', 'warn'];
+        if (draft[k]) return ['Perubahan akan disimpan otomatis...', 'dirty'];
         return ['', ''];
     }
     function refreshTabs() {
         const r = $('sj-root'); if (!r) return;
-        r.querySelectorAll('.sj-tabs button').forEach(b => { const x = +b.dataset.n; b.textContent = 'Skenario ' + x + (draft[x] ? ' \u2022' : (srv[x] && srv[x].ts ? ' \u2713' : '')); });
+        const b = BLOK[curB];
+        r.querySelectorAll('.sj-tabs button').forEach(el => { const x = +el.dataset.n; el.textContent = 'Skenario ' + x + mark(b, x); });
+        r.querySelectorAll('.sj-bloks button').forEach(el => { const bb = BLOK[+el.dataset.b], m = el.querySelector('.sj-bl'); if (bb && m) m.textContent = bb.label + (blokDirty(bb) ? ' \u2022' : ''); });
+    }
+
+    function trialBar() {
+        const b = BLOK[curB];
+        return trial
+            ? `<div class="sj-trial"><strong>\ud83e\uddea MODE COBA aktif</strong> \u2014 isian hanya disimpan di perangkat ini. Tidak masuk ke data kelompok, tidak membuat Google Docs di Drive (hanya unduh .doc), dan unggah gambar dimatikan. Aman untuk coba-coba.
+  <div class="sj-acts"><button type="button" class="btn btn-primary btn-sm" data-trial="off">Keluar Mode Coba</button><button type="button" class="btn btn-outline btn-sm" data-trialreset>Kosongkan isian coba (${esc(b.label)})</button></div></div>`
+            : `<div class="sj-acts" style="margin:0 0 10px;"><button type="button" class="btn btn-outline btn-sm" data-trial="on">\ud83e\uddea Mode Coba</button><span class="sj-status">Mau coba-coba tanpa mengubah isian kelompok? Nyalakan Mode Coba.</span></div>`;
     }
 
     function linkCard() {
@@ -4598,14 +4727,18 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
 
     function render() {
         const r = $('sj-root'); if (!r) return;
-        const s = SCEN[cur - 1], v = view(cur), st = stateText();
+        const b = BLOK[curB], s = b.skenario[cur - 1], k = curKey(), v = view(k), st = stateText();
+        const head = `<div class="sj-head"><h3>\ud83d\udcdd Seven Jump</h3><span class="sj-status" id="sj-meta">${esc(s ? metaText(k) : '')}</span></div>${trialBar()}
+<div class="sj-bloks" role="tablist" aria-label="Pilih blok">${BLOK.map((x, i) => `<button type="button" role="tab" data-b="${i}" class="${i === curB ? 'on' : ''}"><span class="sj-bl">${esc(x.label)}${blokDirty(x) ? ' \u2022' : ''}</span><span class="sj-bj">${esc(x.judul)}</span><span class="sj-bc">${x.skenario.length} skenario</span></button>`).join('')}</div>`;
+        if (!s) { r.innerHTML = head + `<p class="sj-status">Blok ini belum punya skenario.</p>`; return; }
         const istilah = v.istilah && v.istilah.length ? v.istilah : [{ t: '', d: '' }];
         const gambar = v.gambar || [];
         const soal = v.soal && v.soal.length ? v.soal : [{ q: '', by: me(), a: [{ t: '', by: me() }] }];
         const used = new Set(istilah.map(x => (x.t || '').trim().toLowerCase()));
-        r.innerHTML = `
-<div class="sj-head"><h3>\ud83d\udcdd Seven Jump</h3><span class="sj-status" id="sj-meta">${esc(metaText(cur))}</span></div>
-<div class="sj-tabs">${SCEN.map(x => `<button type="button" data-n="${x.n}" class="${x.n === cur ? 'on' : ''}">Skenario ${x.n}${draft[x.n] ? ' \u2022' : (srv[x.n] && srv[x.n].ts ? ' \u2713' : '')}</button>`).join('')}</div>
+        const dl = docs[b.key] || [];
+        r.innerHTML = head + `
+<div class="sj-blokinfo sj-status">${esc(b.label)} \u2013 ${esc(b.judul)}</div>
+<div class="sj-tabs">${b.skenario.map(x => `<button type="button" data-n="${x.n}" class="${x.n === cur ? 'on' : ''}">Skenario ${x.n}${mark(b, x.n)}</button>`).join('')}</div>
 <details class="sj-card sj-case" open><summary><strong>Skenario ${s.n}: ${esc(s.judul)}</strong></summary>
   <p class="sj-sub" style="margin-top:6px;">${esc(s.topik)}</p>${s.teks.map(p => `<p>${esc(p)}</p>`).join('')}</details>
 <div class="sj-card"><h4>Langkah 1 \u2013 Klarifikasi istilah / kalimat sulit</h4><p class="sj-sub">Tulis istilah dari skenario dan artinya sesuai kesepakatan kelompok.</p>
@@ -4622,36 +4755,37 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
   <div class="sj-acts"><button type="button" class="btn btn-outline btn-sm" data-addq>+ Tambah masalah</button></div></div>
 <div class="sj-card"><h4>Langkah 5 \u2013 Learning Objectives (LO)</h4><p class="sj-sub">Satu LO per baris.</p><textarea class="modern-input" data-f="lo" placeholder="Mahasiswa mampu menjelaskan ...">${esc(v.lo)}</textarea></div>
 <div class="sj-card"><h4>Pertemuan 2 \u2013 Hasil belajar mandiri (opsional)</h4><p class="sj-sub">Informasi baru yang dilaporkan dan dibahas pada pertemuan kedua.</p><textarea class="modern-input" data-f="belajar" placeholder="Isi bila sudah ada">${esc(v.belajar)}</textarea></div>
-<div class="sj-card"><h4>\ud83d\uddbc\ufe0f Gambar pendukung</h4><p class="sj-sub">Tambahkan gambar (skema, foto, tabel) untuk memperkuat alasan. Tulis keterangan di bawah tiap gambar. Foto otomatis diperkecil sebelum diunggah.</p>
+<div class="sj-card"><h4>\ud83d\uddbc\ufe0f Gambar pendukung</h4><p class="sj-sub">Tambahkan gambar (skema, foto, tabel) untuk memperkuat alasan. Tulis keterangan di bawah tiap gambar. Foto otomatis diperkecil sebelum diunggah.${trial ? ' (Dimatikan di Mode Coba.)' : ''}</p>
   <div class="sj-imgs">${gambar.map((g, i) => `<div class="sj-img" data-url="${esc(g.url)}" data-id="${esc(g.id || '')}"><img src="${esc(imgSrc(g))}" alt="Gambar ${i + 1}" loading="lazy" referrerpolicy="no-referrer"><input class="modern-input" data-cap placeholder="Keterangan / alasan gambar ini" value="${esc(g.cap || '')}"><button type="button" class="btn btn-outline btn-sm" data-delimg="${i}">Hapus dari daftar</button></div>`).join('')}</div>
   <input type="file" id="sj-file" accept="image/*" multiple hidden>
   <div class="sj-acts"><button type="button" class="btn btn-outline btn-sm" data-addimg>+ Tambah gambar</button></div></div>
 <div class="sj-card"><h4>\ud83d\udd17 Sumber / referensi</h4><p class="sj-sub">Satu sumber per baris. Boleh <em>Judul | link</em> atau tempel link saja. Tampil di akhir dokumen.</p><textarea class="modern-input" data-f="sumber" placeholder="Guyton & Hall, Textbook of Medical Physiology | https://...">${esc(v.sumber)}</textarea></div>
-${linkCard()}
+${trial ? '' : linkCard()}
 <div class="sj-acts">
-  <button type="button" class="btn btn-primary" data-save>Simpan skenario ${s.n}</button>
-  <button type="button" class="btn btn-outline" data-reload>Muat ulang</button>
-  <button type="button" class="btn btn-outline" data-exp="one">Buat Google Docs (skenario ${s.n})</button>
-  <button type="button" class="btn btn-outline" data-exp="all">Buat Google Docs (semua skenario)</button>
+  <button type="button" class="btn btn-primary" data-save>${trial ? 'Simpan (coba) skenario ' : 'Simpan skenario '}${s.n}</button>
+  <button type="button" class="btn btn-outline" data-reload>${trial ? 'Muat ulang isian coba' : 'Muat ulang'}</button>
+  <button type="button" class="btn btn-outline" data-exp="one">${trial ? 'Unduh .doc' : 'Buat Google Docs'} (skenario ${s.n})</button>
+  <button type="button" class="btn btn-outline" data-exp="all">${trial ? 'Unduh .doc' : 'Buat Google Docs'} (semua skenario)</button>
   <span class="sj-status ${st[1]}" id="sj-state">${esc(st[0])}</span></div>
-<div class="sj-docs sj-status" style="margin-top:8px;">${docs.length ? 'Dokumen terakhir: ' + docs.slice(0, 3).map(d => `<a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.name)}</a> <button type="button" class="btn btn-outline btn-sm" data-copy="${esc(d.url)}">Salin link</button>`).join(' \u00b7 ') : ''}</div>`;
+<div class="sj-docs sj-status" style="margin-top:8px;">${!trial && dl.length ? 'Dokumen terakhir: ' + dl.slice(0, 3).map(d => `<a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.name)}</a> <button type="button" class="btn btn-outline btn-sm" data-copy="${esc(d.url)}">Salin link</button>`).join(' \u00b7 ') : ''}</div>`;
     }
 
     // ambil isi form ke draft
     function collect() {
         const r = $('sj-root'); if (!r || !r.querySelector('#sj-rows')) return;
-        const b = view(cur), d = { istilah: [], soal: [], lo: b.lo, belajar: b.belajar, sumber: b.sumber, gambar: [] };
+        const k = curKey();
+        const b = view(k), d = { istilah: [], soal: [], lo: b.lo, belajar: b.belajar, sumber: b.sumber, gambar: [] };
         r.querySelectorAll('.sj-row').forEach(row => d.istilah.push({ t: row.querySelector('[data-t]').value, d: row.querySelector('[data-d]').value }));
         r.querySelectorAll('[data-f]').forEach(el => { d[el.dataset.f] = el.value; });
         r.querySelectorAll('.sj-q').forEach(q => d.soal.push({ q: q.querySelector('[data-q]').value, by: q.querySelector('[data-qby]').value, a: Array.from(q.querySelectorAll('.sj-a')).map(a => ({ t: a.querySelector('[data-at]').value, by: a.querySelector('[data-aby]').value })) }));
         r.querySelectorAll('.sj-img').forEach(el => d.gambar.push({ url: el.dataset.url, id: el.dataset.id || '', cap: el.querySelector('[data-cap]').value }));
-        if (same(d, srv[cur])) { if (draft[cur]) dropDraft(cur); }
-        else setDraft(cur, d);
+        if (same(d, srv[k])) { if (draft[k]) dropDraft(k); }
+        else setDraft(k, d);
         const st = stateText(); setState(st[0], st[1]);
     }
 
     // ubah draft dari tombol (tambah/hapus baris, gambar, dst.)
-    function mutate(fn) { collect(); const d = clone(view(cur)); if (!d.istilah || !d.istilah.length) d.istilah = [{ t: '', d: '' }]; if (!d.soal || !d.soal.length) d.soal = [{ q: '', by: me(), a: [] }]; d.soal.forEach(x => { if (!x.a) x.a = []; }); fn(d); setDraft(cur, d); render(); }
+    function mutate(fn) { collect(); const k = curKey(); const d = clone(view(k)); if (!d.istilah || !d.istilah.length) d.istilah = [{ t: '', d: '' }]; if (!d.soal || !d.soal.length) d.soal = [{ q: '', by: me(), a: [] }]; d.soal.forEach(x => { if (!x.a) x.a = []; }); fn(d); setDraft(k, d); render(); }
 
     // perkecil foto sebelum diunggah (maks 1600 px, JPEG)
     function shrink(file) {
@@ -4671,18 +4805,19 @@ ${linkCard()}
     }
 
     async function addImages(files) {
+        if (trial) { toast('Unggah gambar dimatikan di Mode Coba.'); return; }
         collect();
-        const n = cur, added = [];
+        const b = BLOK[curB], n = cur, k = skey(b, n), added = [];
         for (const f of files) {
             if (!/^image\//.test(f.type)) { toast(f.name + ' bukan gambar, dilewati.'); continue; }
             const small = await shrink(f);
-            const url = await uploadFileObj(small, 'Tutorial/Seven Jump/Skenario ' + n);
+            const url = await uploadFileObj(small, b.folder + '/Skenario ' + n);
             if (url) added.push({ url, id: driveIdOf(url) || '', cap: '' });
         }
         if (!added.length) return;
-        const d = clone(view(n)); d.gambar = (d.gambar || []).concat(added);
-        setDraft(n, d);
-        if (cur === n) render();
+        const d = clone(view(k)); d.gambar = (d.gambar || []).concat(added);
+        setDraft(k, d);
+        if (curKey() === k) render();
     }
 
     async function copyText(t) {
@@ -4700,7 +4835,10 @@ ${linkCard()}
         });
         r.addEventListener('click', e => {
             const t = e.target.closest('button'); if (!t) return;
+            if (t.dataset.b != null) { const i = +t.dataset.b; if (i === curB || !BLOK[i]) return; collect(); curB = i; cur = 1; lastDoc = null; lastFetch = 0; render(); fetchAll(true); autosave(); return; }
             if (t.dataset.n) { collect(); cur = +t.dataset.n; render(); autosave(); return; }
+            if (t.dataset.trial) { setTrial(t.dataset.trial === 'on'); return; }
+            if (t.hasAttribute('data-trialreset')) { resetTrial(); return; }
             if (t.hasAttribute('data-add')) { mutate(d => d.istilah.push({ t: '', d: '' })); const rows = r.querySelectorAll('.sj-row'); const last = rows[rows.length - 1]; if (last) last.querySelector('[data-t]').focus(); return; }
             if (t.dataset.hint) { mutate(d => { const e0 = d.istilah.findIndex(x => !x.t && !x.d); if (e0 >= 0) d.istilah[e0].t = t.dataset.hint; else d.istilah.push({ t: t.dataset.hint, d: '' }); }); return; }
             if (t.dataset.del != null) { mutate(d => { d.istilah.splice(+t.dataset.del, 1); if (!d.istilah.length) d.istilah = [{ t: '', d: '' }]; }); return; }
@@ -4708,15 +4846,16 @@ ${linkCard()}
             if (t.dataset.delq != null) { mutate(d => { d.soal.splice(+t.dataset.delq, 1); }); return; }
             if (t.dataset.adda != null) { const qi = +t.dataset.adda; mutate(d => { if (d.soal[qi]) { if (!d.soal[qi].a.length) d.soal[qi].a.push({ t: '', by: me() }); d.soal[qi].a.push({ t: '', by: me() }); } }); const q = r.querySelectorAll('.sj-q')[qi]; if (q) { const as = q.querySelectorAll('[data-at]'); if (as.length) as[as.length - 1].focus(); } return; }
             if (t.dataset.dela != null) { const p = t.dataset.dela.split('-').map(Number); mutate(d => { if (d.soal[p[0]]) d.soal[p[0]].a.splice(p[1], 1); }); return; }
-            if (t.hasAttribute('data-addimg')) { const f = $('sj-file'); if (f) f.click(); return; }
+            if (t.hasAttribute('data-addimg')) { if (trial) { toast('Unggah gambar dimatikan di Mode Coba.'); return; } const f = $('sj-file'); if (f) f.click(); return; }
             if (t.dataset.delimg != null) { mutate(d => { d.gambar.splice(+t.dataset.delimg, 1); }); return; }
             if (t.hasAttribute('data-save')) { save(); return; }
             if (t.hasAttribute('data-reload')) {
-                if (draft[cur] && !confirm('Perubahan yang belum tersimpan di skenario ' + cur + ' akan dibuang. Lanjutkan?')) return;
-                dropDraft(cur); delete conflict[cur];
+                const k = curKey();
+                if (draft[k] && !confirm('Perubahan yang belum tersimpan di skenario ' + cur + ' akan dibuang. Lanjutkan?')) return;
+                dropDraft(k); delete conflict[k];
                 fetchAll(true).then(render); return;
             }
-            if (t.dataset.exp) { exportDocs(t.dataset.exp === 'one' ? [cur] : [1, 2, 3, 4]); return; }
+            if (t.dataset.exp) { exportDocs(t.dataset.exp === 'one' ? [cur] : BLOK[curB].skenario.map(x => x.n)); return; }
             if (t.dataset.copy) { copyText(t.dataset.copy).then(ok => toast(ok ? 'Link disalin.' : 'Gagal menyalin. Pilih link lalu salin manual.')); return; }
             if (t.hasAttribute('data-share')) { if (lastDoc && navigator.share) navigator.share({ title: lastDoc.name, url: lastDoc.url }).catch(() => { }); return; }
             if (t.hasAttribute('data-closelink')) { lastDoc = null; render(); return; }
@@ -4734,10 +4873,11 @@ ${linkCard()}
 
     // tokens=true: gambar Drive ditandai [[IMG:id]] supaya Apps Script menyisipkannya ke Docs
     function docHtml(ns, tokens) {
+        const b = BLOK[curB];
         const ol = s => { const a = lines(s); return a.length ? '<ol>' + a.map(x => `<li>${esc(x)}</li>`).join('') + '</ol>' : '<p><em>(belum diisi)</em></p>'; };
         const allSrc = [], seen = new Set();
         const body = ns.map(n => {
-            const s = SCEN[n - 1], v = cleanData(view(n)), meta = srv[n] && srv[n].ts ? 'Terakhir disimpan oleh ' + srv[n].by + ', ' + fmtTs(srv[n].ts) : '';
+            const s = b.skenario[n - 1], k = skey(b, n), v = cleanData(view(k)), meta = srv[k] && srv[k].ts ? 'Terakhir disimpan oleh ' + srv[k].by + ', ' + fmtTs(srv[k].ts) : '';
             const tbl = v.istilah.length
                 ? '<table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;width:100%"><tr><th style="width:30%;background:#eef2ff">Istilah</th><th style="background:#eef2ff">Arti / penjelasan</th></tr>' + v.istilah.map(x => `<tr><td>${esc(x.t)}</td><td>${esc(x.d)}</td></tr>`).join('') + '</table>'
                 : '<p><em>(belum diisi)</em></p>';
@@ -4746,7 +4886,7 @@ ${linkCard()}
             const soalHtml = v.soal.length ? v.soal.map((x, i) => `<p><strong>Masalah ${i + 1}:</strong> ${esc(x.q) || '<em>(belum ditulis)</em>'}${x.by ? ` <em>(${esc(x.by)})</em>` : ''}</p>` +
                 (x.a.length ? `<p style="margin-left:18pt"><u>Jawaban sementara:</u></p><ol>${x.a.map(a => `<li>${esc(a.t)}${a.by ? ` <em>\u2014 ${esc(a.by)}</em>` : ''}</li>`).join('')}</ol>` : '<p style="margin-left:18pt"><em>(belum ada jawaban)</em></p>')).join('') : '<p><em>(belum diisi)</em></p>';
             const sl = lines(v.sumber);
-            sl.forEach(x => { const k = x.toLowerCase(); if (!seen.has(k)) { seen.add(k); allSrc.push(x); } });
+            sl.forEach(x => { const kk = x.toLowerCase(); if (!seen.has(kk)) { seen.add(kk); allSrc.push(x); } });
             return `<h1>Skenario ${s.n}: ${esc(s.judul)}</h1><p><em>${esc(s.topik)}</em></p>${meta ? `<p style="color:#666">${esc(meta)}</p>` : ''}` +
                 `<h2>Skenario</h2>${s.teks.map(p => `<p>${esc(p)}</p>`).join('')}` +
                 `<h2>1. Klarifikasi istilah</h2>${tbl}` +
@@ -4757,11 +4897,11 @@ ${linkCard()}
                 (sl.length ? `<h2>Sumber / referensi</h2><ol>${sl.map(x => `<li>${srcLi(x)}</li>`).join('')}</ol>` : '');
         }).join('<br style="page-break-before:always">');
         const gabungan = ns.length > 1 && allSrc.length ? `<br style="page-break-before:always"><h1>Daftar sumber (semua skenario)</h1><ol>${allSrc.map(x => `<li>${srcLi(x)}</li>`).join('')}</ol>` : '';
-        return `<html><head><meta charset="utf-8"><title>Seven Jump Blok 1.3</title></head><body style="font-family:Arial,sans-serif;font-size:11pt">` +
-            `<p style="color:#666">Seven Jump \u2013 Blok 1.3 Sistem Pencernaan dan Metabolisme \u2013 Kelompok A9</p>${body}${gabungan}</body></html>`;
+        return `<html><head><meta charset="utf-8"><title>Seven Jump ${esc(b.label)}</title></head><body style="font-family:Arial,sans-serif;font-size:11pt">` +
+            `<p style="color:#666">Seven Jump \u2013 ${esc(b.label)} ${esc(b.judul)} \u2013 Kelompok A9</p>${body}${gabungan}</body></html>`;
     }
 
-    async function uploadDoc(name, html) {
+    async function uploadDoc(name, html, path) {
         let key = ''; try { key = localStorage.getItem('a9_drive_key') || ''; } catch (e) { }
         if (!key) {
             const r = await askDialog('Kunci unggah ke Drive', [
@@ -4772,7 +4912,7 @@ ${linkCard()}
         }
         const done = busy('Membuat Google Docs di Drive...');
         try {
-            const r = await fetch(DRIVE_UPLOAD_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key, action: 'createDoc', name, path: 'Tutorial/Seven Jump', html }) });
+            const r = await fetch(DRIVE_UPLOAD_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key, action: 'createDoc', name, path, html }) });
             const j = await r.json();
             if (!j.ok) { if (/kunci/i.test(j.error || '')) { try { localStorage.removeItem('a9_drive_key'); } catch (e) { } } throw new Error(j.error || 'Apps Script belum mendukung createDoc (pasang code.gs terbaru dan deploy versi baru)'); }
             return { url: j.url, shared: j.shared !== false };
@@ -4789,15 +4929,22 @@ ${linkCard()}
     async function exportDocs(ns) {
         collect();
         await autosaveNow();                       // simpan dulu supaya dokumen sama dengan yang tersimpan
-        const unsaved = ns.filter(n => draft[n]);
-        if (unsaved.length && !confirm('Skenario ' + unsaved.join(', ') + ' belum tersimpan di server (mungkin ada konflik dengan versi teman). Dokumen akan memakai isi yang tampil sekarang. Lanjutkan?')) return;
-        const name = 'Seven Jump Blok 1.3 - Kelompok A9 - ' + (ns.length === 1 ? 'Skenario ' + ns[0] : 'Semua Skenario') + ' - ' + isoLocal(new Date());
+        const b = BLOK[curB];
+        const unsaved = ns.filter(n => draft[skey(b, n)]);
+        if (unsaved.length && !trial && !confirm('Skenario ' + unsaved.join(', ') + ' belum tersimpan di server (mungkin ada konflik dengan versi teman). Dokumen akan memakai isi yang tampil sekarang. Lanjutkan?')) return;
+        const name = (trial ? 'COBA - ' : '') + 'Seven Jump ' + b.label + ' - Kelompok A9 - ' + (ns.length === 1 ? 'Skenario ' + ns[0] : 'Semua Skenario') + ' - ' + isoLocal(new Date());
+        if (trial) {
+            downloadDoc(name, docHtml(ns, false));
+            toast('Mode Coba: dokumen hanya diunduh (.doc), tidak dibuat di Drive.');
+            return;
+        }
         if (DRIVE_UPLOAD_URL) {
-            const res = await uploadDoc(name, docHtml(ns, true));
+            const res = await uploadDoc(name, docHtml(ns, true), b.folder);
             if (res && res.url) {
                 lastDoc = { name, url: res.url, shared: res.shared };
-                docs.unshift({ name, url: res.url, by: me(), ts: Date.now() }); docs = docs.slice(0, 10);
-                if (supabaseClient) { try { await supabaseClient.from('portal_db').upsert({ key: DOCS_KEY, value: docs }, { onConflict: 'key' }); } catch (e) { } }
+                const list = [{ name, url: res.url, by: me(), ts: Date.now() }].concat(docs[b.key] || []).slice(0, 10);
+                docs[b.key] = list;
+                if (supabaseClient) { try { await supabaseClient.from('portal_db').upsert({ key: docsKey(b), value: list }, { onConflict: 'key' }); } catch (e) { } }
                 render();
                 const lc = document.querySelector('#sj-root .sj-link'); if (lc && lc.scrollIntoView) lc.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
@@ -4824,4 +4971,176 @@ ${linkCard()}
     };
     document.addEventListener('visibilitychange', () => { if (document.hidden && currentUser && Object.keys(draft).length) autosaveNow(); });
     setInterval(tick, 1500);
+})();
+
+// ==========================================================================
+// BAGIAN 17 - TAMPILAN KLASIK (KEDOKTERAN) + LOGIN TANPA PENGISIAN OTOMATIS BROWSER
+//   Ditaruh paling akhir. Hanya mengubah tampilan dan atribut kolom login, tidak menyentuh data.
+//   Arah desain: kertas perkamen, tinta cokelat tua, merah marun + emas, huruf serif,
+//   sudut tegak, garis ganda seperti buku teks / ijazah. Tanpa bayangan, gradasi, dan gerak.
+// ==========================================================================
+(function () {
+    'use strict';
+
+    // ---------- 1) Huruf serif klasik (tanpa internet jatuh ke Georgia / Times) ----------
+    if (!document.getElementById('a9-font-classic')) {
+        const f = document.createElement('link'); f.id = 'a9-font-classic'; f.rel = 'stylesheet';
+        f.href = 'https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Serif+4:wght@400;500;600;700&display=swap';
+        document.head.appendChild(f);
+    }
+
+    // ---------- 2) Gaya klasik ----------
+    const css = document.createElement('style');
+    css.id = 'a9-classic';
+    css.textContent = `
+/* ================= Token ================= */
+:root, body {
+  --primary: #6b1f2a; --primary-hover: #4f151e; --primary-light: #f1e3da;
+  --bg-base: #efe6d2; --bg-card: #fbf7ec;
+  --text-main: #2a1f15; --text-muted: #6c5d49; --border-color: #c9b995;
+  --warning: #9a6a12; --danger: #9b1c1c; --gold: #a8843a;
+  --radius-sm: 2px; --radius-md: 3px; --radius-lg: 3px; --radius-xl: 4px;
+  --shadow-sm: none; --shadow-lg: none; --shadow-glow: 0 0 0 2px rgba(107,31,42,.28);
+  --font: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --font-head: 'Libre Baskerville', Baskerville, Georgia, 'Times New Roman', serif;
+}
+body.theme-dark {
+  --primary: #d9b86c; --primary-hover: #ead08e; --primary-light: rgba(217,184,108,.12);
+  --bg-base: #16120d; --bg-card: #201a13;
+  --text-main: #efe3c8; --text-muted: #b3a384; --border-color: #4b3f2c;
+  --shadow-glow: 0 0 0 2px rgba(217,184,108,.35); --gold: #d9b86c;
+}
+body.theme-dark .btn-primary, body.theme-dark .nav-pill.active, body.theme-dark .chip.active,
+body.theme-dark .cx-btn.done, body.theme-dark .cbt-nav-btn.done, body.theme-dark .trk span.on,
+body.theme-dark .sj-tabs button.on, body.theme-dark .sj-bloks button.on { color: #1a1409; }
+
+/* ================= Dasar ================= */
+html body { background: var(--bg-base) !important; background-image: none !important; color: var(--text-main); font-family: var(--font); letter-spacing: 0; }
+h1, h2, h3, h4, h5, .card-title, .greeting h3 { font-family: var(--font-head); font-weight: 700; letter-spacing: .005em; }
+.tab-content { animation: none !important; }
+.btn:active, .fv-folder:hover, .lb-card:hover { transform: none !important; box-shadow: none !important; }
+::selection { background: var(--primary-light); color: var(--text-main); }
+
+/* ================= Kartu: bingkai garis ganda ================= */
+.card { background: var(--bg-card); border: 1px solid var(--border-color); box-shadow: inset 0 0 0 3px var(--bg-card), inset 0 0 0 4px var(--border-color) !important; }
+.card-header { border-bottom: 3px double var(--border-color); }
+.card-title { font-size: clamp(17px, 2vw, 20px); }
+.greeting { background: var(--primary); color: #f7efdc; border: 1px solid var(--gold); box-shadow: inset 0 0 0 3px var(--primary), inset 0 0 0 4px var(--gold) !important; }
+.greeting h3 { font-weight: 700; }
+body.theme-dark .greeting { background: #2b2216; color: #efe3c8; }
+.upd-card { background: var(--primary-light); border: 1px solid var(--gold); }
+
+/* ================= Tombol: kapital kecil, sudut tegak ================= */
+.btn { border-radius: 2px; text-transform: uppercase; letter-spacing: .07em; font-size: 12.5px; font-weight: 700; }
+.btn-sm { font-size: 11.5px; }
+.btn-primary { background: var(--primary); border-color: var(--primary); color: #f7efdc; }
+.btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+.btn-outline { background: transparent; border: 1px solid var(--text-main); color: var(--text-main); }
+.btn-outline:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+.btn-danger { background: #f6e3df; color: var(--danger); border-color: #d9a9a1; }
+body.theme-dark .btn-danger { background: rgba(155,28,28,.2); color: #f0b4ab; border-color: rgba(155,28,28,.5); }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 2px; }
+
+/* ================= Input ================= */
+.modern-input { background: #fffdf5; border: 1px solid var(--border-color); border-bottom: 2px solid var(--text-muted); border-radius: 2px; }
+body.theme-dark .modern-input { background: #17120c; border-bottom-color: var(--border-color); }
+.modern-input:hover { border-color: var(--text-muted); }
+.modern-input:focus { border-color: var(--primary); border-bottom-color: var(--primary); box-shadow: var(--shadow-glow); }
+.form-group label { font-family: var(--font-head); font-size: 12.5px; font-weight: 700; letter-spacing: .03em; }
+.admin-form-box { border: 1px dashed var(--text-muted); }
+
+/* ================= Navigasi ================= */
+.simple-nav { border-bottom: 3px double var(--border-color); }
+.nav-pill, .sn-chip, .chip, .jd-tag, .dl-badge, .osce-chip, .sm-badge, #cbt-timer, .cbt-timer,
+.sj-tabs button, .sj-hints button { border-radius: 2px !important; }
+.nav-pill.active { background: var(--primary); color: #f7efdc; }
+#sn-sub .sn-chip.active { background: var(--bg-card); color: var(--primary); border: 1px solid var(--primary); }
+@media (max-width: 768px) {
+  #sn-main { border-top: 3px double var(--border-color); box-shadow: none; }
+  #sn-main .nav-pill.active { background: var(--primary-light); color: var(--primary); }
+}
+
+/* ================= Tabel: gaya daftar buku teks ================= */
+.table-responsive { border: 1px solid var(--text-main); }
+.modern-table th { font-family: var(--font-head); font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-main); background: var(--primary-light); border-bottom: 2px solid var(--text-main); }
+.modern-table td { border-bottom: 1px dotted var(--border-color); }
+.modern-table tbody tr:nth-child(even) td { background: rgba(120,90,40,.05); }
+.modern-table tr:hover td { background: var(--primary-light); }
+
+/* ================= Komponen lain ================= */
+.jd.today { background: var(--primary-light); border: 1px solid var(--primary); }
+.fv-folder, .fv-file, .lb-card, .osce-st, .osce-stase, .cbtx-side, .prog-stat { border-radius: 3px; }
+.option-label { border-radius: 3px; border-width: 1px; }
+.cx-btn { border-radius: 2px; }
+.toast { border-radius: 2px; border: 1px solid var(--gold); }
+.modal-content, #preview-modal > div, #admin-settings-modal > div { border-radius: 4px; }
+#to-top { border-radius: 2px; box-shadow: none; }
+.sj-card, .sj-q, .sj-img, .sj-link, .sj-trial, .sm-card { border-radius: 3px; }
+.sj-bloks button { border-radius: 3px; }
+.sj-bloks button.on { background: var(--primary); color: #f7efdc; }
+.sj-bloks .sj-bl { font-family: var(--font-head); }
+::-webkit-scrollbar-thumb { border-radius: 2px; }
+
+/* ================= Halaman masuk ================= */
+#login-page { background: var(--bg-base) !important; background-image: none !important; }
+#login-page .card, #login-page .login-card, #login-page .login-box, #login-page .login-container {
+  max-width: 520px; margin-left: auto; margin-right: auto; background: var(--bg-card);
+  border: 1px solid var(--text-main); padding: 36px clamp(22px, 5vw, 44px);
+  box-shadow: inset 0 0 0 5px var(--bg-card), inset 0 0 0 6px var(--border-color) !important;
+}
+#login-page h1, #login-page h2, #login-page h3 { color: var(--primary) !important; text-align: center; text-transform: uppercase; letter-spacing: .08em; }
+#login-page h1::after, #login-page h2::after, #login-page h3::after { content: ''; display: block; width: 96px; margin: 12px auto 0; border-top: 3px double var(--gold); }
+#login-page p { text-align: center; color: var(--text-muted); }
+#login-page .btn, #login-page button { width: 100%; }
+.a9-secret { -webkit-text-security: disc; text-security: disc; }
+`;
+    document.head.appendChild(css);
+
+    // ---------- 3) Warna bilah alamat HP ----------
+    try {
+        const m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.content = document.body.classList.contains('theme-dark') ? '#16120d' : '#efe6d2';
+    } catch (e) { }
+
+    // ---------- 4) Login: jangan memicu isi otomatis / kunci sandi browser ----------
+    //   Penyebab popup kunci (Safari/Chrome): kolom "kode admin" bertipe password di formulir yang sama
+    //   membuat browser menganggap ini formulir login, lalu menawarkan akun tersimpan.
+    //   Solusi: tidak ada kolom password, nama kolom acak, dan semua tanda "jangan isi otomatis".
+    const textSecuritySupported = (() => { try { return !!(window.CSS && CSS.supports && (CSS.supports('-webkit-text-security', 'disc') || CSS.supports('text-security', 'disc'))); } catch (e) { return false; } })();
+    function hardenLogin() {
+        const nim = document.getElementById('login-nim-input');
+        const adm = document.getElementById('login-admin-code');
+        const role = document.getElementById('login-role');
+        if (!nim && !adm) return;
+        const rnd = () => 'a9f_' + Math.random().toString(36).slice(2, 10);
+        [nim, adm, role].forEach(el => {
+            if (!el || el.dataset.a9Hard) return;
+            el.dataset.a9Hard = '1';
+            el.setAttribute('autocomplete', 'off');
+            el.setAttribute('name', rnd());
+            el.setAttribute('data-lpignore', 'true');      // LastPass
+            el.setAttribute('data-1p-ignore', 'true');     // 1Password
+            el.setAttribute('data-bwignore', 'true');      // Bitwarden
+            el.setAttribute('data-form-type', 'other');    // Dashlane
+            if (el.tagName === 'INPUT') {
+                el.setAttribute('autocapitalize', 'off');
+                el.setAttribute('autocorrect', 'off');
+                el.setAttribute('spellcheck', 'false');
+            }
+        });
+        if (nim) nim.setAttribute('inputmode', 'numeric');
+        // kode admin: tampil titik-titik lewat CSS, bukan type=password (di browser yang mendukung)
+        if (adm && adm.type === 'password' && textSecuritySupported) { adm.type = 'text'; adm.classList.add('a9-secret'); }
+        const form = (nim || adm).closest('form');
+        if (form) { form.setAttribute('autocomplete', 'off'); form.setAttribute('novalidate', ''); }
+        // ikon topi wisuda -> simbol medis (tongkat Asklepios), sesuai tema klasik
+        const page = document.getElementById('login-page');
+        if (page) {
+            const w = document.createTreeWalker(page, NodeFilter.SHOW_TEXT);
+            let n; while ((n = w.nextNode())) { if (n.nodeValue.indexOf('\ud83c\udf93') >= 0) n.nodeValue = n.nodeValue.replace(/\ud83c\udf93/g, '\u2695\ufe0e'); }
+        }
+    }
+    hardenLogin();
+    window.addEventListener('DOMContentLoaded', hardenLogin);
+    setTimeout(hardenLogin, 300);
 })();
