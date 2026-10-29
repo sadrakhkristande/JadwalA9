@@ -1299,7 +1299,7 @@ body { font-size: 16px; }
     function tick() {
         if (!cbt || cbt.mode !== 'exam') return;
         const rem = Math.max(0, Math.ceil((cbt.endAt - Date.now()) / 1000));
-        cbtTimeInSeconds = rem; $('cbt-timer').textContent = cbtFormatTime(rem);
+        cbtTimeInSeconds = rem; $('cbt-timer').textContent = cbtFormatTime(rem); document.querySelectorAll('[data-timer]').forEach(e => { e.textContent = cbtFormatTime(rem); });
         if (rem <= 0) { clearInterval(timer); timer = null; alert('\u23f0 Waktu habis! Jawaban dikumpulkan otomatis.'); finish(); }
     }
 
@@ -1355,12 +1355,13 @@ body { font-size: 16px; }
             ${fb}
             <div class="cbtx-nav">
               <button class="btn btn-outline" data-act="prev"${c.idx === 0 ? ' disabled' : ''}>\u25c0 Sebelumnya</button>
+              ${c.mode === 'exam' && !rv ? `<span class="cbtx-time" data-timer>${cbtFormatTime(cbtTimeInSeconds)}</span>` : ''}
               ${pr && !rv ? `<button class="btn btn-primary" data-act="check"${ans === undefined || c.chk[q.id] ? ' disabled' : ''}>\u2714 Periksa jawaban</button>` : ''}
               <button class="btn btn-primary" data-act="next"${c.idx === n - 1 ? ' disabled' : ''}>Berikutnya \u25b6</button>
             </div>
           </div>
           <aside class="cbtx-side${c.side ? ' open' : ''}">
-            <h4>Daftar Soal</h4>
+            <div class="cx-sidehead"><h4>Daftar Soal</h4><button type="button" class="btn btn-outline btn-sm cx-close" data-act="side">\u2715 Tutup</button></div>
             <div class="cx-legend">${legend}</div>
             <div class="cx-grid">${grid}</div>
             <div class="cx-stats">${stats}</div>
@@ -1372,6 +1373,7 @@ body { font-size: 16px; }
     function go(i) {
         if (!cbt) return;
         cbt.idx = Math.max(0, Math.min(cbt.qs.length - 1, i));
+        if (window.innerWidth <= 900) cbt.side = false;   // di HP daftar soal menutup setelah memilih nomor
         renderCbt();
         const nx = cbt.qs[cbt.idx + 1]; if (nx && nx.image) { new Image().src = nx.image; }
         $('cbt-question-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1961,20 +1963,33 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
 
     // ======================= PERPUSTAKAAN =======================
     const CATS = [
-        { id: 'materi', cat: 'materi', label: 'Materi', title: 'materi', lg: 'kuliah', host: () => document.querySelector('#tab-materi .table-responsive') },
+        { id: 'materi', cat: 'materi', label: 'Materi', title: 'materi', lg: 'kuliah', mk: true, host: () => document.querySelector('#tab-materi .table-responsive') },
         { id: 'lab', cat: 'laboratorium', label: 'Lab', title: 'nama', lg: 'skenario', host: () => $('lab-list') },
         { id: 'skills', cat: 'skills_lab', label: 'Skills Lab', title: 'nama', lg: 'skenario', host: () => $('skills-list') },
         { id: 'tut', cat: 'tutorial', label: 'Tutorial', title: 'nama', lg: 'skenario', host: () => $('tutorial-list') }
     ];
     const savedView = lsGet('a9_lb_view', 'grid');
-    CATS.forEach(c => { c.f = { kategori: '', jenis: '', fav: false, q: '', sort: 'baru' }; c.view = savedView; c.root = null; c.last = ''; c.lastSel = ''; c.shown = []; c.all = []; });
+    CATS.forEach(c => { c.f = { matkul: '', kategori: '', jenis: '', fav: false, q: '', sort: 'baru' }; c.view = savedView; c.root = null; c.last = ''; c.lastSel = ''; c.shown = []; c.all = []; });
 
     // kategori: data baru memakai "kategori"; data lama memakai mata kuliah / blok / sumber sebagai cadangan
-    const meta = (c, it) => ({
-        title: String(it[c.title] || 'Tanpa judul'), link: it.link && it.link !== '#' ? it.link : '',
-        kategori: String(it.kategori || it.matkul || it[c.lg] || it.blok || it.sumber || '').trim(),
-        blok: String(it.blok || '').trim(), sumber: String(it.sumber || '').trim(), matkul: String(it.matkul || it[c.lg] || '').trim(), tipe: it.tipe || ''
-    });
+    const meta = (c, it) => {
+        const matkul = String(it.matkul || it[c.lg] || '').trim();
+        let kategori = String(it.kategori || it.matkul || it[c.lg] || it.blok || it.sumber || '').trim();
+        if (c.mk && kategori === matkul) kategori = '';   // Materi: mata kuliah dan kategori dipisah
+        return {
+            title: String(it[c.title] || 'Tanpa judul'), link: it.link && it.link !== '#' ? it.link : '',
+            kategori, blok: String(it.blok || '').trim(), sumber: String(it.sumber || '').trim(), matkul, tipe: it.tipe || ''
+        };
+    };
+    const driveFileId = u => { const m = String(u || '').match(/(?:drive\.google\.com\/(?:file\/d\/|open\?(?:[^#]*&)?id=|uc\?(?:[^#]*&)?id=)|docs\.google\.com\/(?:document|presentation|spreadsheets)\/d\/)([\w-]+)/); return m ? m[1] : null; };
+    const thumbSrc = x => {
+        const yt = x.kind === 'youtube' ? a9YtId(x.link) : null;
+        if (yt) return 'https://i.ytimg.com/vi/' + yt + '/hqdefault.jpg';
+        if (x.kind === 'image') return x.link;
+        if (['drive', 'gdoc', 'drivevideo'].includes(x.kind)) { const d = driveFileId(x.link); if (d) return 'https://drive.google.com/thumbnail?id=' + d + '&sz=w480'; }
+        return '';
+    };
+    const extOf = x => { const e = String(x.link || '').split('?')[0].split('#')[0].split('.').pop().toLowerCase(); return /^[a-z0-9]{2,5}$/.test(e) ? e.toUpperCase() : ''; };
     const keyOf = (c, it) => c.cat + ':' + (it.id != null ? it.id : (it[c.title] + '|' + (it.link || '')));
     const favs = () => lsGet('a9_fav_' + nimKey(), []);
     const recents = () => lsGet('a9_rec_' + nimKey(), []);
@@ -1988,6 +2003,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
           <div class="lb-top"><input type="search" class="modern-input fd-search" placeholder="\ud83d\udd0e Cari judul atau kategori..." aria-label="Cari">
             <div class="fd-views" role="group" aria-label="Tampilan"><button type="button" class="fd-vbtn" data-view="grid" title="Kartu" aria-label="Tampilan kartu">\u25a6</button><button type="button" class="fd-vbtn" data-view="list" title="Daftar" aria-label="Tampilan daftar">\u2630</button></div></div>
           <div class="lb-filters">
+            ${c.mk ? '<label class="lb-f"><span>Mata kuliah</span><select class="modern-input" data-f="matkul"></select></label>' : ''}
             <label class="lb-f"><span>Kategori</span><select class="modern-input" data-f="kategori"></select></label>
             <label class="lb-f"><span>Jenis</span><select class="modern-input" data-f="jenis">${JENIS.map(j => `<option value="${j[0]}">${j[1]}</option>`).join('')}</select></label>
             <label class="lb-f"><span>Urutkan</span><select class="modern-input" data-f="sort"><option value="baru">Terbaru</option><option value="nama">Judul A-Z</option><option value="kategori">Kategori</option></select></label>
@@ -2009,12 +2025,17 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         all.forEach(x => { if (x.kategori) set[x.kategori] = (set[x.kategori] || 0) + 1; else none++; });
         const names = Object.keys(set).sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
         if (f.kategori && f.kategori !== '__none' && !set[f.kategori]) f.kategori = '';
-        const sig = JSON.stringify([names, set, none, f.kategori, f.jenis, f.sort]);
+        const mset = {}; if (c.mk) all.forEach(x => { if (x.matkul) mset[x.matkul] = (mset[x.matkul] || 0) + 1; });
+        const mnames = Object.keys(mset).sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
+        if (f.matkul && !mset[f.matkul]) f.matkul = '';
+        const sig = JSON.stringify([names, set, none, f.kategori, f.jenis, f.sort, mnames, mset, f.matkul]);
         if (sig !== c.lastSel) {
             c.lastSel = sig;
             const s = root.querySelector('[data-f="kategori"]');
             s.innerHTML = '<option value="">Semua kategori</option>' + names.map(n => `<option value="${esc(n)}">${esc(n)} (${set[n]})</option>`).join('') + (none && names.length ? `<option value="__none">(Tanpa kategori) (${none})</option>` : '');
             s.value = f.kategori;
+            const ms = root.querySelector('[data-f="matkul"]');
+            if (ms) { ms.innerHTML = '<option value="">Semua mata kuliah</option>' + mnames.map(n => `<option value="${esc(n)}">${esc(n)} (${mset[n]})</option>`).join(''); ms.value = f.matkul; }
             root.querySelector('[data-f="jenis"]').value = f.jenis; root.querySelector('[data-f="sort"]').value = f.sort;
         }
         root.classList.toggle('lb-list', c.view === 'list');
@@ -2023,7 +2044,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         root.querySelector('[data-fav]').classList.toggle('active', f.fav);
 
         const q = lc(f.q);
-        const pass = x => (!f.kategori || (f.kategori === '__none' ? !x.kategori : x.kategori === f.kategori))
+        const pass = x => (!f.matkul || x.matkul === f.matkul) && (!f.kategori || (f.kategori === '__none' ? !x.kategori : x.kategori === f.kategori))
             && (!f.jenis || KIND[x.kind].g === f.jenis) && (!f.fav || fv.includes(x.key))
             && (!q || lc([x.title, x.kategori, x.blok, x.sumber, x.matkul].join(' ')).includes(q));
         const shown = all.filter(pass);
@@ -2031,18 +2052,20 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
             : f.sort === 'kategori' ? (a, b) => a.kategori.localeCompare(b.kategori, 'id', { numeric: true }) || a.title.localeCompare(b.title, 'id', { numeric: true })
                 : (a, b) => (Number(b.it.id) || b.idx) - (Number(a.it.id) || a.idx));
         c.shown = shown;
-        const filtered = !!(f.kategori || f.jenis || f.fav || q);
+        const filtered = !!(f.matkul || f.kategori || f.jenis || f.fav || q);
         root.querySelector('.lb-count').textContent = filtered ? `${shown.length} dari ${all.length} berkas` : `${all.length} berkas`;
         root.querySelector('[data-reset]').style.display = filtered ? 'inline-flex' : 'none';
 
         const card = x => {
             const k = KIND[x.kind], yt = x.kind === 'youtube' ? a9YtId(x.link) : null, on = fv.includes(x.key);
-            const thumb = yt ? `<img src="https://i.ytimg.com/vi/${yt}/hqdefault.jpg" alt="" loading="lazy"><span class="lb-play">\u25b6</span>` : (k.g === 'video' ? '<span class="lb-play">\u25b6</span>' : k.ico);
+            const src = thumbSrc(x), ext = extOf(x);
+            const ph = `<span class="lb-ph"><span class="lb-ico">${k.ico}</span>${ext ? `<small>${esc(ext)}</small>` : ''}</span>`;
+            const thumb = ph + (src ? `<img src="${esc(src)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '') + (k.g === 'video' ? '<span class="lb-play">\u25b6</span>' : '');
             return `<div class="lb-card" data-k="${esc(x.key)}" role="button" tabindex="0" aria-label="Buka ${esc(x.title)}">
               <div class="lb-thumb k-${x.kind}">${thumb}<span class="lb-kind">${esc(k.label)}</span></div>
               <button type="button" class="lb-fav${on ? ' on' : ''}" data-fav-k="${esc(x.key)}" aria-label="${on ? 'Hapus dari favorit' : 'Tambah ke favorit'}">${on ? '\u2605' : '\u2606'}</button>${admin ? `<button type="button" class="lb-more" data-more-k="${esc(x.key)}" aria-label="Menu">\u22ef</button>` : ''}
               <div class="lb-body"><div class="lb-title">${esc(x.title)}</div>
-                <div class="lb-tags">${x.kategori ? `<span class="lb-tag">${esc(x.kategori)}</span>` : ''}</div></div></div>`;
+                <div class="lb-tags">${c.mk && x.matkul ? `<span class="lb-tag mk">${esc(x.matkul)}</span>` : ''}${x.kategori ? `<span class="lb-tag">${esc(x.kategori)}</span>` : ''}</div></div></div>`;
         };
         let html = '';
         if (!filtered) {
@@ -2077,6 +2100,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         if (/google\.com/.test(u)) return 'Berkas Google Drive';
         try { return nameOf({ name: decodeURIComponent(new URL(u).pathname.split('/').pop() || '') }) || new URL(u).hostname; } catch (e) { return 'Tautan'; }
     };
+    const mkList = c => [...new Set((dbData[c.cat] || []).map(i => meta(c, i).matkul).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
     const catList = c => [...new Set((dbData[c.cat] || []).map(i => meta(c, i).kategori).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
 
     // Satu pintu tambah: 1 atau banyak file, judul = nama file, admin cukup isi kategori
@@ -2085,11 +2109,14 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
             { type: 'note', text: 'Pilih satu atau banyak file sekaligus. Judul otomatis memakai nama file.' },
             { id: 'files', label: 'File (boleh lebih dari satu)', type: 'file', multiple: true },
             { id: 'links', label: 'Atau tempel tautan, satu per baris (boleh "Judul | tautan")', type: 'textarea', placeholder: 'https://drive.google.com/...' },
-            { id: 'kategori', label: 'Kategori', value: c.f.kategori && c.f.kategori !== '__none' ? c.f.kategori : '', placeholder: 'Pilih dari daftar, atau ketik nama baru', list: catList(c) }
+            ...(c.mk ? [{ id: 'matkul', label: 'Mata kuliah', value: c.f.matkul || '', placeholder: 'Pilih dari daftar, atau ketik nama baru', list: mkList(c) }] : []),
+            { id: 'kategori', label: c.mk ? 'Kategori (opsional, mis. Kuliah pakar, Skenario)' : 'Kategori', value: c.f.kategori && c.f.kategori !== '__none' ? c.f.kategori : '', placeholder: 'Pilih dari daftar, atau ketik nama baru', list: catList(c) }
         ], 'Tambah');
         if (!r) return;
-        const kategori = r.kategori.trim();
-        if (!kategori) return alert('Isi kategori dulu. Ketik nama baru kalau belum ada.');
+        const kategori = r.kategori.trim(), matkul = c.mk ? String(r.matkul || '').trim() : '';
+        if (c.mk && !matkul) return alert('Isi mata kuliah dulu. Ketik nama baru kalau belum ada.');
+        if (!c.mk && !kategori) return alert('Isi kategori dulu. Ketik nama baru kalau belum ada.');
+        const where = c.mk ? matkul : kategori;
         const jobs = (r.files || []).map(f => ({ title: nameOf(f), file: f }));
         String(r.links || '').split('\n').map(s => s.trim()).filter(Boolean).forEach(ln => {
             const i = ln.indexOf('|'), url = (i > 0 ? ln.slice(i + 1) : ln).trim(), t = i > 0 ? ln.slice(0, i).trim() : '';
@@ -2101,31 +2128,34 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         for (const j of jobs) {
             let link = j.url;
             if (j.file) {
-                link = await uploadFileObj(j.file, c.label + '/' + kategori);
+                link = await uploadFileObj(j.file, c.label + '/' + where);
                 if (!link) { if (confirm(`"${j.title}" gagal diunggah. Lanjut ke file berikutnya?`)) continue; break; }
             }
-            (dbData[c.cat] = dbData[c.cat] || []).push({ id: Date.now() + ok, ket: '', [c.title]: j.title, [c.lg]: kategori, kategori, link, tipe: j.file && /^video\//.test(j.file.type) ? 'video' : '' });
+            (dbData[c.cat] = dbData[c.cat] || []).push({ id: Date.now() + ok, ket: '', [c.title]: j.title, [c.lg]: where, ...(c.mk ? { matkul } : {}), kategori, link, tipe: j.file && /^video\//.test(j.file.type) ? 'video' : '' });
             ok++; last = j.title;
         }
         if (!ok) return;
         if (!(await saveCategoryData(c.cat))) return;
         alert(ok + ' berkas ditambahkan.');
-        postUpdate('file', '\ud83d\udcda ' + c.label + ' baru', ok === 1 ? last + ' ditambahkan ke ' + kategori + '.' : ok + ' berkas baru di kategori ' + kategori + '.', { key: 'lib:' + c.cat, merge: n => n + ' berkas baru ditambahkan ke ' + c.label + '.' });
+        postUpdate('file', '\ud83d\udcda ' + c.label + ' baru', ok === 1 ? last + ' ditambahkan ke ' + where + '.' : ok + ' berkas baru di ' + where + '.', { key: 'lib:' + c.cat, merge: n => n + ' berkas baru ditambahkan ke ' + c.label + '.' });
     }
 
     async function editFlow(c, x) {
         const r = await askDialog('Ubah berkas', [
             { id: 'judul', label: 'Judul', value: x.title },
-            { id: 'kategori', label: 'Kategori', value: x.kategori, placeholder: 'Pilih atau ketik kategori baru', list: catList(c) },
+            ...(c.mk ? [{ id: 'matkul', label: 'Mata kuliah', value: x.matkul, placeholder: 'Pilih atau ketik mata kuliah baru', list: mkList(c) }] : []),
+            { id: 'kategori', label: c.mk ? 'Kategori (opsional)' : 'Kategori', value: x.kategori, placeholder: 'Pilih atau ketik kategori baru', list: catList(c) },
             { id: 'link', label: 'Tautan', value: x.link },
             { id: 'file', label: 'Atau ganti dengan file baru', type: 'file' }
         ], 'Simpan');
         if (!r) return;
         if (!r.judul.trim()) return alert('Judul wajib diisi.');
-        const kategori = r.kategori.trim(), old = x.link; let link = r.link.trim();
-        if (r.file) { const u = await uploadFileObj(r.file, c.label + '/' + (kategori || 'Umum')); if (!u) return; link = u; }
+        const kategori = r.kategori.trim(), matkul = c.mk ? String(r.matkul || '').trim() : '', old = x.link; let link = r.link.trim();
+        if (c.mk && !matkul) return alert('Mata kuliah wajib diisi.');
+        const where = c.mk ? matkul : kategori;
+        if (r.file) { const u = await uploadFileObj(r.file, c.label + '/' + (where || 'Umum')); if (!u) return; link = u; }
         if (!link) return alert('Tautan tidak boleh kosong.');
-        Object.assign(x.it, { [c.title]: r.judul.trim(), [c.lg]: kategori, kategori, link });
+        Object.assign(x.it, { [c.title]: r.judul.trim(), [c.lg]: where, ...(c.mk ? { matkul } : {}), kategori, link });
         if (!(await saveCategoryData(c.cat))) return;
         alert('Perubahan disimpan.' + (old && old !== link ? await purgeFileOf({ link: old }) : ''));
     }
@@ -2158,7 +2188,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         root.addEventListener('click', async e => {
             const v = e.target.closest('[data-view]'); if (v) { CATS.forEach(x => { x.view = v.dataset.view; if (x.root) draw(x); }); lsSet('a9_lb_view', v.dataset.view); return; }
             if (e.target.closest('[data-fav]')) { c.f.fav = !c.f.fav; draw(c); return; }
-            if (e.target.closest('[data-reset]')) { Object.assign(c.f, { kategori: '', jenis: '', fav: false, q: '', sort: 'baru' }); root.querySelector('.fd-search').value = ''; c.lastSel = ''; draw(c); return; }
+            if (e.target.closest('[data-reset]')) { Object.assign(c.f, { matkul: '', kategori: '', jenis: '', fav: false, q: '', sort: 'baru' }); root.querySelector('.fd-search').value = ''; c.lastSel = ''; draw(c); return; }
             if (e.target.closest('[data-add]')) { await addFlow(c); return; }
             const fav = e.target.closest('[data-fav-k]'); if (fav) { e.stopPropagation(); toggleFav(fav.dataset.favK); draw(c); return; }
             const more = e.target.closest('[data-more-k]');
@@ -4117,4 +4147,84 @@ img, video, canvas, iframe, svg { max-width: 100%; }
     // Navigasi sederhana (Bagian 3) memanggil switchTab lewat window, jadi pembungkus ini ikut berlaku
     tidy();
     setInterval(tidy, 800);
+})();
+
+// ==========================================================================
+// BAGIAN 14 - TAMPILAN SOAL DI HP, PREVIEW MATERI, TINGGI MENU
+//   Ditaruh paling akhir. Hanya tampilan; data tidak diubah.
+// ==========================================================================
+(function () {
+    const css = document.createElement('style');
+    css.id = 'a9-fix14';
+    css.textContent = `
+/* ---- Kartu materi: preview + judul terbaca penuh ---- */
+.lb-thumb { background: var(--primary-light); }
+.lb-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.lb-thumb.k-image img { object-fit: contain; background: #0b1220; }
+.lb-ph { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.lb-ph .lb-ico { font-size: 38px; line-height: 1; }
+.lb-ph small { font-weight: 800; font-size: 12px; letter-spacing: .06em; color: var(--text-muted); }
+.lb-kind { z-index: 1; }
+.lb-play { z-index: 1; }
+.lb-title { -webkit-line-clamp: 4; line-clamp: 4; }
+.lb-tag.mk { background: var(--primary); color: #fff; }
+body.theme-dark .lb-tag.mk { color: #04211e; }
+.lb-tags { align-items: center; }
+
+/* ---- Soal (CBT / latihan) ---- */
+.cbtx-time { font-variant-numeric: tabular-nums; font-weight: 800; font-size: 15px; padding: 8px 12px; border-radius: 999px; background: var(--primary-light); color: var(--primary); text-align: center; white-space: nowrap; }
+.cx-sidehead { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.cx-close { display: none; }
+.option-text { overflow-wrap: anywhere; line-height: 1.5; }
+.q-text img, .options img { max-width: 100%; height: auto; }
+.cbt-image { max-height: 55vh; object-fit: contain; }
+
+@media (max-width: 900px) {
+  /* bilah Sebelumnya | tengah | Berikutnya menempel di atas menu bawah, satu baris */
+  .cbtx-nav { display: grid !important; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; position: sticky !important;
+    bottom: var(--a9-bar-h, 0px) !important; background: var(--bg-card) !important; border-top: 1px solid var(--border-color); padding: 8px 0 !important; margin: 14px 0 0; z-index: 8; }
+  .cbtx-nav > :first-child { grid-column: 1; } .cbtx-nav > :last-child { grid-column: 3; }
+  .cbtx-nav .btn { width: 100%; min-height: 46px; padding: 8px 6px !important; font-size: 14px; flex: none !important; }
+  .cbtx-nav .btn[data-act="check"] { white-space: nowrap; }
+  /* kepala soal: judul di atas, tombol bisa digeser ke samping */
+  .cbtx-head { flex-direction: column; align-items: stretch; }
+  .cbtx-head > span:last-child { display: flex !important; flex-wrap: nowrap; overflow-x: auto; gap: 8px; scrollbar-width: none; padding-bottom: 2px; }
+  .cbtx-head > span:last-child::-webkit-scrollbar { display: none; }
+  .cbtx-head .btn { flex: none; white-space: nowrap; font-size: 13px; padding: 6px 12px; }
+  /* daftar soal jadi lembar yang muncul dari bawah */
+  .cbtx-side.open { display: block !important; position: fixed !important; left: 8px; right: 8px; top: auto !important; bottom: calc(var(--a9-bar-h, 0px) + 8px);
+    max-height: 62vh; overflow-y: auto; z-index: 960; background: var(--bg-card); box-shadow: 0 -14px 44px rgba(0,0,0,.35); border-radius: 18px; padding: 14px; }
+  .cbtx-side.open .cx-grid { max-height: none; overflow: visible; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); }
+  .cbtx-side.open .cx-btn { min-height: 44px; }
+  .cx-close { display: inline-flex; }
+  /* pilihan jawaban mudah ditekan */
+  .options { gap: 8px; }
+  .option-label { min-height: 52px; align-items: flex-start; padding: 12px 14px; }
+  .q-text { font-size: 16px; line-height: 1.6; }
+  .cbt-feedback { font-size: 14px; }
+}
+@media (max-width: 768px) {
+  .lb-title { font-size: 14px; }
+  .lb-body { padding: 10px 11px 12px; }
+  .lb-tag { font-size: 11px; padding: 2px 8px; }
+  .lb-ph .lb-ico { font-size: 30px; }
+}
+`;
+    document.head.appendChild(css);
+
+    // tinggi menu bawah diukur supaya bilah sticky dan lembar daftar soal pas di atasnya
+    const root = document.documentElement;
+    function measure() {
+        try {
+            const bar = document.getElementById('sn-main');
+            const fixedBar = bar && getComputedStyle(bar).position === 'fixed';
+            root.style.setProperty('--a9-bar-h', (fixedBar ? bar.offsetHeight : 0) + 'px');
+            const nav = document.querySelector('.simple-nav');
+            root.style.setProperty('--a9-nav-h', (nav ? nav.offsetHeight : 0) + 'px');
+        } catch (e) { }
+    }
+    window.addEventListener('resize', measure);
+    window.addEventListener('orientationchange', measure);
+    measure();
+    setInterval(measure, 1000);
 })();
