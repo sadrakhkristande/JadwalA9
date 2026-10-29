@@ -1656,6 +1656,8 @@ body { font-size: 16px; }
     .fv-file .ico { font-size: 26px; }
     .fv-meta { flex: 1; min-width: 0; } .fv-meta strong { display: block; word-break: break-word; } .fv-meta small { color: var(--text-muted); }
     .pa-trend-up { color: #10b981; font-weight: 700; } .pa-trend-down { color: #ef4444; font-weight: 700; }
+    .jd-moved { display: block; font-size: 12px; color: var(--warning); font-weight: 600; margin-top: 2px; }
+    .jd-mv { margin-top: 6px; min-height: 32px; padding: 4px 12px; font-size: 12px; }
     @media (max-width: 768px) { .fv-bar { grid-template-columns: 1fr; } .jd-row { grid-template-columns: 1fr; gap: 2px; } }`;
     document.head.appendChild(st);
 
@@ -1682,7 +1684,7 @@ body { font-size: 16px; }
         <button class="btn btn-primary" id="jd-save">Simpan jadwal ke database</button></details>`);
 
     function renderJadwal() {
-        const all = (dbData.jadwalCustom || []).filter(j => j && Array.isArray(j.sesi));
+        const all = a9DropPast((dbData.jadwalCustom || []).filter(j => j && Array.isArray(j.sesi)), sod(new Date()));
         const today = sod(new Date()), tmr = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
         const q = ($('jd-search').value || '').trim().toLowerCase();
         const items = all.map(j => ({ j, d: parseTgl(j.tgl) }));
@@ -1699,13 +1701,36 @@ body { font-size: 16px; }
         $('jd-view').innerHTML = (note ? `<p style="color:var(--text-muted);margin-bottom:10px;">${note}</p>` : '') +
             (shown.length ? shown.map(({ j, d }) => {
                 const isT = d && d.getTime() === today.getTime(), isTm = d && d.getTime() === tmr.getTime();
-                const rows = j.sesi.filter(s => s && s.kegiatan && s.kegiatan.trim() !== '-');
+                const rows = j.sesi.map((s, i) => ({ s, i })).filter(r => r.s && r.s.kegiatan && r.s.kegiatan.trim() !== '-');
                 return `<div class="jd ${isT ? 'today' : ''}"><div class="jd-head"><strong>${esc(j.tgl)}</strong>${isT ? '<span class="jd-tag">Hari ini</span>' : isTm ? '<span class="jd-tag" style="background:#3b82f6">Besok</span>' : ''}</div>
-                    ${rows.length ? rows.map(s => `<div class="jd-row"><span class="jd-jam">${esc(s.jam)}</span><span>${esc(s.kegiatan)}</span></div>`).join('') : '<div class="jd-row"><span></span><span style="color:var(--text-muted)">Tidak ada kegiatan</span></div>'}</div>`;
+                    ${rows.length ? rows.map(({ s, i }) => `<div class="jd-row"><span class="jd-jam">${esc(s.jam)}</span><span>${esc(s.kegiatan)}${s.pindahDari ? `<small class="jd-moved">\ud83d\udd01 Jadwal berubah (semula ${esc(s.pindahDari)})${s.catatan ? ' \u00b7 ' + esc(s.catatan) : ''}</small>` : ''}${isAdmin() ? `<button type="button" class="btn btn-outline btn-sm jd-mv" data-jd-day="${esc(j.tgl)}" data-jd-mv="${i}">\u21aa Pindah</button>` : ''}</span></div>`).join('') : '<div class="jd-row"><span></span><span style="color:var(--text-muted)">Tidak ada kegiatan</span></div>'}</div>`;
             }).join('') : '<p style="color:var(--text-muted);">Tidak ada jadwal yang cocok.</p>');
     }
     $('jd-chips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (!b) return; jView = b.dataset.v; document.querySelectorAll('#jd-chips .chip').forEach(c => c.classList.toggle('active', c === b)); renderJadwal(); });
     $('jd-search').addEventListener('input', renderJadwal);
+    $('jd-view').addEventListener('click', async e => {
+        const b = e.target.closest('[data-jd-mv]'); if (!b || !isAdmin()) return;
+        const day = (dbData.jadwalCustom || []).find(j => j && j.tgl === b.dataset.jdDay), idx = +b.dataset.jdMv;
+        const it = day && day.sesi && day.sesi[idx]; if (!it) { alert('Kegiatan tidak ditemukan. Muat ulang halaman lalu coba lagi.'); return; }
+        const d0 = parseTgl(day.tgl), iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        const r = await askDialog('Pindahkan kegiatan', [
+            { type: 'note', text: it.kegiatan + ' (' + day.tgl + ', ' + it.jam + ')' },
+            { id: 'tgl', label: 'Pindah ke tanggal', type: 'date', value: d0 ? iso(d0) : '' },
+            { id: 'jam', label: 'Jam baru (biarkan kalau jamnya tetap)', value: it.jam, placeholder: '07.50-09.30' },
+            { id: 'ket', label: 'Catatan untuk mahasiswa (opsional)', value: it.catatan || '', placeholder: 'Mis. dosen berhalangan' }
+        ], 'Pindahkan');
+        if (!r) return;
+        if (!r.tgl) { alert('Pilih tanggal tujuan dulu.'); return; }
+        const nd = new Date(r.tgl + 'T00:00:00');
+        if (nd < sod(new Date()) && !confirm('Tanggal tujuan sudah lewat, jadwalnya akan langsung terhapus otomatis. Lanjut?')) return;
+        const res = a9MoveSesi(dbData.jadwalCustom, day.tgl, idx, nd, r.jam, (r.ket || '').trim());
+        if (!res) { alert('Tidak ada yang berubah.'); return; }
+        const before = dbData.jadwalCustom;
+        dbData.jadwalCustom = res.list;
+        if (!(await saveCategoryData('jadwal'))) { dbData.jadwalCustom = before; renderAll(); return; }
+        alert('Jadwal dipindah ke ' + res.to + '.');
+        postUpdate('jadwal', '\ud83d\uddd3\ufe0f Jadwal berubah', res.nama + ' dipindah dari ' + res.from + ' ke ' + res.to + '.', { key: 'jadwal-pindah', merge: n => n + ' kegiatan dipindah jadwalnya. Cek menu Kuliah \u203a Jadwal.', until: iso(nd) });
+    });
     $('jd-save').addEventListener('click', async () => {
         let p; try { p = JSON.parse($('jd-json').value); } catch (e) { alert('JSON tidak valid: ' + e.message); return; }
         const arr = Array.isArray(p) ? p : (p && p.jadwal);
@@ -4227,4 +4252,80 @@ body.theme-dark .lb-tag.mk { color: #04211e; }
     window.addEventListener('orientationchange', measure);
     measure();
     setInterval(measure, 1000);
+})();
+
+// ==========================================================================
+// BAGIAN 15 - JADWAL: HAPUS OTOMATIS YANG SUDAH LEWAT + PINDAH HARI (RESCHEDULE)
+//   Fungsi murni (tanpa DOM) dipakai oleh Bagian 5 (tampilan jadwal).
+// ==========================================================================
+function a9ParseTgl(t) {
+    const MON = { jan: 0, feb: 1, mar: 2, apr: 3, mei: 4, may: 4, jun: 5, jul: 6, agu: 7, aug: 7, sep: 8, okt: 9, oct: 9, nov: 10, des: 11, dec: 11 };
+    const m = String(t).match(/(\d{1,2})[-\s]([A-Za-z]{3})[a-z]*[-\s](\d{2,4})/); if (!m) return null;
+    const mo = MON[m[2].toLowerCase()]; if (mo === undefined) return null;
+    let y = +m[3]; if (y < 100) y += 2000; return new Date(y, mo, +m[1]);
+}
+function a9TglStr(d) {
+    const HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'], BLN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    return HARI[d.getDay()] + ', ' + String(d.getDate()).padStart(2, '0') + '-' + BLN[d.getMonth()] + '-' + String(d.getFullYear()).slice(2);
+}
+// Hari yang tanggalnya sebelum "today" dibuang. Tanggal yang tidak terbaca dibiarkan.
+function a9DropPast(list, today) {
+    return (list || []).filter(j => { const d = a9ParseTgl(j && j.tgl); return !d || d >= today; });
+}
+// Pindahkan satu kegiatan ke tanggal lain (atau ubah jamnya di hari yang sama). Mengembalikan salinan baru, atau null.
+function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
+    const L = JSON.parse(JSON.stringify(list || []));
+    const src = L.find(j => j && j.tgl === tglLama); if (!src || !src.sesi || !src.sesi[idx]) return null;
+    const s = src.sesi[idx], oldD = a9ParseTgl(src.tgl), key = a9TglStr(tglBaru);
+    const jam = String(jamBaru || '').trim() || s.jam;
+    const sameDay = !!oldD && oldD.getTime() === tglBaru.getTime();
+    if (sameDay && jam === s.jam && (ket || '') === (s.catatan || '')) return null;
+    const moved = Object.assign({}, s, { jam });
+    if (ket) moved.catatan = ket; else delete moved.catatan;
+    const start = x => { const m = String(x.jam || '').match(/(\d{1,2})[.:](\d{2})/); return m ? +m[1] * 60 + +m[2] : 99999; };
+    let dst = src;
+    if (sameDay) { src.sesi[idx] = moved; }
+    else {
+        moved.pindahDari = s.pindahDari || src.tgl;           // simpan tanggal asli sekali saja
+        src.sesi.splice(idx, 1);
+        dst = L.find(j => { const d = a9ParseTgl(j && j.tgl); return d && d.getTime() === tglBaru.getTime(); });
+        if (!dst) { dst = { tgl: key, sesi: [] }; L.push(dst); }
+        dst.sesi.push(moved);
+        if (!src.sesi.length) L.splice(L.indexOf(src), 1);    // hari yang kosong dihapus
+    }
+    dst.sesi.sort((a, b) => start(a) - start(b));
+    L.sort((a, b) => { const x = a9ParseTgl(a.tgl), y = a9ParseTgl(b.tgl); return x && y ? x - y : 0; });
+    return { list: L, from: src.tgl, to: dst.tgl, nama: s.kegiatan };
+}
+
+// Admin: bersihkan hari yang sudah lewat dari database, sekali per hari (dan saat tanggal berganti).
+(function () {
+    let lastDay = '', busy = false;
+    async function purgeJadwal() {
+        if (busy || !currentUser || currentUser.role !== 'admin' || !supabaseClient) return;
+        const now = new Date(), today = new Date(now.getFullYear(), now.getMonth(), now.getDate()), stamp = today.toDateString();
+        if (lastDay === stamp) return;
+        busy = true;
+        try {
+            // baca data TERBARU dulu supaya tidak menimpa perubahan orang lain dengan data lama
+            const { data, error } = await supabaseClient.from('portal_db').select('value').eq('key', 'jadwal').maybeSingle();
+            if (error) throw error;
+            let v = data && data.value; if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { v = null; } }
+            const arr = Array.isArray(v) ? v : (v && Array.isArray(v.jadwal) ? v.jadwal : null);
+            if (arr) {
+                const keep = a9DropPast(arr, today);
+                if (keep.length !== arr.length) {
+                    const r = await supabaseClient.from('portal_db').upsert({ key: 'jadwal', value: keep }, { onConflict: 'key' });
+                    if (r.error) throw r.error;
+                    try { const c = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}') || {}; c.jadwal = keep; localStorage.setItem(CACHE_KEY, JSON.stringify(c)); } catch (e) { }
+                    console.log('Jadwal: ' + (arr.length - keep.length) + ' hari yang sudah lewat dihapus.');
+                }
+                dbData.jadwalCustom = keep;
+                renderAll();
+            }
+            lastDay = stamp;
+        } catch (e) { console.error('Hapus jadwal lewat gagal:', e); }
+        busy = false;
+    }
+    setInterval(purgeJadwal, 20 * 1000);   // cukup ringan: hanya bekerja bila admin masuk dan tanggal sudah berganti
 })();
