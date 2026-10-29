@@ -24,7 +24,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_-NTQ0VL2xQmIYJ_ieREXkg_WUcU3L0t";
 
 // URL Web App Google Apps Script milik kelompok.a9.2026@gmail.com (lihat drive-uploader.gs dan langkah pasang).
 // Kalau masih kosong, unggahan memakai penyimpanan Supabase seperti sebelumnya.
-const DRIVE_UPLOAD_URL = '';
+const DRIVE_UPLOAD_URL = 'https://script.google.com/macros/s/AKfycbxm0IeQ1szMn1b_qptmCnolrFOAIrW1siJPJoH3EHkKiKq2iAnFwXSYoca0Mou9oUaM/exec';
 
 let supabaseClient = null;
 try {
@@ -4329,4 +4329,298 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
         busy = false;
     }
     setInterval(purgeJadwal, 20 * 1000);   // cukup ringan: hanya bekerja bila admin masuk dan tanggal sudah berganti
+})();
+
+// ==========================================================================
+// BAGIAN 16 - TUTORIAL: SEVEN JUMP PER SKENARIO + EKSPOR KE GOOGLE DOCS
+//   Ditaruh paling akhir. Data disimpan di portal_db, key: tutorial_sj_1..4 dan tutorial_sj_docs.
+//   Semua mahasiswa yang login bisa mengisi bersama; draft yang belum disimpan aman di perangkat.
+// ==========================================================================
+(function () {
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const $ = id => document.getElementById(id);
+
+    const SCEN = [
+        {
+            n: 1, judul: 'Perut Terasa Penuh Setelah Makan',
+            topik: 'Anatomi-histologi-fisiologi dan biokimia saluran pencernaan atas',
+            teks: [
+                'Seorang perempuan berusia 25 tahun datang ke klinik dengan keluhan rasa tidak nyaman di ulu hati sejak 3 bulan terakhir. Pasien mengeluhkan rasa penuh setelah makan dalam porsi kecil (bloating), cepat merasa kenyang, dan sering bersendawa (burping). Keluhan kadang disertai rasa panas seperti terbakar di dada (heartburn) terutama setelah makan malam dan saat berbaring.',
+                'Pasien mengatakan bahwa keluhan semakin sering muncul ketika jadwal makannya tidak teratur karena aktivitas kuliah. Ia sering mengonsumsi makanan pedas, asam, dan berlemak. Pasien juga mengaku sering langsung berbaring setelah makan.',
+                'Pasien tidak mengalami keluhan muntah darah (hematemesis), BAB berwarna hitam (melena), maupun diare. Pemeriksaan fisik menunjukkan keadaan umum baik, tanda vital dalam batas normal. Pada pemeriksaan abdomen didapatkan nyeri tekan ringan di daerah epigastrium.',
+                'Dokter menjelaskan bahwa keluhan pasien kemungkinan berhubungan dengan gangguan pada saluran pencernaan pasien. Dokter merencanakan edukasi tentang perubahan gaya hidup dan pemeriksaan lebih lanjut bila keluhan menetap.'
+            ],
+            hint: ['Ulu hati', 'Bloating', 'Burping (sendawa)', 'Heartburn', 'Hematemesis', 'Melena', 'Tanda vital', 'Nyeri tekan', 'Epigastrium']
+        },
+        {
+            n: 2, judul: 'Sembelit di Pagi Hari',
+            topik: 'Anatomi-histologi-fisiologi dan biokimia saluran pencernaan bawah',
+            teks: [
+                'Seorang mahasiswa laki-laki berusia 19 tahun datang ke medical center dengan keluhan tidak bisa buang air besar selama empat hari terakhir. Pasien mengeluh adanya rasa tidak nyaman di perut bagian bawah yang semakin meningkat. Pasien juga merasakan ingin buang air besar, tetapi ketika buang air besar, yang keluar hanya sedikit berupa tinja yang keras dan kering seperti kotoran kambing.',
+                'Selama seminggu terakhir, pasien sibuk menghadapi ujian blok. Pasien mengaku bahwa menu makanan yang dikonsumsinya sebagian besar makanan cepat saji, kurang minum air, dan jarang mengonsumsi buah atau sayuran. Karena jadwalnya yang padat, ia sering menunda keinginan untuk buang air besar sampai rasa untuk buang air besar hilang.',
+                'Pasien menyangkal adanya mual, muntah, tinja berdarah, demam, atau penurunan berat badan yang signifikan. Pemeriksaan fisik didapatkan tanda vital normal, perut sedikit buncit dengan sedikit nyeri di kuadran kiri bawah, suara usus terdengar normal, pemeriksaan colok dubur ditemukan adanya tinja keras di rektum.',
+                'Dokter menyarankan agar pasien meningkatkan asupan airnya, mengonsumsi lebih banyak makanan berserat, melakukan olahraga secara teratur, dan memulai kebiasaan buang air besar secara teratur.'
+            ],
+            hint: ['Tinja keras dan kering', 'Kuadran kiri bawah', 'Suara usus', 'Colok dubur', 'Rektum', 'Makanan cepat saji', 'Makanan berserat']
+        },
+        {
+            n: 3, judul: 'Mengapa Badan Saya Loyo dan Mata Terlihat Kuning?',
+            topik: 'Biokimia metabolisme makromolekul',
+            teks: [
+                'Seorang perempuan berusia 19 tahun diantar orang tuanya ke IGD RS dengan keluhan utama lemas. Keluhan lain yang dirasakan adalah mata dan kulitnya kuning. Sekitar 5 hari yang lalu pasien sempat panas, mual, muntah dan tidak nafsu makan. Selama ini pasien dirawat sendiri di rumah, baru minum obat penurun panas, dan hanya mengonsumsi air dan buah-buahan yang disukai.',
+                'Setelah melakukan pemeriksaan fisik, dokter menduga pasien mengalami infeksi virus yang menyebabkan kerusakan sel hepar dan mengganggu fungsinya. Kondisi lemas berkaitan dengan gangguan metabolisme tubuh yang dialami oleh pasien tersebut, kemungkinan karena kekurangan makromolekul karbohidrat, protein, lemak dan energi. Dokter merencanakan pemeriksaan laboratorium yang terkait dengan fungsi hepar, yaitu albumin, globulin, bilirubin, SGPT dan SGOT.'
+            ],
+            hint: ['Lemas', 'IGD', 'Infeksi virus', 'Kerusakan sel hepar', 'Makromolekul', 'Albumin', 'Globulin', 'Bilirubin', 'SGPT', 'SGOT']
+        },
+        {
+            n: 4, judul: 'Pingsan Akibat Tidak Sarapan',
+            topik: 'Anatomi-histologi tractus digestivus accesoria yang terlibat dalam metabolisme dan fisiologi regulasi metabolisme',
+            teks: [
+                'Rini, seorang karyawati berusia 24 tahun, terbangun kesiangan karena lembur semalam sebelumnya. Demi mengejar presensi pagi agar tidak terlambat, ia terburu-buru berangkat ke kantor. Ia hanya sempat minum segelas air putih dan melewatkan sarapan.',
+                'Sesampainya di kantor, Rini langsung dihadapkan pada jadwal rapat pleno yang padat. Sebagai penanggung jawab proyek, ia harus melakukan presentasi di depan jajaran direksi di ruang rapat di lantai 4. Lift kantor sedang diperbaiki hari itu sehingga Rini terpaksa menaiki tangga dari kantornya di lantai 1 menuju ruang rapat di lantai 4 sambil membawa tumpukan dokumen yang cukup berat.',
+                'Saat sedang berdiri mempresentasikan laporannya di ruang rapat, Rini tiba-tiba merasa sangat lemas, pusing, pandangannya mengabur dan berdebar-debar. Teman-teman kantornya yang berada di ruang rapat melihat wajah Rini memucat. Tidak lama kemudian, Rini jatuh pingsan.',
+                'Oleh teman-temannya, Rini dibawa ke klinik di dekat kantornya. Dokter melakukan pemeriksaan fisik dan pemeriksaan kadar gula darah. Hasil pemeriksaan kadar gula darah menunjukkan penurunan dari nilai normalnya. Setelah Rini siuman, ia diberi segelas teh manis hangat. Beberapa saat kemudian, kondisi Rini berangsur membaik, rasa lemasnya berkurang, dan ia merasa tenaganya pulih kembali.'
+            ],
+            hint: ['Rapat pleno', 'Pandangan mengabur', 'Berdebar-debar', 'Pingsan', 'Siuman', 'Kadar gula darah', 'Nilai normal']
+        }
+    ];
+
+    const KEY = n => 'tutorial_sj_' + n;
+    const DOCS_KEY = 'tutorial_sj_docs';
+    const DRAFT = n => 'a9_sj_draft_' + n;
+    const blank = () => ({ istilah: [{ t: '', d: '' }], masalah: '', jawaban: '', lo: '', belajar: '', by: '', ts: 0 });
+    const me = () => (currentUser && (currentUser.name || currentUser.nim)) || 'Anonim';
+
+    let cur = 1, srv = {}, draft = {}, docs = [], lastFetch = 0, fetching = false;
+
+    // draft yang belum disimpan dibaca dari perangkat
+    [1, 2, 3, 4].forEach(n => { try { const d = JSON.parse(localStorage.getItem(DRAFT(n)) || 'null'); if (d && d.data) draft[n] = d.data; } catch (e) { } });
+
+    const view = n => draft[n] || srv[n] || blank();
+    const lines = s => String(s || '').split(/\n+/).map(x => x.trim()).filter(Boolean);
+    const parse = v => { if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { v = null; } } return v; };
+    const fmtTs = ts => ts ? new Date(ts).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    const toast = m => { const done = busy(m); setTimeout(done, 2500); };
+
+    // ---------- CSS ----------
+    const css = document.createElement('style');
+    css.id = 'a9-sj-css';
+    css.textContent = `
+#sj-root { margin: 0 0 22px; }
+.sj-head { display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.sj-head h3 { margin:0; color:var(--text-main); }
+.sj-tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+.sj-tabs button { border:1px solid var(--border-color); background:var(--bg-base); color:var(--text-main); border-radius:999px; padding:7px 14px; cursor:pointer; font:inherit; font-size:13px; }
+.sj-tabs button.on { background:var(--primary, #2563eb); color:#fff; border-color:transparent; }
+.sj-card { background:var(--bg-base); border:1px solid var(--border-color); border-radius:var(--radius-md, 12px); padding:14px; margin-bottom:12px; }
+.sj-card h4 { margin:0 0 4px; color:var(--text-main); }
+.sj-card .sj-sub { margin:0 0 10px; font-size:12.5px; color:var(--text-muted); }
+.sj-case p { margin:0 0 8px; line-height:1.55; font-size:14px; color:var(--text-main); }
+.sj-card textarea { width:100%; min-height:110px; box-sizing:border-box; resize:vertical; }
+.sj-row { display:grid; grid-template-columns:1fr 2fr auto; gap:8px; margin-bottom:8px; align-items:start; }
+.sj-row input, .sj-row textarea { width:100%; box-sizing:border-box; min-height:0; }
+.sj-row textarea { min-height:42px; }
+.sj-hints { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 0; }
+.sj-hints button { border:1px dashed var(--border-color); background:transparent; color:var(--text-muted); border-radius:999px; padding:3px 10px; font:inherit; font-size:12px; cursor:pointer; }
+.sj-acts { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:6px; }
+.sj-status { font-size:12.5px; color:var(--text-muted); }
+.sj-status.dirty { color:#b45309; }
+.sj-docs a { color:var(--primary, #2563eb); }
+@media (max-width:640px) { .sj-row { grid-template-columns:1fr; } }
+`;
+    document.head.appendChild(css);
+
+    // ---------- Pemasangan ----------
+    function host() { const l = $('tutorial-list'); return l ? l.closest('.tab-content') : null; }
+    function ensureRoot() {
+        const tab = host(); if (!tab) return null;
+        let r = $('sj-root');
+        if (!r) { r = document.createElement('div'); r.id = 'sj-root'; tab.insertBefore(r, tab.firstChild); wire(r); render(); }
+        return r;
+    }
+
+    // ---------- Pengambilan & penyimpanan ----------
+    async function fetchAll(force) {
+        if (!supabaseClient || !currentUser || fetching) return;
+        if (!force && Date.now() - lastFetch < 20000) return;
+        fetching = true;
+        try {
+            const keys = [1, 2, 3, 4].map(KEY).concat(DOCS_KEY);
+            const res = await Promise.all(keys.map(k => supabaseClient.from('portal_db').select('value').eq('key', k).maybeSingle().then(r => r, () => null)));
+            [1, 2, 3, 4].forEach((n, i) => { const r = res[i]; const v = r && !r.error && r.data ? parse(r.data.value) : null; if (v && typeof v === 'object') srv[n] = Object.assign(blank(), v); });
+            const dr = res[4]; const dv = dr && !dr.error && dr.data ? parse(dr.data.value) : null; if (Array.isArray(dv)) docs = dv;
+            lastFetch = Date.now();
+        } catch (e) { console.error('Seven Jump: gagal memuat', e); }
+        fetching = false;
+        const r = $('sj-root');
+        // jangan merusak ketikan: render ulang hanya bila fokus tidak di dalam form
+        if (r && !r.contains(document.activeElement)) render();
+    }
+
+    const cleanData = d => ({
+        istilah: (d.istilah || []).map(x => ({ t: String(x.t || '').trim(), d: String(x.d || '').trim() })).filter(x => x.t || x.d),
+        masalah: String(d.masalah || '').trim(), jawaban: String(d.jawaban || '').trim(), lo: String(d.lo || '').trim(), belajar: String(d.belajar || '').trim()
+    });
+
+    async function save() {
+        collect();
+        const n = cur, d = draft[n];
+        if (!d) { toast('Belum ada perubahan untuk disimpan.'); return; }
+        if (!supabaseClient) { alert('Server belum terhubung. Perubahan belum tersimpan.'); return; }
+        const done = busy('Menyimpan skenario ' + n + '...');
+        try {
+            // cek versi terbaru supaya hasil teman tidak tertimpa tanpa sepengetahuan
+            const r = await supabaseClient.from('portal_db').select('value').eq('key', KEY(n)).maybeSingle();
+            const latest = r && r.data ? parse(r.data.value) : null;
+            if (latest && (latest.ts || 0) > ((srv[n] && srv[n].ts) || 0) && latest.by !== me()) {
+                done();
+                if (!confirm('Skenario ' + n + ' baru disimpan oleh ' + (latest.by || 'teman') + ' pukul ' + fmtTs(latest.ts) + '. Timpa dengan versimu?\n\nOK = timpa, Batal = tidak (muat ulang dulu).')) return;
+            }
+            const out = Object.assign(cleanData(d), { by: me(), ts: Date.now() });
+            const w = await supabaseClient.from('portal_db').upsert({ key: KEY(n), value: out }, { onConflict: 'key' });
+            if (w.error) throw w.error;
+            srv[n] = Object.assign(blank(), out); delete draft[n];
+            try { localStorage.removeItem(DRAFT(n)); } catch (e) { }
+            toast('Skenario ' + n + ' tersimpan.');
+        } catch (e) { console.error(e); alert('Gagal menyimpan. Draf tetap aman di perangkat ini, coba lagi sebentar.'); }
+        finally { done(); }
+        render();
+    }
+
+    // ---------- Tampilan ----------
+    function render() {
+        const r = $('sj-root'); if (!r) return;
+        const s = SCEN[cur - 1], v = view(cur), dirty = !!draft[cur];
+        if (!v.istilah || !v.istilah.length) v.istilah = [{ t: '', d: '' }];
+        const used = new Set(v.istilah.map(x => (x.t || '').trim().toLowerCase()));
+        r.innerHTML = `
+<div class="sj-head"><h3>\ud83d\udcdd Seven Jump</h3><span class="sj-status" id="sj-meta">${srv[cur] && srv[cur].ts ? 'Tersimpan oleh ' + esc(srv[cur].by) + ' \u00b7 ' + esc(fmtTs(srv[cur].ts)) : 'Belum ada yang tersimpan'}</span></div>
+<div class="sj-tabs">${SCEN.map(x => `<button type="button" data-n="${x.n}" class="${x.n === cur ? 'on' : ''}">Skenario ${x.n}${draft[x.n] ? ' \u2022' : (srv[x.n] && srv[x.n].ts ? ' \u2713' : '')}</button>`).join('')}</div>
+<details class="sj-card sj-case" open><summary><strong>Skenario ${s.n}: ${esc(s.judul)}</strong></summary>
+  <p class="sj-sub" style="margin-top:6px;">${esc(s.topik)}</p>${s.teks.map(p => `<p>${esc(p)}</p>`).join('')}</details>
+<div class="sj-card"><h4>Langkah 1 \u2013 Klarifikasi istilah / kalimat sulit</h4><p class="sj-sub">Tulis istilah dari skenario dan artinya sesuai kesepakatan kelompok.</p>
+  <div id="sj-rows">${v.istilah.map((x, i) => `<div class="sj-row" data-i="${i}"><input class="modern-input" data-t placeholder="Istilah" value="${esc(x.t)}"><textarea class="modern-input" data-d placeholder="Arti / penjelasan">${esc(x.d)}</textarea><button type="button" class="btn btn-outline btn-sm" data-del="${i}" title="Hapus baris">\u2715</button></div>`).join('')}</div>
+  <div class="sj-acts"><button type="button" class="btn btn-outline btn-sm" data-add>+ Tambah istilah</button></div>
+  <div class="sj-hints">${s.hint.filter(h => !used.has(h.toLowerCase())).map(h => `<button type="button" data-hint="${esc(h)}">+ ${esc(h)}</button>`).join('')}</div></div>
+<div class="sj-card"><h4>Langkah 2 \u2013 Rumusan masalah</h4><p class="sj-sub">Satu masalah per baris.</p><textarea class="modern-input" data-f="masalah" placeholder="Contoh: Mengapa ...?">${esc(v.masalah)}</textarea></div>
+<div class="sj-card"><h4>Langkah 3 \u2013 Jawaban sementara (curah pendapat)</h4><p class="sj-sub">Jawaban sementara tiap masalah, tanpa membuka gadget atau literatur.</p><textarea class="modern-input" data-f="jawaban" placeholder="Masalah 1: ...">${esc(v.jawaban)}</textarea></div>
+<div class="sj-card"><h4>Langkah 5 \u2013 Learning Objectives (LO)</h4><p class="sj-sub">Satu LO per baris.</p><textarea class="modern-input" data-f="lo" placeholder="Mahasiswa mampu menjelaskan ...">${esc(v.lo)}</textarea></div>
+<div class="sj-card"><h4>Pertemuan 2 \u2013 Hasil belajar mandiri (opsional)</h4><p class="sj-sub">Informasi baru yang dilaporkan dan dibahas pada pertemuan kedua.</p><textarea class="modern-input" data-f="belajar" placeholder="Isi bila sudah ada">${esc(v.belajar)}</textarea></div>
+<div class="sj-acts">
+  <button type="button" class="btn btn-primary" data-save>Simpan skenario ${s.n}</button>
+  <button type="button" class="btn btn-outline" data-reload>Muat ulang</button>
+  <button type="button" class="btn btn-outline" data-exp="one">Buat Google Docs (skenario ${s.n})</button>
+  <button type="button" class="btn btn-outline" data-exp="all">Buat Google Docs (semua skenario)</button>
+  <span class="sj-status ${dirty ? 'dirty' : ''}" id="sj-state">${dirty ? 'Ada perubahan yang belum disimpan' : ''}</span></div>
+<div class="sj-docs sj-status" style="margin-top:8px;">${docs.length ? 'Dokumen terakhir: ' + docs.slice(0, 3).map(d => `<a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.name)}</a>`).join(' \u00b7 ') : ''}</div>`;
+    }
+
+    // ambil isi form ke draft
+    function collect() {
+        const r = $('sj-root'); if (!r || !r.querySelector('#sj-rows')) return;
+        const base = view(cur), d = { istilah: [], masalah: base.masalah, jawaban: base.jawaban, lo: base.lo, belajar: base.belajar };
+        r.querySelectorAll('.sj-row').forEach(row => d.istilah.push({ t: row.querySelector('[data-t]').value, d: row.querySelector('[data-d]').value }));
+        r.querySelectorAll('[data-f]').forEach(el => { d[el.dataset.f] = el.value; });
+        const before = JSON.stringify(cleanData(srv[cur] || blank())), after = JSON.stringify(cleanData(d));
+        if (before === after) { delete draft[cur]; try { localStorage.removeItem(DRAFT(cur)); } catch (e) { } }
+        else { draft[cur] = d; try { localStorage.setItem(DRAFT(cur), JSON.stringify({ data: d, ts: Date.now() })); } catch (e) { } }
+        const st = $('sj-state'); if (st) { st.textContent = draft[cur] ? 'Ada perubahan yang belum disimpan' : ''; st.classList.toggle('dirty', !!draft[cur]); }
+    }
+
+    function wire(r) {
+        r.addEventListener('input', () => collect());
+        r.addEventListener('click', e => {
+            const t = e.target.closest('button'); if (!t) return;
+            if (t.dataset.n) { collect(); cur = +t.dataset.n; render(); return; }
+            if (t.hasAttribute('data-add')) { collect(); const d = draft[cur] || Object.assign(blank(), JSON.parse(JSON.stringify(view(cur)))); d.istilah = (d.istilah || []).concat([{ t: '', d: '' }]); draft[cur] = d; render(); const rows = r.querySelectorAll('.sj-row'); const last = rows[rows.length - 1]; if (last) last.querySelector('[data-t]').focus(); return; }
+            if (t.dataset.hint) { collect(); const d = draft[cur] || JSON.parse(JSON.stringify(view(cur))); const empty = (d.istilah || []).findIndex(x => !x.t && !x.d); if (empty >= 0) d.istilah[empty].t = t.dataset.hint; else d.istilah.push({ t: t.dataset.hint, d: '' }); draft[cur] = d; try { localStorage.setItem(DRAFT(cur), JSON.stringify({ data: d, ts: Date.now() })); } catch (x) { } render(); return; }
+            if (t.dataset.del != null) { collect(); const d = draft[cur] || JSON.parse(JSON.stringify(view(cur))); d.istilah.splice(+t.dataset.del, 1); if (!d.istilah.length) d.istilah = [{ t: '', d: '' }]; draft[cur] = d; try { localStorage.setItem(DRAFT(cur), JSON.stringify({ data: d, ts: Date.now() })); } catch (x) { } render(); return; }
+            if (t.hasAttribute('data-save')) { save(); return; }
+            if (t.hasAttribute('data-reload')) {
+                if (draft[cur] && !confirm('Perubahan yang belum disimpan di skenario ' + cur + ' akan dibuang. Lanjutkan?')) return;
+                delete draft[cur]; try { localStorage.removeItem(DRAFT(cur)); } catch (x) { }
+                fetchAll(true).then(render); return;
+            }
+            if (t.dataset.exp) { exportDocs(t.dataset.exp === 'one' ? [cur] : [1, 2, 3, 4]); return; }
+        });
+    }
+
+    // ---------- Ekspor ke Google Docs ----------
+    function docHtml(ns) {
+        const ol = s => { const a = lines(s); return a.length ? '<ol>' + a.map(x => `<li>${esc(x)}</li>`).join('') + '</ol>' : '<p><em>(belum diisi)</em></p>'; };
+        const body = ns.map(n => {
+            const s = SCEN[n - 1], v = cleanData(view(n)), meta = srv[n] && srv[n].ts ? 'Terakhir disimpan oleh ' + srv[n].by + ', ' + fmtTs(srv[n].ts) : '';
+            const tbl = v.istilah.length
+                ? '<table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;width:100%"><tr><th style="width:30%;background:#eef2ff">Istilah</th><th style="background:#eef2ff">Arti / penjelasan</th></tr>' + v.istilah.map(x => `<tr><td>${esc(x.t)}</td><td>${esc(x.d)}</td></tr>`).join('') + '</table>'
+                : '<p><em>(belum diisi)</em></p>';
+            return `<h1>Skenario ${s.n}: ${esc(s.judul)}</h1><p><em>${esc(s.topik)}</em></p>${meta ? `<p style="color:#666">${esc(meta)}</p>` : ''}` +
+                `<h2>Skenario</h2>${s.teks.map(p => `<p>${esc(p)}</p>`).join('')}` +
+                `<h2>1. Klarifikasi istilah</h2>${tbl}` +
+                `<h2>2. Rumusan masalah</h2>${ol(v.masalah)}` +
+                `<h2>3. Jawaban sementara (curah pendapat)</h2>${ol(v.jawaban)}` +
+                `<h2>4. Learning Objectives (LO)</h2>${ol(v.lo)}` +
+                (v.belajar ? `<h2>5. Hasil belajar mandiri (pertemuan 2)</h2>${ol(v.belajar)}` : '');
+        }).join('<br style="page-break-before:always">');
+        return `<html><head><meta charset="utf-8"><title>Seven Jump Blok 1.3</title></head><body style="font-family:Arial,sans-serif;font-size:11pt">` +
+            `<p style="color:#666">Seven Jump \u2013 Blok 1.3 Sistem Pencernaan dan Metabolisme \u2013 Kelompok A9</p>${body}</body></html>`;
+    }
+
+    async function uploadDoc(name, html) {
+        let key = ''; try { key = localStorage.getItem('a9_drive_key') || ''; } catch (e) { }
+        if (!key) {
+            const r = await askDialog('Kunci unggah ke Drive', [
+                { type: 'note', text: 'Masukkan kunci unggah (UPLOAD_KEY) dari Apps Script. Cukup sekali di perangkat ini.' },
+                { id: 'k', label: 'Kunci unggah', type: 'password' }], 'Simpan');
+            if (!r || !r.k.trim()) return null;
+            key = r.k.trim(); try { localStorage.setItem('a9_drive_key', key); } catch (e) { }
+        }
+        const done = busy('Membuat Google Docs di Drive...');
+        try {
+            const r = await fetch(DRIVE_UPLOAD_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key, action: 'createDoc', name, path: 'Tutorial/Seven Jump', html }) });
+            const j = await r.json();
+            if (!j.ok) { if (/kunci/i.test(j.error || '')) { try { localStorage.removeItem('a9_drive_key'); } catch (e) { } } throw new Error(j.error || 'Apps Script belum mendukung createDoc (pasang drive-uploader-doc.gs)'); }
+            return j.url;
+        } catch (e) { console.error(e); alert('Gagal membuat Google Docs: ' + (e.message || e)); return null; }
+        finally { done(); }
+    }
+
+    function downloadDoc(name, html) {
+        const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name + '.doc';
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }
+
+    async function exportDocs(ns) {
+        collect();
+        const unsaved = ns.filter(n => draft[n]);
+        if (unsaved.length && !confirm('Skenario ' + unsaved.join(', ') + ' punya perubahan yang belum disimpan. Dokumen akan memakai isi yang tampil sekarang. Lanjutkan?')) return;
+        const name = 'Seven Jump Blok 1.3 - Kelompok A9 - ' + (ns.length === 1 ? 'Skenario ' + ns[0] : 'Semua Skenario') + ' - ' + isoLocal(new Date());
+        const html = docHtml(ns);
+        if (DRIVE_UPLOAD_URL) {
+            const url = await uploadDoc(name, html);
+            if (url) {
+                docs.unshift({ name, url, by: me(), ts: Date.now() }); docs = docs.slice(0, 10);
+                if (supabaseClient) { try { await supabaseClient.from('portal_db').upsert({ key: DOCS_KEY, value: docs }, { onConflict: 'key' }); } catch (e) { } }
+                render(); window.open(url, '_blank', 'noopener'); return;
+            }
+            if (!confirm('Mau unduh sebagai file .doc saja? Nanti bisa diunggah ke Drive dan dibuka dengan Google Dokumen.')) return;
+        } else {
+            alert('Portal belum tersambung ke Google Drive (DRIVE_UPLOAD_URL kosong). File .doc akan diunduh. Unggah ke Drive, klik kanan, lalu Buka dengan Google Dokumen.');
+        }
+        downloadDoc(name, html);
+    }
+
+    // ---------- Pemicu ----------
+    function tick() {
+        if (!currentUser) return;
+        const r = ensureRoot(); if (!r) return;
+        if (r.offsetParent !== null) fetchAll(false);   // hanya saat menu Tutorial terbuka
+    }
+    const prev = window.switchTab;
+    window.switchTab = function (t, b) {
+        const x = prev ? prev(t, b) : undefined;
+        setTimeout(() => { ensureRoot(); if (t === 'tutorial') fetchAll(true); }, 0);
+        return x;
+    };
+    setInterval(tick, 1500);
 })();
