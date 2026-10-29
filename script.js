@@ -4388,19 +4388,48 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
     const KEY = n => 'tutorial_sj_' + n;
     const DOCS_KEY = 'tutorial_sj_docs';
     const DRAFT = n => 'a9_sj_draft_' + n;
-    const blank = () => ({ istilah: [{ t: '', d: '' }], masalah: '', jawaban: '', lo: '', belajar: '', by: '', ts: 0 });
+    const blank = () => ({ istilah: [{ t: '', d: '' }], soal: [], lo: '', belajar: '', sumber: '', gambar: [], by: '', ts: 0 });
     const me = () => (currentUser && (currentUser.name || currentUser.nim)) || 'Anonim';
+    const AUTOSAVE_MS = 5000;
+    const NAMES = Array.from(new Set(Object.values(typeof allowedUsers !== 'undefined' ? allowedUsers : {})));
 
-    let cur = 1, srv = {}, draft = {}, docs = [], lastFetch = 0, fetching = false;
+    // srv: versi di server | draft: perubahan belum tersimpan | base: ts server saat draft dimulai | conflict: versi teman yang lebih baru
+    let cur = 1, srv = {}, draft = {}, base = {}, conflict = {}, docs = [], lastDoc = null;
+    let lastFetch = 0, fetching = false, timer = null, saving = false, booted = false;
 
     // draft yang belum disimpan dibaca dari perangkat
-    [1, 2, 3, 4].forEach(n => { try { const d = JSON.parse(localStorage.getItem(DRAFT(n)) || 'null'); if (d && d.data) draft[n] = d.data; } catch (e) { } });
+    [1, 2, 3, 4].forEach(n => { try { const d = JSON.parse(localStorage.getItem(DRAFT(n)) || 'null'); if (d && d.data) { draft[n] = norm(d.data); base[n] = d.base || 0; } } catch (e) { } });
 
+    const clone = o => JSON.parse(JSON.stringify(o));
     const view = n => draft[n] || srv[n] || blank();
     const lines = s => String(s || '').split(/\n+/).map(x => x.trim()).filter(Boolean);
     const parse = v => { if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { v = null; } } return v; };
+    // data versi lama (masalah & jawaban berupa teks) dipindah ke bentuk baru: masalah -> daftar jawaban
+    function norm(d) {
+        d = d || {};
+        if (!Array.isArray(d.soal)) {
+            const qs = String(d.masalah || '').split(/\n+/).map(x => x.trim()).filter(Boolean).map(q => ({ q, by: '', a: [] }));
+            const ja = String(d.jawaban || '').trim();
+            if (ja) { if (!qs.length) qs.push({ q: '', by: '', a: [] }); qs[0].a.push({ t: ja, by: '' }); }
+            d.soal = qs;
+        }
+        delete d.masalah; delete d.jawaban;
+        return d;
+    }
     const fmtTs = ts => ts ? new Date(ts).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    const hhmm = () => new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     const toast = m => { const done = busy(m); setTimeout(done, 2500); };
+    const imgSrc = g => g.id ? 'https://drive.google.com/thumbnail?id=' + g.id + '&sz=w800' : g.url;
+    const metaText = n => srv[n] && srv[n].ts ? 'Tersimpan oleh ' + srv[n].by + ' \u00b7 ' + fmtTs(srv[n].ts) : 'Belum ada yang tersimpan';
+
+    const cleanData = d => ({
+        istilah: (d.istilah || []).map(x => ({ t: String(x.t || '').trim(), d: String(x.d || '').trim() })).filter(x => x.t || x.d),
+        soal: (d.soal || []).map(x => ({ q: String(x.q || '').trim(), by: String(x.by || '').trim(), a: (x.a || []).map(a => ({ t: String(a.t || '').trim(), by: String(a.by || '').trim() })).filter(a => a.t) })).filter(x => x.q || x.a.length),
+        lo: String(d.lo || '').trim(),
+        belajar: String(d.belajar || '').trim(), sumber: String(d.sumber || '').trim(),
+        gambar: (d.gambar || []).filter(g => g && g.url).map(g => ({ url: String(g.url), id: String(g.id || ''), cap: String(g.cap || '').trim() }))
+    });
+    const same = (a, b) => JSON.stringify(cleanData(a || blank())) === JSON.stringify(cleanData(b || blank()));
 
     // ---------- CSS ----------
     const css = document.createElement('style');
@@ -4425,8 +4454,23 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
 .sj-acts { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:6px; }
 .sj-status { font-size:12.5px; color:var(--text-muted); }
 .sj-status.dirty { color:#b45309; }
+.sj-status.warn { color:#b91c1c; font-weight:600; }
 .sj-docs a { color:var(--primary, #2563eb); }
-@media (max-width:640px) { .sj-row { grid-template-columns:1fr; } }
+.sj-q { border:1px solid var(--border-color); border-radius:10px; padding:10px; margin-bottom:10px; }
+.sj-qhead, .sj-a { display:grid; grid-template-columns:1fr 170px auto; gap:8px; align-items:start; margin-bottom:8px; }
+.sj-qn { font-weight:700; color:var(--text-main); font-size:13px; margin-bottom:4px; display:block; }
+.sj-ans { margin-left:14px; padding-left:10px; border-left:3px solid var(--border-color); }
+.sj-q textarea { min-height:56px; }
+.sj-q input { width:100%; box-sizing:border-box; }
+.sj-imgs { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px; margin-bottom:10px; }
+.sj-img { border:1px solid var(--border-color); border-radius:10px; padding:8px; display:flex; flex-direction:column; gap:6px; }
+.sj-img img { width:100%; height:130px; object-fit:cover; border-radius:6px; background:rgba(128,128,128,.12); }
+.sj-img input { width:100%; box-sizing:border-box; }
+.sj-link { border:1px solid #16a34a; background:rgba(22,163,74,.08); border-radius:12px; padding:12px; margin-bottom:12px; }
+.sj-link strong { color:var(--text-main); }
+.sj-link .sj-linkrow { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; align-items:center; }
+.sj-link input { flex:1 1 220px; min-width:0; }
+@media (max-width:640px) { .sj-row, .sj-qhead, .sj-a { grid-template-columns:1fr; } .sj-ans { margin-left:4px; } }
 `;
     document.head.appendChild(css);
 
@@ -4439,7 +4483,7 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
         return r;
     }
 
-    // ---------- Pengambilan & penyimpanan ----------
+    // ---------- Pengambilan dari server ----------
     async function fetchAll(force) {
         if (!supabaseClient || !currentUser || fetching) return;
         if (!force && Date.now() - lastFetch < 20000) return;
@@ -4447,7 +4491,7 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
         try {
             const keys = [1, 2, 3, 4].map(KEY).concat(DOCS_KEY);
             const res = await Promise.all(keys.map(k => supabaseClient.from('portal_db').select('value').eq('key', k).maybeSingle().then(r => r, () => null)));
-            [1, 2, 3, 4].forEach((n, i) => { const r = res[i]; const v = r && !r.error && r.data ? parse(r.data.value) : null; if (v && typeof v === 'object') srv[n] = Object.assign(blank(), v); });
+            [1, 2, 3, 4].forEach((n, i) => { const r = res[i]; const v = r && !r.error && r.data ? parse(r.data.value) : null; if (v && typeof v === 'object') srv[n] = Object.assign(blank(), norm(v)); });
             const dr = res[4]; const dv = dr && !dr.error && dr.data ? parse(dr.data.value) : null; if (Array.isArray(dv)) docs = dv;
             lastFetch = Date.now();
         } catch (e) { console.error('Seven Jump: gagal memuat', e); }
@@ -4457,30 +4501,73 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
         if (r && !r.contains(document.activeElement)) render();
     }
 
-    const cleanData = d => ({
-        istilah: (d.istilah || []).map(x => ({ t: String(x.t || '').trim(), d: String(x.d || '').trim() })).filter(x => x.t || x.d),
-        masalah: String(d.masalah || '').trim(), jawaban: String(d.jawaban || '').trim(), lo: String(d.lo || '').trim(), belajar: String(d.belajar || '').trim()
-    });
+    // ---------- Penyimpanan (manual & autosave) ----------
+    function persistDraft(n) { try { localStorage.setItem(DRAFT(n), JSON.stringify({ data: draft[n], base: base[n] || 0, ts: Date.now() })); } catch (e) { } }
+    function dropDraft(n) { delete draft[n]; delete base[n]; try { localStorage.removeItem(DRAFT(n)); } catch (e) { } }
+    function setDraft(n, d) { if (!draft[n]) base[n] = (srv[n] && srv[n].ts) || 0; draft[n] = d; persistDraft(n); schedule(); }
+    function setState(msg, cls) { const st = $('sj-state'); if (st) { st.textContent = msg; st.className = 'sj-status ' + (cls || ''); } }
+
+    // Tulis satu skenario ke server. force=true: timpa walau teman sudah menyimpan versi lebih baru.
+    async function push(n, force) {
+        const d = draft[n]; if (!d) return { none: true };
+        if (same(d, srv[n])) { dropDraft(n); return { none: true }; }
+        const snap = JSON.stringify(cleanData(d));
+        const r = await supabaseClient.from('portal_db').select('value').eq('key', KEY(n)).maybeSingle();
+        if (r.error) throw r.error;
+        const latest = r.data ? parse(r.data.value) : null;
+        if (!force && latest && (latest.ts || 0) > (base[n] || 0) && latest.by !== me()) { conflict[n] = latest; return { conflict: latest }; }
+        const out = Object.assign(cleanData(d), { by: me(), ts: Date.now() });
+        const w = await supabaseClient.from('portal_db').upsert({ key: KEY(n), value: out }, { onConflict: 'key' });
+        if (w.error) throw w.error;
+        srv[n] = Object.assign(blank(), out); delete conflict[n];
+        // bila selama menyimpan ada ketikan baru, draft tetap dipertahankan
+        if (draft[n] && JSON.stringify(cleanData(draft[n])) === snap) dropDraft(n); else { base[n] = out.ts; persistDraft(n); }
+        return { ok: out.ts };
+    }
+
+    function schedule() { clearTimeout(timer); timer = setTimeout(autosave, AUTOSAVE_MS); }
+
+    async function autosave() {
+        clearTimeout(timer);
+        if (saving) { schedule(); return; }
+        const ns = Object.keys(draft).map(Number).filter(n => !conflict[n]);
+        if (!ns.length || !supabaseClient || !currentUser) return;
+        saving = true;
+        for (const n of ns) {
+            if (n === cur) setState('Menyimpan otomatis...', 'dirty');
+            try {
+                const res = await push(n, false);
+                if (n === cur) {
+                    if (res.conflict) setState('\u26a0 ' + (res.conflict.by || 'Teman') + ' menyimpan versi lebih baru. Autosave dihentikan: klik Simpan (menimpa) atau Muat ulang.', 'warn');
+                    else if (res.ok) { setState(draft[n] ? 'Perubahan akan disimpan otomatis...' : 'Tersimpan otomatis ' + hhmm(), draft[n] ? 'dirty' : ''); const m = $('sj-meta'); if (m) m.textContent = metaText(n); }
+                }
+            } catch (e) {
+                console.error('Autosave gagal', e);
+                if (n === cur) setState('Autosave gagal (draf aman di perangkat). Akan dicoba lagi.', 'warn');
+                schedule();
+            }
+        }
+        saving = false;
+        refreshTabs();
+    }
+
+    async function autosaveNow() { clearTimeout(timer); await autosave(); }
 
     async function save() {
         collect();
-        const n = cur, d = draft[n];
-        if (!d) { toast('Belum ada perubahan untuk disimpan.'); return; }
+        const n = cur;
+        if (!draft[n]) { toast('Semua perubahan sudah tersimpan.'); return; }
         if (!supabaseClient) { alert('Server belum terhubung. Perubahan belum tersimpan.'); return; }
+        clearTimeout(timer);
+        while (saving) await new Promise(r => setTimeout(r, 150));
         const done = busy('Menyimpan skenario ' + n + '...');
         try {
-            // cek versi terbaru supaya hasil teman tidak tertimpa tanpa sepengetahuan
-            const r = await supabaseClient.from('portal_db').select('value').eq('key', KEY(n)).maybeSingle();
-            const latest = r && r.data ? parse(r.data.value) : null;
-            if (latest && (latest.ts || 0) > ((srv[n] && srv[n].ts) || 0) && latest.by !== me()) {
+            let res = await push(n, false);
+            if (res.conflict) {
                 done();
-                if (!confirm('Skenario ' + n + ' baru disimpan oleh ' + (latest.by || 'teman') + ' pukul ' + fmtTs(latest.ts) + '. Timpa dengan versimu?\n\nOK = timpa, Batal = tidak (muat ulang dulu).')) return;
+                if (!confirm('Skenario ' + n + ' baru disimpan oleh ' + (res.conflict.by || 'teman') + ' pukul ' + fmtTs(res.conflict.ts) + '. Timpa dengan versimu?\n\nOK = timpa, Batal = tidak (muat ulang dulu).')) { render(); return; }
+                res = await push(n, true);
             }
-            const out = Object.assign(cleanData(d), { by: me(), ts: Date.now() });
-            const w = await supabaseClient.from('portal_db').upsert({ key: KEY(n), value: out }, { onConflict: 'key' });
-            if (w.error) throw w.error;
-            srv[n] = Object.assign(blank(), out); delete draft[n];
-            try { localStorage.removeItem(DRAFT(n)); } catch (e) { }
             toast('Skenario ' + n + ' tersimpan.');
         } catch (e) { console.error(e); alert('Gagal menyimpan. Draf tetap aman di perangkat ini, coba lagi sebentar.'); }
         finally { done(); }
@@ -4488,81 +4575,190 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
     }
 
     // ---------- Tampilan ----------
+    function stateText() {
+        if (conflict[cur]) return ['\u26a0 ' + (conflict[cur].by || 'Teman') + ' menyimpan versi lebih baru. Autosave dihentikan: klik Simpan (menimpa) atau Muat ulang.', 'warn'];
+        if (draft[cur]) return ['Perubahan akan disimpan otomatis...', 'dirty'];
+        return ['', ''];
+    }
+    function refreshTabs() {
+        const r = $('sj-root'); if (!r) return;
+        r.querySelectorAll('.sj-tabs button').forEach(b => { const x = +b.dataset.n; b.textContent = 'Skenario ' + x + (draft[x] ? ' \u2022' : (srv[x] && srv[x].ts ? ' \u2713' : '')); });
+    }
+
+    function linkCard() {
+        if (!lastDoc) return '';
+        return `<div class="sj-link"><strong>\u2705 Google Docs sudah dibuat</strong><div class="sj-status">${esc(lastDoc.name)}</div>
+  <div class="sj-linkrow"><input class="modern-input" id="sj-linkinput" readonly value="${esc(lastDoc.url)}" onfocus="this.select()">
+  <button type="button" class="btn btn-primary btn-sm" data-copy="${esc(lastDoc.url)}">Salin link</button>
+  <a class="btn btn-outline btn-sm" href="${esc(lastDoc.url)}" target="_blank" rel="noopener">Buka</a>
+  ${navigator.share ? '<button type="button" class="btn btn-outline btn-sm" data-share>Bagikan</button>' : ''}
+  <button type="button" class="btn btn-outline btn-sm" data-closelink>Tutup</button></div>
+  <div class="sj-status" style="margin-top:6px;">${lastDoc.shared === false ? 'Akses "siapa saja yang memiliki link" belum bisa diatur otomatis. Atur manual lewat tombol Bagikan di Google Docs.' : 'Siapa saja yang memiliki link ini bisa melihat dokumennya.'}</div></div>`;
+    }
+
     function render() {
         const r = $('sj-root'); if (!r) return;
-        const s = SCEN[cur - 1], v = view(cur), dirty = !!draft[cur];
-        if (!v.istilah || !v.istilah.length) v.istilah = [{ t: '', d: '' }];
-        const used = new Set(v.istilah.map(x => (x.t || '').trim().toLowerCase()));
+        const s = SCEN[cur - 1], v = view(cur), st = stateText();
+        const istilah = v.istilah && v.istilah.length ? v.istilah : [{ t: '', d: '' }];
+        const gambar = v.gambar || [];
+        const soal = v.soal && v.soal.length ? v.soal : [{ q: '', by: me(), a: [{ t: '', by: me() }] }];
+        const used = new Set(istilah.map(x => (x.t || '').trim().toLowerCase()));
         r.innerHTML = `
-<div class="sj-head"><h3>\ud83d\udcdd Seven Jump</h3><span class="sj-status" id="sj-meta">${srv[cur] && srv[cur].ts ? 'Tersimpan oleh ' + esc(srv[cur].by) + ' \u00b7 ' + esc(fmtTs(srv[cur].ts)) : 'Belum ada yang tersimpan'}</span></div>
+<div class="sj-head"><h3>\ud83d\udcdd Seven Jump</h3><span class="sj-status" id="sj-meta">${esc(metaText(cur))}</span></div>
 <div class="sj-tabs">${SCEN.map(x => `<button type="button" data-n="${x.n}" class="${x.n === cur ? 'on' : ''}">Skenario ${x.n}${draft[x.n] ? ' \u2022' : (srv[x.n] && srv[x.n].ts ? ' \u2713' : '')}</button>`).join('')}</div>
 <details class="sj-card sj-case" open><summary><strong>Skenario ${s.n}: ${esc(s.judul)}</strong></summary>
   <p class="sj-sub" style="margin-top:6px;">${esc(s.topik)}</p>${s.teks.map(p => `<p>${esc(p)}</p>`).join('')}</details>
 <div class="sj-card"><h4>Langkah 1 \u2013 Klarifikasi istilah / kalimat sulit</h4><p class="sj-sub">Tulis istilah dari skenario dan artinya sesuai kesepakatan kelompok.</p>
-  <div id="sj-rows">${v.istilah.map((x, i) => `<div class="sj-row" data-i="${i}"><input class="modern-input" data-t placeholder="Istilah" value="${esc(x.t)}"><textarea class="modern-input" data-d placeholder="Arti / penjelasan">${esc(x.d)}</textarea><button type="button" class="btn btn-outline btn-sm" data-del="${i}" title="Hapus baris">\u2715</button></div>`).join('')}</div>
+  <div id="sj-rows">${istilah.map((x, i) => `<div class="sj-row" data-i="${i}"><input class="modern-input" data-t placeholder="Istilah" value="${esc(x.t)}"><textarea class="modern-input" data-d placeholder="Arti / penjelasan">${esc(x.d)}</textarea><button type="button" class="btn btn-outline btn-sm" data-del="${i}" title="Hapus baris">\u2715</button></div>`).join('')}</div>
   <div class="sj-acts"><button type="button" class="btn btn-outline btn-sm" data-add>+ Tambah istilah</button></div>
   <div class="sj-hints">${s.hint.filter(h => !used.has(h.toLowerCase())).map(h => `<button type="button" data-hint="${esc(h)}">+ ${esc(h)}</button>`).join('')}</div></div>
-<div class="sj-card"><h4>Langkah 2 \u2013 Rumusan masalah</h4><p class="sj-sub">Satu masalah per baris.</p><textarea class="modern-input" data-f="masalah" placeholder="Contoh: Mengapa ...?">${esc(v.masalah)}</textarea></div>
-<div class="sj-card"><h4>Langkah 3 \u2013 Jawaban sementara (curah pendapat)</h4><p class="sj-sub">Jawaban sementara tiap masalah, tanpa membuka gadget atau literatur.</p><textarea class="modern-input" data-f="jawaban" placeholder="Masalah 1: ...">${esc(v.jawaban)}</textarea></div>
+<div class="sj-card"><h4>Langkah 2\u20133 \u2013 Rumusan masalah dan jawaban sementara</h4><p class="sj-sub">Tulis masalah, lalu tambahkan satu atau lebih jawaban di bawahnya. Nama terisi otomatis dengan akunmu dan bisa diganti (ketik atau pilih dari daftar). Jawaban sementara dibuat tanpa membuka gadget atau literatur.</p>
+  <datalist id="sj-names">${NAMES.map(x => `<option value="${esc(x)}">`).join('')}</datalist>
+  <div id="sj-soal">${soal.map((x, qi) => `<div class="sj-q" data-qi="${qi}">
+    <span class="sj-qn">Masalah ${qi + 1}</span>
+    <div class="sj-qhead"><textarea class="modern-input" data-q placeholder="Contoh: Mengapa ...?">${esc(x.q)}</textarea><input class="modern-input" data-qby list="sj-names" placeholder="Nama penanya" value="${esc(x.by)}"><button type="button" class="btn btn-outline btn-sm" data-delq="${qi}" title="Hapus masalah ini">\u2715</button></div>
+    <div class="sj-ans">${(x.a && x.a.length ? x.a : [{ t: '', by: me() }]).map((a, ai) => `<div class="sj-a" data-ai="${ai}"><textarea class="modern-input" data-at placeholder="Jawaban ${ai + 1}">${esc(a.t)}</textarea><input class="modern-input" data-aby list="sj-names" placeholder="Nama penjawab" value="${esc(a.by)}"><button type="button" class="btn btn-outline btn-sm" data-dela="${qi}-${ai}" title="Hapus jawaban">\u2715</button></div>`).join('')}
+    <button type="button" class="btn btn-outline btn-sm" data-adda="${qi}">+ Tambah jawaban</button></div></div>`).join('')}</div>
+  <div class="sj-acts"><button type="button" class="btn btn-outline btn-sm" data-addq>+ Tambah masalah</button></div></div>
 <div class="sj-card"><h4>Langkah 5 \u2013 Learning Objectives (LO)</h4><p class="sj-sub">Satu LO per baris.</p><textarea class="modern-input" data-f="lo" placeholder="Mahasiswa mampu menjelaskan ...">${esc(v.lo)}</textarea></div>
 <div class="sj-card"><h4>Pertemuan 2 \u2013 Hasil belajar mandiri (opsional)</h4><p class="sj-sub">Informasi baru yang dilaporkan dan dibahas pada pertemuan kedua.</p><textarea class="modern-input" data-f="belajar" placeholder="Isi bila sudah ada">${esc(v.belajar)}</textarea></div>
+<div class="sj-card"><h4>\ud83d\uddbc\ufe0f Gambar pendukung</h4><p class="sj-sub">Tambahkan gambar (skema, foto, tabel) untuk memperkuat alasan. Tulis keterangan di bawah tiap gambar. Foto otomatis diperkecil sebelum diunggah.</p>
+  <div class="sj-imgs">${gambar.map((g, i) => `<div class="sj-img" data-url="${esc(g.url)}" data-id="${esc(g.id || '')}"><img src="${esc(imgSrc(g))}" alt="Gambar ${i + 1}" loading="lazy" referrerpolicy="no-referrer"><input class="modern-input" data-cap placeholder="Keterangan / alasan gambar ini" value="${esc(g.cap || '')}"><button type="button" class="btn btn-outline btn-sm" data-delimg="${i}">Hapus dari daftar</button></div>`).join('')}</div>
+  <input type="file" id="sj-file" accept="image/*" multiple hidden>
+  <div class="sj-acts"><button type="button" class="btn btn-outline btn-sm" data-addimg>+ Tambah gambar</button></div></div>
+<div class="sj-card"><h4>\ud83d\udd17 Sumber / referensi</h4><p class="sj-sub">Satu sumber per baris. Boleh <em>Judul | link</em> atau tempel link saja. Tampil di akhir dokumen.</p><textarea class="modern-input" data-f="sumber" placeholder="Guyton & Hall, Textbook of Medical Physiology | https://...">${esc(v.sumber)}</textarea></div>
+${linkCard()}
 <div class="sj-acts">
   <button type="button" class="btn btn-primary" data-save>Simpan skenario ${s.n}</button>
   <button type="button" class="btn btn-outline" data-reload>Muat ulang</button>
   <button type="button" class="btn btn-outline" data-exp="one">Buat Google Docs (skenario ${s.n})</button>
   <button type="button" class="btn btn-outline" data-exp="all">Buat Google Docs (semua skenario)</button>
-  <span class="sj-status ${dirty ? 'dirty' : ''}" id="sj-state">${dirty ? 'Ada perubahan yang belum disimpan' : ''}</span></div>
-<div class="sj-docs sj-status" style="margin-top:8px;">${docs.length ? 'Dokumen terakhir: ' + docs.slice(0, 3).map(d => `<a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.name)}</a>`).join(' \u00b7 ') : ''}</div>`;
+  <span class="sj-status ${st[1]}" id="sj-state">${esc(st[0])}</span></div>
+<div class="sj-docs sj-status" style="margin-top:8px;">${docs.length ? 'Dokumen terakhir: ' + docs.slice(0, 3).map(d => `<a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.name)}</a> <button type="button" class="btn btn-outline btn-sm" data-copy="${esc(d.url)}">Salin link</button>`).join(' \u00b7 ') : ''}</div>`;
     }
 
     // ambil isi form ke draft
     function collect() {
         const r = $('sj-root'); if (!r || !r.querySelector('#sj-rows')) return;
-        const base = view(cur), d = { istilah: [], masalah: base.masalah, jawaban: base.jawaban, lo: base.lo, belajar: base.belajar };
+        const b = view(cur), d = { istilah: [], soal: [], lo: b.lo, belajar: b.belajar, sumber: b.sumber, gambar: [] };
         r.querySelectorAll('.sj-row').forEach(row => d.istilah.push({ t: row.querySelector('[data-t]').value, d: row.querySelector('[data-d]').value }));
         r.querySelectorAll('[data-f]').forEach(el => { d[el.dataset.f] = el.value; });
-        const before = JSON.stringify(cleanData(srv[cur] || blank())), after = JSON.stringify(cleanData(d));
-        if (before === after) { delete draft[cur]; try { localStorage.removeItem(DRAFT(cur)); } catch (e) { } }
-        else { draft[cur] = d; try { localStorage.setItem(DRAFT(cur), JSON.stringify({ data: d, ts: Date.now() })); } catch (e) { } }
-        const st = $('sj-state'); if (st) { st.textContent = draft[cur] ? 'Ada perubahan yang belum disimpan' : ''; st.classList.toggle('dirty', !!draft[cur]); }
+        r.querySelectorAll('.sj-q').forEach(q => d.soal.push({ q: q.querySelector('[data-q]').value, by: q.querySelector('[data-qby]').value, a: Array.from(q.querySelectorAll('.sj-a')).map(a => ({ t: a.querySelector('[data-at]').value, by: a.querySelector('[data-aby]').value })) }));
+        r.querySelectorAll('.sj-img').forEach(el => d.gambar.push({ url: el.dataset.url, id: el.dataset.id || '', cap: el.querySelector('[data-cap]').value }));
+        if (same(d, srv[cur])) { if (draft[cur]) dropDraft(cur); }
+        else setDraft(cur, d);
+        const st = stateText(); setState(st[0], st[1]);
+    }
+
+    // ubah draft dari tombol (tambah/hapus baris, gambar, dst.)
+    function mutate(fn) { collect(); const d = clone(view(cur)); if (!d.istilah || !d.istilah.length) d.istilah = [{ t: '', d: '' }]; if (!d.soal || !d.soal.length) d.soal = [{ q: '', by: me(), a: [] }]; d.soal.forEach(x => { if (!x.a) x.a = []; }); fn(d); setDraft(cur, d); render(); }
+
+    // perkecil foto sebelum diunggah (maks 1600 px, JPEG)
+    function shrink(file) {
+        return new Promise(res => {
+            if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return res(file);
+            const img = new Image(), u = URL.createObjectURL(file);
+            img.onload = () => {
+                const k = Math.min(1, 1600 / Math.max(img.width, img.height));
+                if (k === 1 && file.size < 1.5e6) { URL.revokeObjectURL(u); return res(file); }
+                const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+                const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
+                c.toBlob(b => { URL.revokeObjectURL(u); res(b ? new File([b], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }) : file); }, 'image/jpeg', 0.85);
+            };
+            img.onerror = () => { URL.revokeObjectURL(u); res(file); };
+            img.src = u;
+        });
+    }
+
+    async function addImages(files) {
+        collect();
+        const n = cur, added = [];
+        for (const f of files) {
+            if (!/^image\//.test(f.type)) { toast(f.name + ' bukan gambar, dilewati.'); continue; }
+            const small = await shrink(f);
+            const url = await uploadFileObj(small, 'Tutorial/Seven Jump/Skenario ' + n);
+            if (url) added.push({ url, id: driveIdOf(url) || '', cap: '' });
+        }
+        if (!added.length) return;
+        const d = clone(view(n)); d.gambar = (d.gambar || []).concat(added);
+        setDraft(n, d);
+        if (cur === n) render();
+    }
+
+    async function copyText(t) {
+        try { await navigator.clipboard.writeText(t); return true; }
+        catch (e) {
+            const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;opacity:0;'; document.body.appendChild(ta); ta.select();
+            let ok = false; try { ok = document.execCommand('copy'); } catch (x) { } ta.remove(); return ok;
+        }
     }
 
     function wire(r) {
         r.addEventListener('input', () => collect());
+        r.addEventListener('change', e => {
+            if (e.target.id === 'sj-file') { const fs = Array.from(e.target.files || []); e.target.value = ''; if (fs.length) addImages(fs); }
+        });
         r.addEventListener('click', e => {
             const t = e.target.closest('button'); if (!t) return;
-            if (t.dataset.n) { collect(); cur = +t.dataset.n; render(); return; }
-            if (t.hasAttribute('data-add')) { collect(); const d = draft[cur] || Object.assign(blank(), JSON.parse(JSON.stringify(view(cur)))); d.istilah = (d.istilah || []).concat([{ t: '', d: '' }]); draft[cur] = d; render(); const rows = r.querySelectorAll('.sj-row'); const last = rows[rows.length - 1]; if (last) last.querySelector('[data-t]').focus(); return; }
-            if (t.dataset.hint) { collect(); const d = draft[cur] || JSON.parse(JSON.stringify(view(cur))); const empty = (d.istilah || []).findIndex(x => !x.t && !x.d); if (empty >= 0) d.istilah[empty].t = t.dataset.hint; else d.istilah.push({ t: t.dataset.hint, d: '' }); draft[cur] = d; try { localStorage.setItem(DRAFT(cur), JSON.stringify({ data: d, ts: Date.now() })); } catch (x) { } render(); return; }
-            if (t.dataset.del != null) { collect(); const d = draft[cur] || JSON.parse(JSON.stringify(view(cur))); d.istilah.splice(+t.dataset.del, 1); if (!d.istilah.length) d.istilah = [{ t: '', d: '' }]; draft[cur] = d; try { localStorage.setItem(DRAFT(cur), JSON.stringify({ data: d, ts: Date.now() })); } catch (x) { } render(); return; }
+            if (t.dataset.n) { collect(); cur = +t.dataset.n; render(); autosave(); return; }
+            if (t.hasAttribute('data-add')) { mutate(d => d.istilah.push({ t: '', d: '' })); const rows = r.querySelectorAll('.sj-row'); const last = rows[rows.length - 1]; if (last) last.querySelector('[data-t]').focus(); return; }
+            if (t.dataset.hint) { mutate(d => { const e0 = d.istilah.findIndex(x => !x.t && !x.d); if (e0 >= 0) d.istilah[e0].t = t.dataset.hint; else d.istilah.push({ t: t.dataset.hint, d: '' }); }); return; }
+            if (t.dataset.del != null) { mutate(d => { d.istilah.splice(+t.dataset.del, 1); if (!d.istilah.length) d.istilah = [{ t: '', d: '' }]; }); return; }
+            if (t.hasAttribute('data-addq')) { mutate(d => d.soal.push({ q: '', by: me(), a: [{ t: '', by: me() }] })); const qs = r.querySelectorAll('.sj-q'); const last = qs[qs.length - 1]; if (last) last.querySelector('[data-q]').focus(); return; }
+            if (t.dataset.delq != null) { mutate(d => { d.soal.splice(+t.dataset.delq, 1); }); return; }
+            if (t.dataset.adda != null) { const qi = +t.dataset.adda; mutate(d => { if (d.soal[qi]) { if (!d.soal[qi].a.length) d.soal[qi].a.push({ t: '', by: me() }); d.soal[qi].a.push({ t: '', by: me() }); } }); const q = r.querySelectorAll('.sj-q')[qi]; if (q) { const as = q.querySelectorAll('[data-at]'); if (as.length) as[as.length - 1].focus(); } return; }
+            if (t.dataset.dela != null) { const p = t.dataset.dela.split('-').map(Number); mutate(d => { if (d.soal[p[0]]) d.soal[p[0]].a.splice(p[1], 1); }); return; }
+            if (t.hasAttribute('data-addimg')) { const f = $('sj-file'); if (f) f.click(); return; }
+            if (t.dataset.delimg != null) { mutate(d => { d.gambar.splice(+t.dataset.delimg, 1); }); return; }
             if (t.hasAttribute('data-save')) { save(); return; }
             if (t.hasAttribute('data-reload')) {
-                if (draft[cur] && !confirm('Perubahan yang belum disimpan di skenario ' + cur + ' akan dibuang. Lanjutkan?')) return;
-                delete draft[cur]; try { localStorage.removeItem(DRAFT(cur)); } catch (x) { }
+                if (draft[cur] && !confirm('Perubahan yang belum tersimpan di skenario ' + cur + ' akan dibuang. Lanjutkan?')) return;
+                dropDraft(cur); delete conflict[cur];
                 fetchAll(true).then(render); return;
             }
             if (t.dataset.exp) { exportDocs(t.dataset.exp === 'one' ? [cur] : [1, 2, 3, 4]); return; }
+            if (t.dataset.copy) { copyText(t.dataset.copy).then(ok => toast(ok ? 'Link disalin.' : 'Gagal menyalin. Pilih link lalu salin manual.')); return; }
+            if (t.hasAttribute('data-share')) { if (lastDoc && navigator.share) navigator.share({ title: lastDoc.name, url: lastDoc.url }).catch(() => { }); return; }
+            if (t.hasAttribute('data-closelink')) { lastDoc = null; render(); return; }
         });
     }
 
     // ---------- Ekspor ke Google Docs ----------
-    function docHtml(ns) {
+    const URLRE = /https?:\/\/[^\s<>"']+/;
+    function srcLi(line) {
+        const m = line.match(URLRE); if (!m) return esc(line);
+        const url = m[0].replace(/[).,;]+$/, '');
+        const title = line.replace(m[0], '').replace(/\|/g, ' ').replace(/\s+[-\u2013\u2014:]\s*$/, '').replace(/\s+/g, ' ').trim();
+        return (title ? esc(title) + ' \u2013 ' : '') + `<a href="${esc(url)}">${esc(url)}</a>`;
+    }
+
+    // tokens=true: gambar Drive ditandai [[IMG:id]] supaya Apps Script menyisipkannya ke Docs
+    function docHtml(ns, tokens) {
         const ol = s => { const a = lines(s); return a.length ? '<ol>' + a.map(x => `<li>${esc(x)}</li>`).join('') + '</ol>' : '<p><em>(belum diisi)</em></p>'; };
+        const allSrc = [], seen = new Set();
         const body = ns.map(n => {
             const s = SCEN[n - 1], v = cleanData(view(n)), meta = srv[n] && srv[n].ts ? 'Terakhir disimpan oleh ' + srv[n].by + ', ' + fmtTs(srv[n].ts) : '';
             const tbl = v.istilah.length
                 ? '<table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;width:100%"><tr><th style="width:30%;background:#eef2ff">Istilah</th><th style="background:#eef2ff">Arti / penjelasan</th></tr>' + v.istilah.map(x => `<tr><td>${esc(x.t)}</td><td>${esc(x.d)}</td></tr>`).join('') + '</table>'
                 : '<p><em>(belum diisi)</em></p>';
+            const gam = v.gambar.map((g, i) => (tokens && g.id ? `<p>[[IMG:${g.id}]]</p>` : `<p><img src="${esc(imgSrc(g))}" width="440"></p>`) +
+                `<p style="font-size:9pt;color:#555"><em>Gambar ${i + 1}${g.cap ? '. ' + esc(g.cap) : ''}</em></p>`).join('');
+            const soalHtml = v.soal.length ? v.soal.map((x, i) => `<p><strong>Masalah ${i + 1}:</strong> ${esc(x.q) || '<em>(belum ditulis)</em>'}${x.by ? ` <em>(${esc(x.by)})</em>` : ''}</p>` +
+                (x.a.length ? `<p style="margin-left:18pt"><u>Jawaban sementara:</u></p><ol>${x.a.map(a => `<li>${esc(a.t)}${a.by ? ` <em>\u2014 ${esc(a.by)}</em>` : ''}</li>`).join('')}</ol>` : '<p style="margin-left:18pt"><em>(belum ada jawaban)</em></p>')).join('') : '<p><em>(belum diisi)</em></p>';
+            const sl = lines(v.sumber);
+            sl.forEach(x => { const k = x.toLowerCase(); if (!seen.has(k)) { seen.add(k); allSrc.push(x); } });
             return `<h1>Skenario ${s.n}: ${esc(s.judul)}</h1><p><em>${esc(s.topik)}</em></p>${meta ? `<p style="color:#666">${esc(meta)}</p>` : ''}` +
                 `<h2>Skenario</h2>${s.teks.map(p => `<p>${esc(p)}</p>`).join('')}` +
                 `<h2>1. Klarifikasi istilah</h2>${tbl}` +
-                `<h2>2. Rumusan masalah</h2>${ol(v.masalah)}` +
-                `<h2>3. Jawaban sementara (curah pendapat)</h2>${ol(v.jawaban)}` +
+                `<h2>2\u20133. Rumusan masalah dan jawaban sementara</h2>${soalHtml}` +
                 `<h2>4. Learning Objectives (LO)</h2>${ol(v.lo)}` +
-                (v.belajar ? `<h2>5. Hasil belajar mandiri (pertemuan 2)</h2>${ol(v.belajar)}` : '');
+                (v.belajar ? `<h2>5. Hasil belajar mandiri (pertemuan 2)</h2>${ol(v.belajar)}` : '') +
+                (gam ? `<h2>Gambar pendukung</h2>${gam}` : '') +
+                (sl.length ? `<h2>Sumber / referensi</h2><ol>${sl.map(x => `<li>${srcLi(x)}</li>`).join('')}</ol>` : '');
         }).join('<br style="page-break-before:always">');
+        const gabungan = ns.length > 1 && allSrc.length ? `<br style="page-break-before:always"><h1>Daftar sumber (semua skenario)</h1><ol>${allSrc.map(x => `<li>${srcLi(x)}</li>`).join('')}</ol>` : '';
         return `<html><head><meta charset="utf-8"><title>Seven Jump Blok 1.3</title></head><body style="font-family:Arial,sans-serif;font-size:11pt">` +
-            `<p style="color:#666">Seven Jump \u2013 Blok 1.3 Sistem Pencernaan dan Metabolisme \u2013 Kelompok A9</p>${body}</body></html>`;
+            `<p style="color:#666">Seven Jump \u2013 Blok 1.3 Sistem Pencernaan dan Metabolisme \u2013 Kelompok A9</p>${body}${gabungan}</body></html>`;
     }
 
     async function uploadDoc(name, html) {
@@ -4578,8 +4774,8 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
         try {
             const r = await fetch(DRIVE_UPLOAD_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key, action: 'createDoc', name, path: 'Tutorial/Seven Jump', html }) });
             const j = await r.json();
-            if (!j.ok) { if (/kunci/i.test(j.error || '')) { try { localStorage.removeItem('a9_drive_key'); } catch (e) { } } throw new Error(j.error || 'Apps Script belum mendukung createDoc (pasang drive-uploader-doc.gs)'); }
-            return j.url;
+            if (!j.ok) { if (/kunci/i.test(j.error || '')) { try { localStorage.removeItem('a9_drive_key'); } catch (e) { } } throw new Error(j.error || 'Apps Script belum mendukung createDoc (pasang code.gs terbaru dan deploy versi baru)'); }
+            return { url: j.url, shared: j.shared !== false };
         } catch (e) { console.error(e); alert('Gagal membuat Google Docs: ' + (e.message || e)); return null; }
         finally { done(); }
     }
@@ -4592,28 +4788,32 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
 
     async function exportDocs(ns) {
         collect();
+        await autosaveNow();                       // simpan dulu supaya dokumen sama dengan yang tersimpan
         const unsaved = ns.filter(n => draft[n]);
-        if (unsaved.length && !confirm('Skenario ' + unsaved.join(', ') + ' punya perubahan yang belum disimpan. Dokumen akan memakai isi yang tampil sekarang. Lanjutkan?')) return;
+        if (unsaved.length && !confirm('Skenario ' + unsaved.join(', ') + ' belum tersimpan di server (mungkin ada konflik dengan versi teman). Dokumen akan memakai isi yang tampil sekarang. Lanjutkan?')) return;
         const name = 'Seven Jump Blok 1.3 - Kelompok A9 - ' + (ns.length === 1 ? 'Skenario ' + ns[0] : 'Semua Skenario') + ' - ' + isoLocal(new Date());
-        const html = docHtml(ns);
         if (DRIVE_UPLOAD_URL) {
-            const url = await uploadDoc(name, html);
-            if (url) {
-                docs.unshift({ name, url, by: me(), ts: Date.now() }); docs = docs.slice(0, 10);
+            const res = await uploadDoc(name, docHtml(ns, true));
+            if (res && res.url) {
+                lastDoc = { name, url: res.url, shared: res.shared };
+                docs.unshift({ name, url: res.url, by: me(), ts: Date.now() }); docs = docs.slice(0, 10);
                 if (supabaseClient) { try { await supabaseClient.from('portal_db').upsert({ key: DOCS_KEY, value: docs }, { onConflict: 'key' }); } catch (e) { } }
-                render(); window.open(url, '_blank', 'noopener'); return;
+                render();
+                const lc = document.querySelector('#sj-root .sj-link'); if (lc && lc.scrollIntoView) lc.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
             }
             if (!confirm('Mau unduh sebagai file .doc saja? Nanti bisa diunggah ke Drive dan dibuka dengan Google Dokumen.')) return;
         } else {
             alert('Portal belum tersambung ke Google Drive (DRIVE_UPLOAD_URL kosong). File .doc akan diunduh. Unggah ke Drive, klik kanan, lalu Buka dengan Google Dokumen.');
         }
-        downloadDoc(name, html);
+        downloadDoc(name, docHtml(ns, false));
     }
 
     // ---------- Pemicu ----------
     function tick() {
         if (!currentUser) return;
         const r = ensureRoot(); if (!r) return;
+        if (!booted) { booted = true; if (Object.keys(draft).length) schedule(); }   // draf lama dari perangkat ikut disimpan
         if (r.offsetParent !== null) fetchAll(false);   // hanya saat menu Tutorial terbuka
     }
     const prev = window.switchTab;
@@ -4622,5 +4822,6 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
         setTimeout(() => { ensureRoot(); if (t === 'tutorial') fetchAll(true); }, 0);
         return x;
     };
+    document.addEventListener('visibilitychange', () => { if (document.hidden && currentUser && Object.keys(draft).length) autosaveNow(); });
     setInterval(tick, 1500);
 })();
