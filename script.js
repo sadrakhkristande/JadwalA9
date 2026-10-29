@@ -5144,3 +5144,207 @@ body.theme-dark .modern-input { background: #17120c; border-bottom-color: var(--
     window.addEventListener('DOMContentLoaded', hardenLogin);
     setTimeout(hardenLogin, 300);
 })();
+
+// ==========================================================================
+// BAGIAN 18 - TAMPILAN LEMBUT (ramah mata) + PEMILIH TEMA
+//   Ditaruh paling akhir. Menggantikan gaya klasik Bagian 17: sudut membulat, tanpa bingkai ganda,
+//   tanpa huruf kapital berjarak, warna redup (bukan hitam/putih murni, bukan blok warna pekat).
+//   Tema: Embun, Kapas, Langit (terang) dan Senja, Malam (gelap), atau Otomatis mengikuti perangkat.
+//   Pilihan tema hanya tersimpan di perangkat ini (localStorage "a9_theme2").
+// ==========================================================================
+(function () {
+    'use strict';
+
+    // ---------- 1) Huruf bulat yang nyaman dibaca (tanpa internet jatuh ke huruf sistem) ----------
+    if (!document.getElementById('a9-font-soft')) {
+        const f = document.createElement('link'); f.id = 'a9-font-soft'; f.rel = 'stylesheet';
+        f.href = 'https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap';
+        document.head.appendChild(f);
+    }
+
+    // ---------- 2) Daftar tema ----------
+    const THEMES = [
+        { id: 'embun', nama: 'Embun', ket: 'Hijau sage, terang', dark: false, bg: '#edf1ed', sw: ['#f8faf7', '#447a6c'] },
+        { id: 'kapas', nama: 'Kapas', ket: 'Krem hangat, terang', dark: false, bg: '#f4efe8', sw: ['#fcfaf6', '#a9644b'] },
+        { id: 'langit', nama: 'Langit', ket: 'Biru keabuan, terang', dark: false, bg: '#eceff5', sw: ['#f8f9fc', '#4a6fa5'] },
+        { id: 'senja', nama: 'Senja', ket: 'Abu hangat, gelap', dark: true, bg: '#1f2124', sw: ['#282b30', '#8dbfae'] },
+        { id: 'malam', nama: 'Malam', ket: 'Biru lembut, gelap', dark: true, bg: '#1b2230', sw: ['#232c3d', '#8fb0e0'] }
+    ];
+
+    const css = document.createElement('style');
+    css.id = 'a9-soft';
+    css.textContent = `
+/* ================= Token umum ================= */
+html body.a9soft {
+  --radius-sm: 10px; --radius-md: 14px; --radius-lg: 18px; --radius-xl: 22px;
+  --font: 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-head: 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+/* ================= Warna per tema ================= */
+html body.a9soft.th-embun { --bg-base:#edf1ed; --bg-card:#f8faf7; --text-main:#2d3a35; --text-muted:#5f7068; --border-color:#d6dfd8; --border-strong:#b7c5bc;
+  --primary:#447a6c; --primary-hover:#3a6b5e; --on-primary:#ffffff; --primary-light:#e0ede7; --primary-text:#2f6254; --primary-bd:#a9cbbd; --input-bg:#f1f5f1;
+  --ring:rgba(68,122,108,.25); --danger:#a8403a; --danger-bg:#f7e6e3; --danger-bd:#e2bab5; --warning:#8f6310; --gold:#8f6310;
+  --shadow-sm:0 1px 2px rgba(45,58,53,.06); --shadow-lg:0 14px 34px -16px rgba(45,58,53,.22); --shadow-glow:0 0 0 3px rgba(68,122,108,.25); }
+html body.a9soft.th-kapas { --bg-base:#f4efe8; --bg-card:#fcfaf6; --text-main:#3b342d; --text-muted:#6f6558; --border-color:#e2d9cb; --border-strong:#c9bba7;
+  --primary:#a9644b; --primary-hover:#925340; --on-primary:#ffffff; --primary-light:#f3e4dc; --primary-text:#8a4a34; --primary-bd:#dcb5a5; --input-bg:#f7f3ec;
+  --ring:rgba(169,100,75,.25); --danger:#a8403a; --danger-bg:#f8e6e1; --danger-bd:#e3bbb4; --warning:#8f6310; --gold:#8f6310;
+  --shadow-sm:0 1px 2px rgba(59,52,45,.07); --shadow-lg:0 14px 34px -16px rgba(59,52,45,.24); --shadow-glow:0 0 0 3px rgba(169,100,75,.25); }
+html body.a9soft.th-langit { --bg-base:#eceff5; --bg-card:#f8f9fc; --text-main:#2b3445; --text-muted:#5d6a82; --border-color:#d7dde8; --border-strong:#b8c2d4;
+  --primary:#4a6fa5; --primary-hover:#3d5d8c; --on-primary:#ffffff; --primary-light:#e0e8f4; --primary-text:#34527f; --primary-bd:#adc0dc; --input-bg:#f1f4f9;
+  --ring:rgba(74,111,165,.25); --danger:#a8403a; --danger-bg:#f7e6e3; --danger-bd:#e2bab5; --warning:#8f6310; --gold:#8f6310;
+  --shadow-sm:0 1px 2px rgba(43,52,69,.06); --shadow-lg:0 14px 34px -16px rgba(43,52,69,.22); --shadow-glow:0 0 0 3px rgba(74,111,165,.25); }
+html body.a9soft.th-senja { --bg-base:#1f2124; --bg-card:#282b30; --text-main:#d9dce1; --text-muted:#9aa1ab; --border-color:#3a3e45; --border-strong:#50555e;
+  --primary:#8dbfae; --primary-hover:#a3cebf; --on-primary:#15241f; --primary-light:rgba(141,191,174,.14); --primary-text:#a9d3c4; --primary-bd:rgba(141,191,174,.4); --input-bg:#212428;
+  --ring:rgba(141,191,174,.3); --danger:#e58a82; --danger-bg:rgba(229,138,130,.12); --danger-bd:rgba(229,138,130,.35); --warning:#e0b45a; --gold:#e0b45a;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.25); --shadow-lg:0 16px 36px -14px rgba(0,0,0,.5); --shadow-glow:0 0 0 3px rgba(141,191,174,.3); }
+html body.a9soft.th-malam { --bg-base:#1b2230; --bg-card:#232c3d; --text-main:#d6dce8; --text-muted:#97a3b9; --border-color:#35405a; --border-strong:#4b5876;
+  --primary:#8fb0e0; --primary-hover:#a8c3ea; --on-primary:#10203a; --primary-light:rgba(143,176,224,.14); --primary-text:#b3caec; --primary-bd:rgba(143,176,224,.4); --input-bg:#1e2636;
+  --ring:rgba(143,176,224,.3); --danger:#e58a82; --danger-bg:rgba(229,138,130,.12); --danger-bd:rgba(229,138,130,.35); --warning:#e0b45a; --gold:#e0b45a;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.25); --shadow-lg:0 16px 36px -14px rgba(0,0,0,.5); --shadow-glow:0 0 0 3px rgba(143,176,224,.3); }
+
+/* ================= Dasar ================= */
+html body.a9soft { background: var(--bg-base) !important; background-image: none !important; color: var(--text-main); font-family: var(--font); letter-spacing: 0; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+html body.a9soft h1, html body.a9soft h2, html body.a9soft h3, html body.a9soft h4, html body.a9soft h5,
+html body.a9soft .card-title, html body.a9soft .greeting h3 { font-family: var(--font-head); font-weight: 700; letter-spacing: 0; }
+html body.a9soft ::selection { background: var(--primary-light); color: var(--text-main); }
+
+/* ================= Kartu: tanpa bingkai ganda, bayangan tipis ================= */
+html body.a9soft .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-xl); box-shadow: var(--shadow-sm) !important; }
+html body.a9soft .card-header { border-bottom: 1px solid var(--border-color); }
+html body.a9soft .greeting { background: var(--primary-light); color: var(--text-main); border: 1px solid var(--border-color); border-radius: var(--radius-xl); box-shadow: none !important; }
+html body.a9soft .upd-card { background: var(--primary-light); border: 1px solid var(--border-color); border-radius: var(--radius-lg); }
+
+/* ================= Tombol: huruf biasa, sudut bulat ================= */
+html body.a9soft .btn { border-radius: 12px; text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 600; box-shadow: none; }
+html body.a9soft .btn-sm { font-size: 13px; }
+html body.a9soft .btn-primary, html body.a9soft .chip.active, html body.a9soft .cx-btn.done, html body.a9soft .cbt-nav-btn.done,
+html body.a9soft .trk span.on, html body.a9soft .sj-tabs button.on, html body.a9soft .sj-bloks button.on { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+html body.a9soft .btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+html body.a9soft .btn-outline { background: transparent; border: 1px solid var(--border-strong); color: var(--text-main); }
+html body.a9soft .btn-outline:hover { background: var(--primary-light); border-color: var(--primary-bd); color: var(--text-main); }
+html body.a9soft .btn-danger { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-bd); }
+html body.a9soft :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 10px; }
+
+/* ================= Isian ================= */
+html body.a9soft .modern-input { background: var(--input-bg); color: var(--text-main); border: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); border-radius: 12px; }
+html body.a9soft .modern-input:hover { border-color: var(--border-strong); }
+html body.a9soft .modern-input:focus { border-color: var(--primary); border-bottom-color: var(--primary); box-shadow: 0 0 0 3px var(--ring); }
+html body.a9soft .form-group label { font-family: var(--font); font-size: 13.5px; font-weight: 600; letter-spacing: 0; }
+html body.a9soft .admin-form-box { border: 1px dashed var(--border-strong); border-radius: 14px; }
+
+/* ================= Navigasi ================= */
+html body.a9soft .simple-nav { border-bottom: 1px solid var(--border-color); }
+html body.a9soft .nav-pill, html body.a9soft .sn-chip, html body.a9soft .chip, html body.a9soft .jd-tag, html body.a9soft .dl-badge,
+html body.a9soft .osce-chip, html body.a9soft .sm-badge { border-radius: 999px !important; letter-spacing: 0; text-transform: none; }
+html body.a9soft #cbt-timer, html body.a9soft .cbt-timer, html body.a9soft .sj-tabs button, html body.a9soft .sj-hints button { border-radius: 12px !important; }
+html body.a9soft .nav-pill.active { background: var(--primary-light); color: var(--primary-text); box-shadow: inset 0 0 0 1px var(--primary-bd); }
+html body.a9soft #sn-sub .sn-chip.active { background: var(--primary-light); color: var(--primary-text); border: 1px solid var(--primary-bd); }
+@media (max-width: 768px) {
+  html body.a9soft #sn-main { border-top: 1px solid var(--border-color); box-shadow: none; }
+  html body.a9soft #sn-main .nav-pill.active { background: var(--primary-light); color: var(--primary-text); box-shadow: none; }
+}
+
+/* ================= Tabel ================= */
+html body.a9soft .table-responsive { border: 1px solid var(--border-color); border-radius: 14px; }
+html body.a9soft .modern-table th { font-family: var(--font); font-size: 13px; text-transform: none; letter-spacing: 0; font-weight: 700; color: var(--text-muted); background: var(--primary-light); border-bottom: 1px solid var(--border-color); }
+html body.a9soft .modern-table td { border-bottom: 1px solid var(--border-color); }
+html body.a9soft .modern-table tbody tr:nth-child(even) td { background: transparent; }
+html body.a9soft .modern-table tr:hover td { background: var(--primary-light); }
+
+/* ================= Komponen lain ================= */
+html body.a9soft .jd.today { background: var(--primary-light); border: 1px solid var(--primary-bd); }
+html body.a9soft .fv-folder, html body.a9soft .fv-file, html body.a9soft .lb-card, html body.a9soft .osce-st, html body.a9soft .osce-stase,
+html body.a9soft .cbtx-side, html body.a9soft .prog-stat, html body.a9soft .sj-card, html body.a9soft .sj-q, html body.a9soft .sj-img,
+html body.a9soft .sj-link, html body.a9soft .sj-trial, html body.a9soft .sm-card, html body.a9soft .sj-bloks button { border-radius: 16px; }
+html body.a9soft .option-label { border-radius: 14px; border-width: 1px; }
+html body.a9soft .cx-btn { border-radius: 10px; }
+html body.a9soft .toast { border-radius: 14px; border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); }
+html body.a9soft .modal-content, html body.a9soft #preview-modal > div, html body.a9soft #admin-settings-modal > div, html body.a9soft .fd-modal { border-radius: 20px; box-shadow: var(--shadow-lg); }
+html body.a9soft #to-top { border-radius: 14px; box-shadow: var(--shadow-lg); }
+html body.a9soft ::-webkit-scrollbar-thumb { border-radius: 8px; }
+html body.a9soft .sj-bloks .sj-bl { font-family: var(--font); }
+html body.a9soft .lb-tag.mk { color: var(--on-primary); }
+
+/* ================= Halaman masuk ================= */
+html body.a9soft #login-page { background: var(--bg-base) !important; background-image: none !important; }
+html body.a9soft #login-page .card, html body.a9soft #login-page .login-card, html body.a9soft #login-page .login-box, html body.a9soft #login-page .login-container {
+  background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 24px; box-shadow: var(--shadow-lg) !important; }
+html body.a9soft #login-page h1, html body.a9soft #login-page h2, html body.a9soft #login-page h3 { color: var(--text-main) !important; text-transform: none; letter-spacing: 0; }
+html body.a9soft #login-page h1::after, html body.a9soft #login-page h2::after, html body.a9soft #login-page h3::after { border-top: 3px solid var(--primary-bd); width: 56px; border-radius: 3px; }
+
+/* ================= Pemilih tema ================= */
+.a9-thm { position: fixed; z-index: 32000; width: min(320px, calc(100vw - 20px)); background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color);
+  border-radius: 18px; box-shadow: var(--shadow-lg); padding: 10px; font-family: var(--font); }
+.a9-thm h4 { margin: 4px 8px 8px; font-size: 13px; color: var(--text-muted); font-weight: 700; }
+.a9-thm button { display: flex; align-items: center; gap: 12px; width: 100%; border: 0; background: transparent; color: var(--text-main); text-align: left; padding: 9px 10px; border-radius: 12px; cursor: pointer; font: inherit; }
+.a9-thm button:hover { background: var(--primary-light); }
+.a9-thm button.on { background: var(--primary-light); box-shadow: inset 0 0 0 1px var(--primary-bd); }
+.a9-thm .sw { flex: none; width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--border-color); position: relative; overflow: hidden; }
+.a9-thm .sw i { position: absolute; right: 0; bottom: 0; width: 55%; height: 55%; border-top-left-radius: 10px; }
+.a9-thm b { display: block; font-weight: 700; font-size: 14px; }
+.a9-thm small { display: block; color: var(--text-muted); font-size: 12px; }
+.a9-thm .ck { margin-left: auto; color: var(--primary-text); font-weight: 800; }
+@media (prefers-reduced-motion: reduce) { html body.a9soft *, html body.a9soft *::before, html body.a9soft *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+`;
+    document.head.appendChild(css);
+
+    // ---------- 3) Menerapkan tema ----------
+    const KEY = 'a9_theme2';
+    const prefersDark = () => { try { return window.matchMedia('(prefers-color-scheme: dark)').matches; } catch (e) { return false; } };
+    function stored() {
+        try {
+            const v = localStorage.getItem(KEY);
+            if (v === 'auto' || THEMES.some(t => t.id === v)) return v;
+            const old = localStorage.getItem('a9_theme');           // pilihan lama (terang / gelap) tetap dihormati
+            if (old === 'dark') return 'senja';
+            if (old === 'light') return 'embun';
+        } catch (e) { }
+        return 'auto';
+    }
+    const resolve = v => THEMES.find(t => t.id === (v === 'auto' ? (prefersDark() ? 'senja' : 'embun') : v)) || THEMES[0];
+    function apply(v) {
+        const t = resolve(v), b = document.body;
+        THEMES.forEach(x => b.classList.remove('th-' + x.id));
+        b.classList.add('a9soft', 'th-' + t.id);
+        b.classList.toggle('theme-dark', t.dark);                    // aturan gelap lama (Bagian 7 dst.) tetap ikut bekerja
+        document.documentElement.style.colorScheme = t.dark ? 'dark' : 'light';
+        let m = document.querySelector('meta[name="theme-color"]');
+        if (!m) { m = document.createElement('meta'); m.name = 'theme-color'; document.head.appendChild(m); }
+        m.content = t.bg;
+    }
+    // Pemanggil lama (terang/gelap dari pengaturan admin) tidak boleh membatalkan pilihan di perangkat ini
+    window.applyTheme = function () { apply(stored()); };
+    apply(stored());
+    try { const mq = window.matchMedia('(prefers-color-scheme: dark)'); (mq.addEventListener ? mq.addEventListener.bind(mq, 'change') : mq.addListener.bind(mq))(() => { if (stored() === 'auto') apply('auto'); }); } catch (e) { }
+
+    // ---------- 4) Pemilih tema (menggantikan tombol terang/gelap) ----------
+    let panel = null;
+    function closePicker() { if (panel) { panel.remove(); panel = null; document.removeEventListener('click', outside, true); document.removeEventListener('keydown', onKey, true); window.removeEventListener('resize', closePicker); } }
+    function outside(e) { if (panel && !panel.contains(e.target) && !e.target.closest('[onclick*="toggleThemeSwitch"]')) closePicker(); }
+    function onKey(e) { if (e.key === 'Escape') closePicker(); }
+    function openPicker(btn) {
+        if (panel) { closePicker(); return; }
+        const cur = stored();
+        const row = (id, nama, ket, sw) => `<button type="button" data-th="${id}" class="${cur === id ? 'on' : ''}"><span class="sw" style="background:${sw[0]}"><i style="background:${sw[1]}"></i></span><span><b>${nama}</b><small>${ket}</small></span>${cur === id ? '<span class="ck">âœ“</span>' : ''}</button>`;
+        panel = document.createElement('div'); panel.className = 'a9-thm'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Pilih tema');
+        panel.innerHTML = '<h4>Pilih tema tampilan</h4>' + THEMES.map(t => row(t.id, t.nama, t.ket, t.sw)).join('') +
+            row('auto', 'Otomatis', 'Ikut mode terang / gelap perangkat', ['#f4f6f4', '#2f3a40']);
+        document.body.appendChild(panel);
+        // letak: di bawah tombol, tidak keluar layar
+        const r = (btn && btn.getBoundingClientRect) ? btn.getBoundingClientRect() : { right: window.innerWidth - 12, bottom: 56 };
+        const w = panel.offsetWidth, left = Math.max(10, Math.min(window.innerWidth - w - 10, r.right - w));
+        panel.style.left = left + 'px'; panel.style.top = Math.min(window.innerHeight - panel.offsetHeight - 10, r.bottom + 8) + 'px';
+        panel.addEventListener('click', e => {
+            const b = e.target.closest('[data-th]'); if (!b) return;
+            try { localStorage.setItem(KEY, b.dataset.th); } catch (x) { }
+            apply(b.dataset.th); closePicker();
+        });
+        document.addEventListener('click', outside, true);
+        document.addEventListener('keydown', onKey, true);
+        window.addEventListener('resize', closePicker);
+    }
+    window.toggleThemeSwitch = function () {
+        const ev = window.event, btn = (ev && ev.currentTarget && ev.currentTarget.getBoundingClientRect) ? ev.currentTarget : document.querySelector('[onclick*="toggleThemeSwitch"]');
+        openPicker(btn);
+    };
+})();
