@@ -3149,15 +3149,24 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
             })
         },
         jadwal: {
-            label: '\ud83d\uddd3\ufe0f Perubahan jadwal', kind: 'jadwal',
-            fields: [['keg', 'Kegiatan'], ['lama', 'Jadwal lama (opsional)'], ['tgl', 'Tanggal baru', 'date'], ['jam', 'Jam baru'], ['tempat', 'Tempat (opsional)'], ['alasan', 'Alasan (opsional)']],
+            label: '\ud83d\uddd3\ufe0f Perubahan jadwal (spesifik: apa yang dipindah)', kind: 'jadwal',
+            fields: [['keg', 'Kegiatan / mata kuliah yang dipindah'], ['lamaTgl', 'Tanggal LAMA', 'date'], ['lamaJam', 'Jam lama (opsional, contoh 07.50-09.30)'], ['lamaTempat', 'Tempat lama (opsional)'], ['tgl', 'Tanggal BARU', 'date'], ['jam', 'Jam baru (opsional)'], ['tempat', 'Tempat baru (opsional)'], ['dosen', 'Dosen / pengampu (opsional)'], ['alasan', 'Alasan (opsional)'], ['cat', 'Catatan lain (opsional)']],
             need: ['keg', 'tgl'],
-            build: (f, t) => ({
-                judul: `\ud83d\uddd3\ufe0f Perubahan jadwal: ${f.keg}`, until: f.tgl,
-                isi: t === 'santai'
-                    ? `Info perubahan jadwal ya, A9! \ud83d\udd04 ${f.keg}${f.lama ? ' (sebelumnya ' + f.lama + ')' : ''} dipindah ke ${tglIndo(f.tgl)}${f.jam ? ', jam ' + f.jam : ''}${f.tempat ? ', di ' + f.tempat : ''}.${opt(f.alasan, 'Alasan: ')}\nMohon dicatat ulang, ya!`
-                    : `Diinformasikan bahwa jadwal ${f.keg}${f.lama ? ', yang semula ' + f.lama + ',' : ''} diubah menjadi ${tglIndo(f.tgl)}${f.jam ? ', pukul ' + f.jam : ''}${f.tempat ? ', bertempat di ' + f.tempat : ''}.${opt(f.alasan, 'Alasan: ')}\nMohon menyesuaikan jadwal masing-masing.`
-            })
+            build: (f, t) => {
+                const sh = iso => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : ''; };
+                const rows = [];
+                const diff = (lbl, a, b) => { if (a && b && a === b) rows.push(`\u2022 ${lbl}: tetap ${a}`); else if (a && b) rows.push(`\u2022 ${lbl}: ${a} \u2192 ${b}`); else if (b) rows.push(`\u2022 ${lbl} baru: ${b}`); else if (a) rows.push(`\u2022 ${lbl}: tetap ${a}`); };
+                diff('Hari/tanggal', f.lamaTgl ? tglIndo(f.lamaTgl) : '', tglIndo(f.tgl));
+                diff('Jam', f.lamaJam, f.jam);
+                diff('Tempat', f.lamaTempat, f.tempat);
+                const daftar = rows.join('\n');
+                return {
+                    judul: `\ud83d\uddd3\ufe0f ${f.keg} dipindah${f.lamaTgl ? ' ' + sh(f.lamaTgl) + ' \u2192 ' + sh(f.tgl) : ' ke ' + sh(f.tgl)}`, until: f.tgl,
+                    isi: t === 'santai'
+                        ? `Info perubahan jadwal ya, A9! \ud83d\udd04\n${f.keg}${f.dosen ? ' (' + f.dosen + ')' : ''} dipindah. Yang berubah:\n${daftar}${opt(f.alasan, 'Alasan: ')}${opt(f.cat, 'Catatan: ')}\nMohon sesuaikan jadwalmu ya!`
+                        : `Diinformasikan bahwa jadwal ${f.keg}${f.dosen ? ' (' + f.dosen + ')' : ''} mengalami perubahan.\nRincian perubahan:\n${daftar}${opt(f.alasan, 'Alasan: ')}${opt(f.cat, 'Catatan: ')}\nMohon menyesuaikan jadwal masing-masing. Terima kasih.`
+                };
+            }
         },
         tiada: {
             label: '\ud83d\udeab Kelas ditiadakan / diganti', kind: 'jadwal',
@@ -4452,6 +4461,7 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
     let curB = 0, cur = 1, lastDoc = null;
     let lastFetch = 0, fetching = false, timer = null, saving = false, booted = false;
     const curKey = () => skey(BLOK[curB], cur);
+    window.__sjxCtx = () => ({ b: BLOK[curB], n: cur, k: curKey(), trial });
 
     const clone = o => JSON.parse(JSON.stringify(o));
     const view = k => draft[k] || srv[k] || blank();
@@ -4893,6 +4903,7 @@ ${trial ? '' : linkCard()}
                 `<h2>2\u20133. Rumusan masalah dan jawaban sementara</h2>${soalHtml}` +
                 `<h2>4. Learning Objectives (LO)</h2>${ol(v.lo)}` +
                 (v.belajar ? `<h2>5. Hasil belajar mandiri (pertemuan 2)</h2>${ol(v.belajar)}` : '') +
+                (window.__sjxDoc ? window.__sjxDoc(b, n) : '') +
                 (gam ? `<h2>Gambar pendukung</h2>${gam}` : '') +
                 (sl.length ? `<h2>Sumber / referensi</h2><ol>${sl.map(x => `<li>${srcLi(x)}</li>`).join('')}</ol>` : '');
         }).join('<br style="page-break-before:always">');
@@ -4913,22 +4924,42 @@ ${trial ? '' : linkCard()}
         const done = busy('Membuat Google Docs di Drive...');
         try {
             const r = await fetch(DRIVE_UPLOAD_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key, action: 'createDoc', name, path, html }) });
-            const j = await r.json();
-            if (!j.ok) { if (/kunci/i.test(j.error || '')) { try { localStorage.removeItem('a9_drive_key'); } catch (e) { } } throw new Error(j.error || 'Apps Script belum mendukung createDoc (pasang code.gs terbaru dan deploy versi baru)'); }
+            const txt = await r.text(); let j = null; try { j = JSON.parse(txt); } catch (e) { }
+            if (!j) throw new Error('Apps Script tidak membalas dengan benar. Biasanya deploy belum diatur "Siapa saja" atau URL di script.js bukan deploy terbaru.');
+            if (!j.ok) { if (/kunci/i.test(j.error || '')) { try { localStorage.removeItem('a9_drive_key'); } catch (e) { } } throw new Error(j.error || 'Apps Script belum mendukung createDoc. Pasang drive-uploader.gs terbaru, jalankan fungsi otorisasi sekali, lalu Deploy > Kelola deployment > versi baru.'); }
             return { url: j.url, shared: j.shared !== false };
-        } catch (e) { console.error(e); alert('Gagal membuat Google Docs: ' + (e.message || e)); return null; }
+        } catch (e) {
+            console.error(e);
+            const m = (e && e.name === 'TypeError') ? 'Tidak bisa menghubungi Apps Script. Cek internet, dan pastikan akses deploy = "Siapa saja".' : (e.message || String(e));
+            await askDialog('Gagal membuat Google Docs', [{ type: 'note', text: m }, { type: 'note', text: 'File .doc tetap bisa diunduh setelah ini.' }], 'Mengerti');
+            return null;
+        }
         finally { done(); }
     }
 
     function downloadDoc(name, html) {
-        const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name + '.doc';
+        // penanda Word supaya terbuka sebagai dokumen (tampilan cetak), bukan halaman web
+        const wordHtml = html
+            .replace('<html>', '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">')
+            .replace('<head>', '<head><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->');
+        const fname = String(name).replace(/[\\/:*?"<>|]+/g, '-') + '.doc';
+        const blob = new Blob(['\ufeff', wordHtml], { type: 'application/msword' });
+        // iPhone/iPad sering menolak unduhan blob: pakai menu Bagikan (Simpan ke Berkas)
+        try {
+            const file = new File([blob], fname, { type: 'application/msword' });
+            if (/iP(hone|ad|od)/.test(navigator.userAgent) && navigator.canShare && navigator.canShare({ files: [file] })) {
+                navigator.share({ files: [file], title: fname }).catch(() => { });
+                return;
+            }
+        } catch (e) { }
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fname;
         document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     }
 
     async function exportDocs(ns) {
         collect();
-        await autosaveNow();                       // simpan dulu supaya dokumen sama dengan yang tersimpan
+        await autosaveNow();
+        if (window.__sjxLoad) { try { await window.__sjxLoad(BLOK[curB], ns); } catch (e) { console.error(e); } }                       // simpan dulu supaya dokumen sama dengan yang tersimpan
         const b = BLOK[curB];
         const unsaved = ns.filter(n => draft[skey(b, n)]);
         if (unsaved.length && !trial && !confirm('Skenario ' + unsaved.join(', ') + ' belum tersimpan di server (mungkin ada konflik dengan versi teman). Dokumen akan memakai isi yang tampil sekarang. Lanjutkan?')) return;
@@ -5347,4 +5378,537 @@ html body.a9soft #login-page h1::after, html body.a9soft #login-page h2::after, 
         const ev = window.event, btn = (ev && ev.currentTarget && ev.currentTarget.getBoundingClientRect) ? ev.currentTarget : document.querySelector('[onclick*="toggleThemeSwitch"]');
         openPicker(btn);
     };
+})();
+
+// ==========================================================================
+// BAGIAN 17 - LONCENG NOTIFIKASI (KANAN ATAS) + PESAN KHUSUS DARI ADMIN
+//   Isi lonceng: (1) semua Pengumuman (termasuk perpindahan jadwal), (2) pesan dari admin
+//   yang dikirim ke semua atau ke satu mahasiswa. Disimpan di tabel portal_db, key "notif".
+//   Notifikasi muncul saat portal terbuka (dicek tiap 60 detik dan saat tab dibuka lagi).
+// ==========================================================================
+(function () {
+    const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const $ = id => document.getElementById(id);
+    const isAdmin = () => !!currentUser && currentUser.role === 'admin';
+    const myNim = () => (currentUser && currentUser.nim) || '';
+    const SKEY = () => 'a9_bell_' + (myNim() || 'admin');
+    const POLL_MS = 60000;
+    let ITEMS = [], seen = { ids: {}, base: 0 }, booted = false, lastCount = -1, lastPull = 0, isOpen = false, expanded = {}, pulling = false;
+
+    // ---------- status dibaca (per perangkat) ----------
+    function loadSeen() {
+        try { seen = JSON.parse(localStorage.getItem(SKEY())); } catch (e) { seen = null; }
+        // pengguna baru: hanya info 3 hari terakhir yang dianggap belum dibaca
+        if (!seen || !seen.ids) seen = { ids: {}, base: Date.now() - 3 * 86400000 };
+    }
+    function saveSeen() {
+        const keys = Object.keys(seen.ids);
+        if (keys.length > 300) keys.slice(0, keys.length - 300).forEach(k => delete seen.ids[k]);
+        try { localStorage.setItem(SKEY(), JSON.stringify(seen)); } catch (e) { }
+    }
+    const isNew = it => !isAdmin() && !seen.ids[it.id] && it.ts > seen.base;
+    const unreadCount = () => ITEMS.filter(isNew).length;
+
+    // ---------- pengambilan data ----------
+    const parseArr = v => { if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { v = []; } } return Array.isArray(v) ? v : []; };
+    async function readKey(key) {
+        const r = await supabaseClient.from('portal_db').select('value').eq('key', key).maybeSingle();
+        if (r.error) throw r.error;
+        return r.data ? parseArr(r.data.value) : [];
+    }
+    async function pull() {
+        if (!supabaseClient || !currentUser || pulling) return;
+        pulling = true; lastPull = Date.now();
+        try {
+            const r = await supabaseClient.from('portal_db').select('key,value').in('key', ['pengumuman', 'notif']);
+            if (r.error) throw r.error;
+            const m = { pengumuman: [], notif: [] };
+            (r.data || []).forEach(x => { m[x.key] = parseArr(x.value); });
+            const items = [];
+            m.pengumuman.forEach(p => {
+                if (!p || !p.judul) return;
+                const ts = Date.parse(p.tgl) || p.ts || p.id || 0;
+                items.push({ id: 'p' + (p.id || ts), ts, judul: p.judul, isi: p.isi || '', kind: p.kind || 'info', src: 'p' });
+            });
+            m.notif.forEach(n => {
+                if (!n || !n.judul) return;
+                if (n.to === 'all' || n.to === myNim() || isAdmin()) items.push({ id: 'n' + n.id, ts: n.ts || n.id, judul: n.judul, isi: n.isi || '', kind: 'pesan', src: 'n', to: n.to, tab: n.tab || '', rawId: n.id });
+            });
+            items.sort((a, b) => b.ts - a.ts);
+            ITEMS = items.slice(0, 40);
+            const n = unreadCount();
+            if (lastCount >= 0 && n > lastCount) {
+                const first = ITEMS.find(isNew);
+                const b = $('a9-bell'); if (b) { b.classList.remove('ring'); void b.offsetWidth; b.classList.add('ring'); }
+                if (first) alert('\ud83d\udd14 ' + first.judul);
+            }
+            lastCount = n;
+            updateBadge();
+            if (isOpen) renderPanel();
+        } catch (e) { console.error('Lonceng: gagal memuat', e); }
+        finally { pulling = false; }
+    }
+
+    // ---------- tampilan ----------
+    function css() {
+        if ($('a9-bell-css')) return;
+        const st = document.createElement('style'); st.id = 'a9-bell-css';
+        st.textContent = `
+.a9-bell{position:relative;flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-main);font-size:18px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;margin:0 6px;padding:0}
+.a9-bell.fixed{position:fixed;top:12px;right:12px;z-index:950;margin:0;box-shadow:0 6px 18px -8px rgba(15,23,42,.45)}
+.a9-bell .bd{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;border-radius:10px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;display:none;align-items:center;justify-content:center;padding:0 5px;box-sizing:border-box}
+.a9-bell.has .bd{display:flex}
+.a9-bell.ring{animation:a9ring .9s ease}
+@keyframes a9ring{0%,100%{transform:rotate(0)}15%{transform:rotate(16deg)}30%{transform:rotate(-14deg)}45%{transform:rotate(10deg)}60%{transform:rotate(-8deg)}75%{transform:rotate(4deg)}}
+.a9-bp{position:fixed;top:60px;right:12px;width:min(92vw,390px);max-height:74vh;overflow:auto;z-index:960;background:var(--bg-card);color:var(--text-main);border:1px solid var(--border-color);border-radius:16px;box-shadow:0 22px 50px -14px rgba(15,23,42,.45);display:none}
+.a9-bp.open{display:block}
+.bp-h{position:sticky;top:0;background:var(--bg-card);display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--border-color)}
+.bp-b{border:1px solid var(--border-color);background:var(--bg-base);color:var(--text-main);border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer}
+.bp-b.danger{color:#dc2626}
+.bp-i{padding:12px 14px;border-bottom:1px solid var(--border-color);cursor:pointer}
+.bp-i.new{background:var(--primary-light)}
+.bp-t{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.bp-t small{color:var(--text-muted)}
+.bp-dot{width:9px;height:9px;border-radius:50%;background:#ef4444;flex:none}
+.bp-i b{display:block;margin:3px 0;overflow-wrap:anywhere}
+.bp-body{font-size:13px;color:var(--text-muted);white-space:pre-line;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bp-body.open{display:block;overflow:visible}
+.bp-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.bp-e{padding:22px 14px;color:var(--text-muted);text-align:center;margin:0}`;
+        document.head.appendChild(st);
+    }
+
+    function visible(el) { return el && el.offsetParent !== null; }
+    function findAnchor() {
+        const list = document.querySelectorAll('[onclick*="handleLogout"], [onclick*="openAdminSettingsModal"]');
+        for (const el of list) if (visible(el)) return el;
+        return null;
+    }
+    function mountBell() {
+        if (!currentUser) return;
+        css();
+        let b = $('a9-bell');
+        const anchor = findAnchor();
+        if (!b) {
+            b = document.createElement('button'); b.id = 'a9-bell'; b.type = 'button'; b.className = 'a9-bell';
+            b.setAttribute('aria-label', 'Notifikasi'); b.title = 'Notifikasi';
+            b.innerHTML = '\ud83d\udd14<span class="bd"></span>';
+            b.addEventListener('click', e => { e.stopPropagation(); togglePanel(); });
+            const p = document.createElement('div'); p.id = 'a9-bp'; p.className = 'a9-bp'; p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'Daftar notifikasi');
+            p.addEventListener('click', onPanelClick);
+            document.body.appendChild(p);
+            document.addEventListener('click', e => { if (isOpen && !p.contains(e.target) && !b.contains(e.target)) togglePanel(false); });
+            document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen) togglePanel(false); });
+            if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(b, anchor); else { b.classList.add('fixed'); document.body.appendChild(b); }
+            updateBadge();
+        } else if (b.classList.contains('fixed') && anchor && anchor.parentNode) {
+            b.classList.remove('fixed'); anchor.parentNode.insertBefore(b, anchor);   // pindah ke sebelah tombol header kalau sudah tampil
+        }
+    }
+    function updateBadge() {
+        const b = $('a9-bell'); if (!b) return;
+        const n = unreadCount();
+        b.classList.toggle('has', n > 0);
+        b.querySelector('.bd').textContent = n > 99 ? '99+' : String(n);
+        b.title = n ? n + ' notifikasi baru' : 'Notifikasi';
+    }
+    function togglePanel(force) {
+        isOpen = typeof force === 'boolean' ? force : !isOpen;
+        const p = $('a9-bp'); if (!p) return;
+        p.classList.toggle('open', isOpen);
+        if (isOpen) { renderPanel(); pull(); }
+    }
+    const rel = ts => {
+        const s = Math.max(0, (Date.now() - ts) / 1000);
+        if (s < 60) return 'baru saja';
+        if (s < 3600) return Math.floor(s / 60) + ' mnt lalu';
+        if (s < 86400) return Math.floor(s / 3600) + ' jam lalu';
+        if (s < 7 * 86400) return Math.floor(s / 86400) + ' hari lalu';
+        return new Date(ts).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    };
+    function renderPanel() {
+        const p = $('a9-bp'); if (!p) return;
+        const head = `<div class="bp-h"><strong>\ud83d\udd14 Notifikasi</strong><span>${isAdmin() ? '<button type="button" class="bp-b" data-bx="compose">\u2709\ufe0f Kirim pesan</button>' : (unreadCount() ? '<button type="button" class="bp-b" data-bx="readall">Tandai dibaca</button>' : '')}</span></div>`;
+        const tagOf = it => it.kind === 'pesan' ? '\u2709\ufe0f Pesan admin' : ((typeof ANN_TAG !== 'undefined' && ANN_TAG[it.kind]) || '\ud83d\udce2 Pengumuman');
+        p.innerHTML = head + (ITEMS.length ? ITEMS.map(it => {
+            const open = !!expanded[it.id], nw = isNew(it);
+            const khusus = it.to && it.to !== 'all' ? ' \u00b7 khusus ' + esc(allowedUsers[it.to] || it.to) : '';
+            const acts = open ? `<div class="bp-acts">${it.src === 'p' ? '<button type="button" class="bp-b" data-bx="go">Lihat di Pengumuman</button>' : (it.tab ? '<button type="button" class="bp-b" data-bx="go">Buka menu</button>' : '')}${isAdmin() && it.src === 'n' ? '<button type="button" class="bp-b danger" data-bx="del">Hapus pesan</button>' : ''}</div>` : '';
+            return `<div class="bp-i${nw ? ' new' : ''}" data-id="${esc(it.id)}"><div class="bp-t"><small>${tagOf(it)} \u00b7 ${rel(it.ts)}${khusus}</small>${nw ? '<i class="bp-dot"></i>' : ''}</div><b>${esc(it.judul)}</b><div class="bp-body${open ? ' open' : ''}">${esc(it.isi)}</div>${acts}</div>`;
+        }).join('') : '<p class="bp-e">Belum ada notifikasi.</p>');
+    }
+    function markSeen(id) { seen.ids[id] = 1; saveSeen(); updateBadge(); }
+    function go(it) {
+        togglePanel(false);
+        const tab = it.src === 'p' ? 'home' : it.tab;
+        if (tab && typeof window.switchTab === 'function') {
+            window.switchTab(tab, null);
+            if (it.src === 'p') setTimeout(() => { const el = $('pengumuman-list'); if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 250);
+        }
+    }
+    async function onPanelClick(e) {
+        const bx = e.target.closest('[data-bx]'), row = e.target.closest('.bp-i');
+        const it = row ? ITEMS.find(x => x.id === row.dataset.id) : null;
+        if (bx) {
+            e.stopPropagation();
+            const a = bx.dataset.bx;
+            if (a === 'compose') { await compose(); return; }
+            if (a === 'readall') { ITEMS.forEach(x => { seen.ids[x.id] = 1; }); saveSeen(); updateBadge(); renderPanel(); return; }
+            if (a === 'go' && it) { markSeen(it.id); go(it); return; }
+            if (a === 'del' && it) { await removeMsg(it); return; }
+            return;
+        }
+        if (it) { expanded[it.id] = !expanded[it.id]; markSeen(it.id); renderPanel(); }
+    }
+
+    // ---------- admin: kirim & hapus pesan ----------
+    async function compose() {
+        const users = Object.keys(allowedUsers).map(nim => ({ v: nim, t: allowedUsers[nim] }));
+        const r = await askDialog('Kirim pesan / update ke mahasiswa', [
+            { type: 'note', text: 'Pesan muncul di lonceng kanan atas. Pengumuman biasa otomatis ikut muncul di lonceng, jadi tidak perlu dikirim dua kali.' },
+            { id: 'judul', label: 'Judul', placeholder: 'Contoh: Kuis dimajukan besok' },
+            { id: 'isi', type: 'textarea', label: 'Isi pesan' },
+            { id: 'to', type: 'select', label: 'Kirim ke', value: 'all', options: [{ v: 'all', t: 'Semua mahasiswa A9' }].concat(users) },
+            { id: 'tab', type: 'select', label: 'Tombol "Buka menu" mengarah ke', value: '', options: [{ v: '', t: '(tidak ada)' }, { v: 'home', t: 'Beranda' }, { v: 'jadwal', t: 'Jadwal' }, { v: 'tugas', t: 'Tugas' }, { v: 'materi', t: 'Materi' }, { v: 'tutorial', t: 'Tutorial' }, { v: 'cbt', t: 'Simulasi CBT' }] }
+        ], 'Kirim');
+        if (!r) return;
+        if (!r.judul.trim() || !r.isi.trim()) { alert('Judul dan isi pesan wajib diisi.'); return; }
+        if (!supabaseClient) { alert('Server belum terhubung.'); return; }
+        const done = busy('Mengirim pesan...');
+        try {
+            const cur = await readKey('notif');
+            const now = Date.now();
+            cur.unshift({ id: now, ts: now, judul: r.judul.trim(), isi: r.isi.trim(), to: r.to || 'all', tab: r.tab || '', by: (currentUser && currentUser.name) || 'Admin' });
+            const w = await supabaseClient.from('portal_db').upsert({ key: 'notif', value: cur.slice(0, 150) }, { onConflict: 'key' });
+            if (w.error) throw w.error;
+            alert('Pesan terkirim' + (r.to && r.to !== 'all' ? ' ke ' + (allowedUsers[r.to] || r.to) : ' ke semua mahasiswa') + '.');
+            await pull();
+        } catch (err) { console.error(err); alert('Gagal mengirim pesan. Cek koneksi lalu coba lagi.'); }
+        finally { done(); }
+    }
+    async function removeMsg(it) {
+        if (!confirm('Hapus pesan "' + it.judul + '"?')) return;
+        const done = busy('Menghapus...');
+        try {
+            const cur = await readKey('notif');
+            const w = await supabaseClient.from('portal_db').upsert({ key: 'notif', value: cur.filter(x => x.id !== it.rawId) }, { onConflict: 'key' });
+            if (w.error) throw w.error;
+            await pull();
+        } catch (err) { console.error(err); alert('Gagal menghapus pesan.'); }
+        finally { done(); }
+    }
+
+    // ---------- pemicu ----------
+    setInterval(() => {
+        if (!currentUser) return;
+        if (!booted) { booted = true; loadSeen(); mountBell(); pull(); return; }
+        mountBell();
+        if (!document.hidden && Date.now() - lastPull > POLL_MS) pull();
+    }, 1500);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && booted) pull(); });
+})();
+
+// ==========================================================================
+// BAGIAN 18 - TUTORIAL: PERTANYAAN BELUM TERJAWAB + NOTULEN (VOICE TYPING)
+//   Muncul di bawah form Seven Jump pada menu Tutorial, per blok dan per skenario.
+//   Data disimpan per item (bukan satu teks besar), jadi isian teman tidak saling menimpa:
+//     tutorial_pq_<blok>_<no>  = daftar pertanyaan   | tutorial_nt_<blok>_<no> = daftar notulen
+//   Mode Coba: semua tersimpan di perangkat ini saja. Isinya ikut masuk ke dokumen Word/Google Docs.
+// ==========================================================================
+(function () {
+    const $ = id => document.getElementById(id);
+    const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const isAdmin = () => !!currentUser && currentUser.role === 'admin';
+    const me = () => (currentUser && (currentUser.name || currentUser.nim)) || 'Anonim';
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const CACHE = {};
+    let sig = '', view = 'pq', scope = 'scn', flt = 'open', lastFetch = 0;
+    let rec = null, recWant = false, recSync = null;
+
+    const ctx = () => (typeof window.__sjxCtx === 'function' ? window.__sjxCtx() : null);
+    const kOf = (kind, b, n) => 'tutorial_' + kind + '_' + (b.legacy ? '' : b.key + '_') + n;
+    const LS = k => 'a9_sjx_' + k;
+    const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const stamp = x => x.upd || x.ts || 0;
+    const fmt = ts => ts ? new Date(ts).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    const linkify = s => esc(s).replace(/https?:\/\/[^\s<]+/g, u => '<a href="' + u + '" target="_blank" rel="noopener">' + u + '</a>');
+    const parseArr = v => { if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { v = null; } } return Array.isArray(v) ? v : []; };
+
+    // ---------- penyimpanan ----------
+    async function rGet(k, trial) {
+        if (trial) { try { return parseArr(localStorage.getItem(LS(k))); } catch (e) { return []; } }
+        if (!supabaseClient) return CACHE[k] || [];
+        const r = await supabaseClient.from('portal_db').select('value').eq('key', k).maybeSingle();
+        if (r.error) throw r.error;
+        return r.data ? parseArr(r.data.value) : [];
+    }
+    async function rPut(k, list, trial) {
+        if (trial) { localStorage.setItem(LS(k), JSON.stringify(list)); return; }
+        if (!supabaseClient) throw new Error('Server belum terhubung');
+        const w = await supabaseClient.from('portal_db').upsert({ key: k, value: list }, { onConflict: 'key' });
+        if (w.error) throw w.error;
+    }
+    // baca versi terbaru -> ubah -> simpan (item teman tidak ikut tertimpa)
+    async function change(k, trial, fn) {
+        const list = await rGet(k, trial);
+        fn(list);
+        const cut = Date.now() - 14 * 86400000;
+        const out = list.filter(x => !(x.del && stamp(x) < cut));
+        await rPut(k, out, trial);
+        CACHE[k] = out;
+        return out;
+    }
+    window.__sjxLoad = async function (b, ns) {
+        const c = ctx(), trial = !!(c && c.trial);
+        const jobs = [];
+        ns.forEach(n => ['pq', 'nt'].forEach(kind => {
+            const k = kOf(kind, b, n);
+            jobs.push(rGet(k, trial).then(v => { CACHE[k] = v; }).catch(e => console.error('Tutorial: gagal memuat', k, e)));
+        }));
+        await Promise.all(jobs);
+    };
+
+    // ---------- untuk dokumen Word / Google Docs ----------
+    window.__sjxDoc = function (b, n) {
+        const pq = (CACHE[kOf('pq', b, n)] || []).filter(x => !x.del).sort((p, q) => (p.ts || 0) - (q.ts || 0));
+        const nt = (CACHE[kOf('nt', b, n)] || []).filter(x => !x.del).sort((p, q) => (p.ts || 0) - (q.ts || 0));
+        let h = '';
+        if (pq.length) {
+            const open = pq.filter(x => x.status !== 'done'), done = pq.filter(x => x.status === 'done');
+            h += '<h2>Pertanyaan belum terjawab</h2>' + (open.length
+                ? '<ol>' + open.map(x => `<li>${esc(x.q)}${x.by ? ` <em>(${esc(x.by)})</em>` : ''}</li>`).join('') + '</ol>'
+                : '<p><em>(semua pertanyaan sudah terjawab)</em></p>');
+            if (done.length) h += '<h3>Pertanyaan yang sudah terjawab</h3><ol>' + done.map(x => `<li><strong>${esc(x.q)}</strong><br>Jawaban: ${linkify(x.a)}${x.aby ? ` <em>(${esc(x.aby)})</em>` : ''}${x.src ? `<br><em>Sumber: ${linkify(x.src)}</em>` : ''}</li>`).join('') + '</ol>';
+        }
+        if (nt.length) {
+            h += '<h2>Notulen diskusi</h2>' + nt.map(x => `<h3>Pertemuan ${esc(x.sesi || 1)} \u2013 ${esc(fmt(x.ts))}</h3><p>${esc(x.text).replace(/\n/g, '<br>')}</p><p style="font-size:9pt;color:#666"><em>Dicatat oleh ${esc(x.by)}</em></p>`).join('');
+        }
+        return h;
+    };
+
+    // ---------- suara -> teks ----------
+    function stopVoice() {
+        recWant = false;
+        if (rec) { try { rec.onend = null; rec.onresult = null; rec.onerror = null; rec.stop(); } catch (e) { } rec = null; }
+        if (recSync) { recSync.el.removeEventListener('input', recSync.fn); recSync = null; }
+        document.querySelectorAll('.sjx-mic.rec').forEach(b => b.classList.remove('rec'));
+        const s = $('sjx-vs'); if (s) s.textContent = '';
+    }
+    const addText = (a, t) => {
+        t = t.replace(/\s*\b(?:baris baru|paragraf baru)\b\s*/gi, '\n');
+        if (!a) return t.replace(/^\s+/, '');
+        if (/^\n/.test(t) || /\n$/.test(a)) return a + t.replace(/^ +/, '');
+        return a.replace(/ +$/, '') + ' ' + t.replace(/^\s+/, '');
+    };
+    function startVoice(el, btn) {
+        if (btn.classList.contains('rec')) { stopVoice(); return; }
+        if (!SR) { alert('Browser ini belum mendukung voice typing. Pakai Chrome, Edge, atau Safari terbaru. Alternatif: tekan ikon mikrofon di keyboard HP.'); return; }
+        stopVoice();
+        let committed = el.value;
+        const r = new SR(); rec = r; recWant = true;
+        r.lang = 'id-ID'; r.continuous = true; r.interimResults = true;
+        r.onresult = ev => {
+            let interim = '';
+            for (let i = ev.resultIndex; i < ev.results.length; i++) {
+                const res = ev.results[i], t = res[0].transcript;
+                if (res.isFinal) committed = addText(committed, t); else interim += t;
+            }
+            el.value = interim ? addText(committed, interim) : committed;
+            el.scrollTop = el.scrollHeight;
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+        r.onerror = ev => {
+            if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { stopVoice(); alert('Izin mikrofon ditolak. Aktifkan lewat ikon gembok di address bar, lalu coba lagi.'); }
+            else if (ev.error === 'network') { stopVoice(); alert('Voice typing butuh internet. Cek koneksi lalu coba lagi.'); }
+            else if (ev.error === 'audio-capture') { stopVoice(); alert('Mikrofon tidak terdeteksi.'); }
+        };
+        r.onend = () => {   // browser menghentikan sendiri saat hening: sambung lagi selama masih aktif
+            if (recWant && rec === r) { try { r.start(); } catch (e) { stopVoice(); } } else if (rec === r) stopVoice();
+        };
+        try { r.start(); } catch (e) { rec = null; recWant = false; alert('Mikrofon tidak bisa dimulai. Coba lagi.'); return; }
+        const fn = ev => { if (ev.isTrusted) committed = el.value; };   // hanya ketikan manual (bukan event dari voice typing)
+        el.addEventListener('input', fn); recSync = { el, fn };
+        btn.classList.add('rec');
+        const s = $('sjx-vs'); if (s) s.textContent = '\ud83d\udd34 Merekam... bicara saja. Ucapkan "baris baru" untuk pindah baris. Ketuk mikrofon lagi untuk berhenti.';
+    }
+
+    // ---------- tampilan ----------
+    function css() {
+        if ($('sjx-css')) return;
+        const st = document.createElement('style'); st.id = 'sjx-css';
+        st.textContent = `
+.sjx{margin-top:16px}
+.sjx-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.sjx-head h3{margin:0}
+.sjx-tabs,.sjx-chips{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.sjx-tabs button,.sjx-chips button{border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-main);border-radius:999px;padding:7px 14px;font-weight:600;cursor:pointer;font-size:13px}
+.sjx-tabs button.on,.sjx-chips button.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.sjx-row{display:flex;gap:8px;align-items:center}
+.sjx-row input{flex:1;min-width:0}
+.sjx-mic{width:44px;height:44px;flex:none;border-radius:50%;border:1px solid var(--border-color);background:var(--bg-card);font-size:20px;cursor:pointer;padding:0}
+.sjx-mic.rec{background:#ef4444;border-color:#ef4444;animation:sjxp 1.2s infinite}
+@keyframes sjxp{50%{box-shadow:0 0 0 8px rgba(239,68,68,.22)}}
+.sjx-item{background:var(--bg-base);border:1px solid var(--border-color);border-left:4px solid #f59e0b;border-radius:12px;padding:12px 14px;margin-top:10px}
+.sjx-item.done{border-left-color:#10b981}
+.sjx-q{font-weight:700;overflow-wrap:anywhere;white-space:pre-line}
+.sjx-a{margin-top:8px;font-size:14px;overflow-wrap:anywhere}
+.sjx-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.sjx-acts button{border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-main);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer}
+.sjx-acts .danger{color:#dc2626}
+.sjx textarea{width:100%;min-height:130px;resize:vertical;box-sizing:border-box}
+.sjx-vs{font-size:13px;color:#dc2626;min-height:18px;margin:6px 0}
+.sjx-note{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0;font-size:14px;line-height:1.55}
+.sjx-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.sjx small,.sjx .hint{color:var(--text-muted)}`;
+        document.head.appendChild(st);
+    }
+    const draftKey = c => 'a9_sjx_draft_' + kOf('nt', c.b, c.n) + (c.trial ? '_t' : '');
+
+    function shell() {
+        const box = $('sjx-box'), c = ctx(); if (!box || !c) return;
+        const s = c.b.skenario[c.n - 1];
+        let draft = ''; try { draft = localStorage.getItem(draftKey(c)) || ''; } catch (e) { }
+        const pqPane = `
+<div class="sjx-row"><input id="sjx-q" class="modern-input" maxlength="400" placeholder="Tulis pertanyaan yang belum terjawab..." autocomplete="off"><button type="button" class="sjx-mic" data-xa="mic" data-t="sjx-q" title="Isi dengan suara" aria-label="Isi dengan suara">\ud83c\udf99\ufe0f</button><button type="button" class="btn btn-primary btn-sm" data-xa="addq">Tambah</button></div>
+<div class="sjx-chips" id="sjx-chips"></div><div id="sjx-list"></div>`;
+        const ntPane = `
+<p class="hint">Tekan mikrofon lalu bicara, teks muncul sendiri. Boleh dikoreksi sebelum disimpan. Setiap notulen tersimpan sebagai catatan terpisah, jadi tidak menimpa catatan teman.</p>
+<div class="sjx-row" style="margin-bottom:8px"><select id="sjx-sesi" class="modern-input" style="max-width:190px"><option value="1">Pertemuan 1</option><option value="2">Pertemuan 2</option></select><button type="button" class="sjx-mic" data-xa="mic" data-t="sjx-nt" title="Rekam suara jadi teks" aria-label="Rekam suara jadi teks">\ud83c\udf99\ufe0f</button></div>
+<textarea id="sjx-nt" class="modern-input" placeholder="Notulen diskusi tutorial...">${esc(draft)}</textarea>
+<div class="sjx-vs" id="sjx-vs"></div>
+<div class="sjx-bar"><button type="button" class="btn btn-primary btn-sm" data-xa="addnt">Simpan notulen</button><button type="button" class="btn btn-outline btn-sm" data-xa="clearnt">Kosongkan</button><button type="button" class="btn btn-outline btn-sm" data-xa="copyall">Salin semua notulen</button></div>
+<div id="sjx-nlist"></div>`;
+        box.innerHTML = `
+<div class="sjx-head"><h3>\u2753 Pertanyaan &amp; \ud83c\udf99\ufe0f Notulen</h3><small>${esc(c.b.label)} \u00b7 Skenario ${s.n}${c.trial ? ' \u00b7 Mode Coba (tersimpan di perangkat ini)' : ''}</small></div>
+<div class="sjx-tabs"><button type="button" data-xv="pq" class="${view === 'pq' ? 'on' : ''}" id="sjx-tab-pq">Pertanyaan belum terjawab</button><button type="button" data-xv="nt" class="${view === 'nt' ? 'on' : ''}" id="sjx-tab-nt">Notulen</button></div>
+${view === 'pq' ? pqPane : ntPane}`;
+        lists();
+    }
+    function itemsPq(c) {
+        const ns = scope === 'blok' ? c.b.skenario.map(s => s.n) : [c.n], out = [];
+        ns.forEach(n => (CACHE[kOf('pq', c.b, n)] || []).filter(x => !x.del).forEach(it => out.push({ it, n })));
+        return out.sort((a, b) => (a.it.ts || 0) - (b.it.ts || 0));
+    }
+    function lists() {
+        const box = $('sjx-box'), c = ctx(); if (!box || !c) return;
+        const pq = itemsPq(c), openN = pq.filter(x => x.it.status !== 'done').length, doneN = pq.length - openN;
+        const nt = (CACHE[kOf('nt', c.b, c.n)] || []).filter(x => !x.del).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+        const tp = $('sjx-tab-pq'); if (tp) tp.textContent = 'Pertanyaan belum terjawab' + (openN ? ' (' + openN + ')' : '');
+        const tn = $('sjx-tab-nt'); if (tn) tn.textContent = 'Notulen' + (nt.length ? ' (' + nt.length + ')' : '');
+        const ch = $('sjx-chips');
+        if (ch) ch.innerHTML = `<button type="button" data-xs="scn" class="${scope === 'scn' ? 'on' : ''}">Skenario ini</button><button type="button" data-xs="blok" class="${scope === 'blok' ? 'on' : ''}">Seluruh ${esc(c.b.label)}</button>` +
+            `<span style="flex-basis:100%;height:0"></span><button type="button" data-xf="open" class="${flt === 'open' ? 'on' : ''}">Belum terjawab (${openN})</button><button type="button" data-xf="done" class="${flt === 'done' ? 'on' : ''}">Terjawab (${doneN})</button><button type="button" data-xf="all" class="${flt === 'all' ? 'on' : ''}">Semua (${pq.length})</button>`;
+        const pl = $('sjx-list');
+        if (pl) {
+            const shown = pq.filter(x => flt === 'all' || (flt === 'done') === (x.it.status === 'done'));
+            pl.innerHTML = shown.length ? shown.map(x => {
+                const it = x.it, done = it.status === 'done', mine = it.by === me() || isAdmin();
+                return `<div class="sjx-item${done ? ' done' : ''}" data-n="${x.n}" data-id="${esc(it.id)}"><div class="sjx-q">${esc(it.q)}</div><small>${scope === 'blok' ? 'Skenario ' + x.n + ' \u00b7 ' : ''}${esc(it.by)} \u00b7 ${esc(fmt(it.ts))}</small>` +
+                    (done ? `<div class="sjx-a"><b>Jawaban:</b> ${linkify(it.a)}${it.aby ? ` <small>(${esc(it.aby)})</small>` : ''}${it.src ? `<br><small>Sumber: ${linkify(it.src)}</small>` : ''}</div>` : '') +
+                    `<div class="sjx-acts"><button type="button" data-xa="ans">${done ? 'Ubah jawaban' : '\u270d\ufe0f Jawab'}</button>${done ? '<button type="button" data-xa="reopen">Buka lagi</button>' : ''}${mine ? '<button type="button" class="danger" data-xa="delq">Hapus</button>' : ''}</div></div>`;
+            }).join('') : `<p class="hint" style="margin-top:12px">${flt === 'open' ? (pq.length ? 'Tidak ada pertanyaan yang tersisa. Semua sudah terjawab \ud83c\udf89' : 'Belum ada pertanyaan. Catat hal yang belum terjawab saat diskusi, lalu bawa ke pertemuan berikutnya.') : 'Tidak ada data untuk filter ini.'}</p>`;
+        }
+        const nl = $('sjx-nlist');
+        if (nl) nl.innerHTML = nt.length ? nt.map(x => {
+            const mine = x.by === me() || isAdmin();
+            return `<div class="sjx-item done" data-id="${esc(x.id)}"><small>Pertemuan ${esc(x.sesi || 1)} \u00b7 ${esc(x.by)} \u00b7 ${esc(fmt(x.ts))}</small><div class="sjx-note">${esc(x.text)}</div><div class="sjx-acts"><button type="button" data-xa="copynt">Salin</button>${mine ? '<button type="button" data-xa="editnt">Ubah</button><button type="button" class="danger" data-xa="delnt">Hapus</button>' : ''}</div></div>`;
+        }).join('') : '<p class="hint" style="margin-top:12px">Belum ada notulen tersimpan untuk skenario ini.</p>';
+    }
+
+    async function refresh() {
+        const c = ctx(); if (!c) return;
+        lastFetch = Date.now();
+        await window.__sjxLoad(c.b, scope === 'blok' ? c.b.skenario.map(s => s.n) : [c.n]);
+        lists();
+    }
+    async function copyText(t) {
+        try { await navigator.clipboard.writeText(t); return true; } catch (e) { }
+        try { const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (e) { return false; }
+    }
+    const fail = e => { console.error(e); alert('Gagal menyimpan. Cek koneksi lalu coba lagi.'); };
+
+    function wire(box) {
+        box.addEventListener('input', e => {
+            if (e.target.id === 'sjx-nt') { const c = ctx(); if (c) { try { localStorage.setItem(draftKey(c), e.target.value); } catch (x) { } } }
+        });
+        box.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'sjx-q') { e.preventDefault(); const b = box.querySelector('[data-xa="addq"]'); if (b) b.click(); } });
+        box.addEventListener('click', async e => {
+            const t = e.target.closest('button'); if (!t) return;
+            const c = ctx(); if (!c) return;
+            const trial = !!c.trial;
+            if (t.dataset.xv) { if (view !== t.dataset.xv) { stopVoice(); view = t.dataset.xv; shell(); refresh(); } return; }
+            if (t.dataset.xs) { scope = t.dataset.xs; lists(); refresh(); return; }
+            if (t.dataset.xf) { flt = t.dataset.xf; lists(); return; }
+            const a = t.dataset.xa; if (!a) return;
+            const row = t.closest('[data-id]'), id = row ? row.dataset.id : null, n = row && row.dataset.n ? +row.dataset.n : c.n;
+            const pk = kOf('pq', c.b, n), nk = kOf('nt', c.b, c.n);
+            try {
+                if (a === 'mic') { const el = $(t.dataset.t); if (el) startVoice(el, t); return; }
+                if (a === 'addq') {
+                    const inp = $('sjx-q'), q = inp.value.trim(); if (!q) { alert('Tulis pertanyaannya dulu.'); return; }
+                    stopVoice(); inp.value = '';
+                    await change(kOf('pq', c.b, c.n), trial, l => l.push({ id: newId(), q, by: me(), ts: Date.now(), status: 'open' }));
+                    flt = 'open'; lists(); return;
+                }
+                if (a === 'ans' && id) {
+                    const cur = (CACHE[pk] || []).find(x => x.id === id); if (!cur) return;
+                    const r = await askDialog('Jawab pertanyaan', [{ type: 'note', text: cur.q }, { id: 'a', type: 'textarea', label: 'Jawaban', value: cur.a || '' }, { id: 's', label: 'Sumber / referensi (opsional, boleh tempel link)', value: cur.src || '' }], 'Simpan jawaban');
+                    if (!r) return;
+                    if (!r.a.trim()) { alert('Jawaban masih kosong.'); return; }
+                    await change(pk, trial, l => { const x = l.find(i => i.id === id); if (x) { x.status = 'done'; x.a = r.a.trim(); x.src = r.s.trim(); x.aby = me(); x.upd = Date.now(); } });
+                    lists(); return;
+                }
+                if (a === 'reopen' && id) { await change(pk, trial, l => { const x = l.find(i => i.id === id); if (x) { x.status = 'open'; x.upd = Date.now(); } }); lists(); return; }
+                if (a === 'delq' && id) {
+                    if (!confirm('Hapus pertanyaan ini?')) return;
+                    await change(pk, trial, l => { const x = l.find(i => i.id === id); if (x) { x.del = true; x.upd = Date.now(); } }); lists(); return;
+                }
+                if (a === 'addnt') {
+                    const ta = $('sjx-nt'), text = ta.value.trim(); if (!text) { alert('Notulen masih kosong.'); return; }
+                    stopVoice();
+                    const sesi = +$('sjx-sesi').value || 1;
+                    await change(nk, trial, l => l.push({ id: newId(), by: me(), ts: Date.now(), sesi, text }));
+                    ta.value = ''; try { localStorage.removeItem(draftKey(c)); } catch (x) { }
+                    alert('Notulen tersimpan.'); lists(); return;
+                }
+                if (a === 'clearnt') { stopVoice(); const ta = $('sjx-nt'); if (ta && (!ta.value.trim() || confirm('Kosongkan isian notulen?'))) { ta.value = ''; try { localStorage.removeItem(draftKey(c)); } catch (x) { } } return; }
+                if (a === 'copyall') {
+                    const all = (CACHE[nk] || []).filter(x => !x.del).sort((p, q) => (p.ts || 0) - (q.ts || 0));
+                    if (!all.length) { alert('Belum ada notulen untuk disalin.'); return; }
+                    const txt = all.map(x => 'Pertemuan ' + (x.sesi || 1) + ' - ' + fmt(x.ts) + ' (' + x.by + ')\n' + x.text).join('\n\n');
+                    alert(await copyText(txt) ? 'Semua notulen disalin.' : 'Gagal menyalin. Salin manual dari daftar.'); return;
+                }
+                if (a === 'copynt' && id) { const x = (CACHE[nk] || []).find(i => i.id === id); if (x) alert(await copyText(x.text) ? 'Notulen disalin.' : 'Gagal menyalin.'); return; }
+                if (a === 'editnt' && id) {
+                    const x = (CACHE[nk] || []).find(i => i.id === id); if (!x) return;
+                    const r = await askDialog('Ubah notulen', [{ id: 't', type: 'textarea', label: 'Isi notulen', value: x.text }], 'Simpan');
+                    if (!r || !r.t.trim()) return;
+                    await change(nk, trial, l => { const y = l.find(i => i.id === id); if (y) { y.text = r.t.trim(); y.upd = Date.now(); } }); lists(); return;
+                }
+                if (a === 'delnt' && id) {
+                    if (!confirm('Hapus notulen ini?')) return;
+                    await change(nk, trial, l => { const y = l.find(i => i.id === id); if (y) { y.del = true; y.upd = Date.now(); } }); lists(); return;
+                }
+            } catch (err) { fail(err); }
+        });
+    }
+
+    // ---------- pemicu: pasang kotak di bawah form Seven Jump ----------
+    function tick() {
+        if (!currentUser) return;
+        const root = $('sj-root');
+        if (!root || root.offsetParent === null) { if (rec) stopVoice(); return; }
+        const c = ctx(); if (!c || !c.b || !c.b.skenario[c.n - 1]) return;
+        const s = c.k + '|' + (c.trial ? 't' : 'r');
+        let box = $('sjx-box');
+        if (!box || !root.nextElementSibling || root.nextElementSibling !== box) {
+            if (!box) { box = document.createElement('div'); box.id = 'sjx-box'; box.className = 'card sjx'; css(); wire(box); sig = ''; }
+            root.insertAdjacentElement('afterend', box);
+        }
+        if (sig !== s) { sig = s; stopVoice(); shell(); refresh(); }
+        else if (!document.hidden && Date.now() - lastFetch > 25000) refresh();
+    }
+    setInterval(tick, 1200);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) stopVoice(); });
+    window.addEventListener('pagehide', stopVoice);
 })();
