@@ -4064,7 +4064,8 @@ button.option-label.picked { border-color: var(--primary); background: var(--pri
 html { height: auto !important; }
 body { height: auto !important; min-height: 100%; position: static !important; overscroll-behavior-y: auto !important; touch-action: pan-y pinch-zoom; }
 @supports (overflow: clip) { html, body { overflow-x: clip; } }
-.main-content, .tab-content, .card { overflow: visible; min-width: 0; max-width: 100%; }
+.tab-content, .card { overflow: visible; min-width: 0; max-width: 100%; }
+.main-content { overflow: visible; min-width: 0; width: 100%; max-width: 1120px; margin-inline: auto; }
 img, video, canvas, iframe, svg { max-width: 100%; }
 .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; }
 .q-text, .option-label, .lb-title, .vw-t b { overflow-wrap: anywhere; word-break: normal; }
