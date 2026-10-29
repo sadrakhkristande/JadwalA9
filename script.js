@@ -1989,8 +1989,8 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
     // ======================= PERPUSTAKAAN =======================
     const CATS = [
         { id: 'materi', cat: 'materi', label: 'Materi', title: 'materi', lg: 'kuliah', mk: true, host: () => document.querySelector('#tab-materi .table-responsive') },
-        { id: 'lab', cat: 'laboratorium', label: 'Lab', title: 'nama', lg: 'skenario', host: () => $('lab-list') },
-        { id: 'skills', cat: 'skills_lab', label: 'Skills Lab', title: 'nama', lg: 'skenario', host: () => $('skills-list') },
+        { id: 'lab', cat: 'laboratorium', label: 'Lab', title: 'nama', lg: 'skenario', mk: true, mkLegacy: false, host: () => $('lab-list') },
+        { id: 'skills', cat: 'skills_lab', label: 'Skills Lab', title: 'nama', lg: 'skenario', mk: true, mkLegacy: false, host: () => $('skills-list') },
         { id: 'tut', cat: 'tutorial', label: 'Tutorial', title: 'nama', lg: 'skenario', host: () => $('tutorial-list') }
     ];
     const savedView = lsGet('a9_lb_view', 'grid');
@@ -1998,7 +1998,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
 
     // kategori: data baru memakai "kategori"; data lama memakai mata kuliah / blok / sumber sebagai cadangan
     const meta = (c, it) => {
-        const matkul = String(it.matkul || it[c.lg] || '').trim();
+        const matkul = String(it.matkul || (c.mkLegacy === false ? '' : it[c.lg]) || '').trim();
         let kategori = String(it.kategori || it.matkul || it[c.lg] || it.blok || it.sumber || '').trim();
         if (c.mk && kategori === matkul) kategori = '';   // Materi: mata kuliah dan kategori dipisah
         return {
@@ -2050,17 +2050,17 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         all.forEach(x => { if (x.kategori) set[x.kategori] = (set[x.kategori] || 0) + 1; else none++; });
         const names = Object.keys(set).sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
         if (f.kategori && f.kategori !== '__none' && !set[f.kategori]) f.kategori = '';
-        const mset = {}; if (c.mk) all.forEach(x => { if (x.matkul) mset[x.matkul] = (mset[x.matkul] || 0) + 1; });
+        const mset = {}; let mnone = 0; if (c.mk) all.forEach(x => { if (x.matkul) mset[x.matkul] = (mset[x.matkul] || 0) + 1; else mnone++; });
         const mnames = Object.keys(mset).sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
-        if (f.matkul && !mset[f.matkul]) f.matkul = '';
-        const sig = JSON.stringify([names, set, none, f.kategori, f.jenis, f.sort, mnames, mset, f.matkul]);
+        if (f.matkul && f.matkul !== '__none' && !mset[f.matkul]) f.matkul = '';
+        const sig = JSON.stringify([names, set, none, f.kategori, f.jenis, f.sort, mnames, mset, f.matkul, mnone]);
         if (sig !== c.lastSel) {
             c.lastSel = sig;
             const s = root.querySelector('[data-f="kategori"]');
             s.innerHTML = '<option value="">Semua kategori</option>' + names.map(n => `<option value="${esc(n)}">${esc(n)} (${set[n]})</option>`).join('') + (none && names.length ? `<option value="__none">(Tanpa kategori) (${none})</option>` : '');
             s.value = f.kategori;
             const ms = root.querySelector('[data-f="matkul"]');
-            if (ms) { ms.innerHTML = '<option value="">Semua mata kuliah</option>' + mnames.map(n => `<option value="${esc(n)}">${esc(n)} (${mset[n]})</option>`).join(''); ms.value = f.matkul; }
+            if (ms) { ms.innerHTML = '<option value="">Semua mata kuliah</option>' + mnames.map(n => `<option value="${esc(n)}">${esc(n)} (${mset[n]})</option>`).join('') + (mnone && mnames.length ? `<option value="__none">(Tanpa mata kuliah) (${mnone})</option>` : ''); ms.value = f.matkul; }
             root.querySelector('[data-f="jenis"]').value = f.jenis; root.querySelector('[data-f="sort"]').value = f.sort;
         }
         root.classList.toggle('lb-list', c.view === 'list');
@@ -2069,7 +2069,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         root.querySelector('[data-fav]').classList.toggle('active', f.fav);
 
         const q = lc(f.q);
-        const pass = x => (!f.matkul || x.matkul === f.matkul) && (!f.kategori || (f.kategori === '__none' ? !x.kategori : x.kategori === f.kategori))
+        const pass = x => (!f.matkul || (f.matkul === '__none' ? !x.matkul : x.matkul === f.matkul)) && (!f.kategori || (f.kategori === '__none' ? !x.kategori : x.kategori === f.kategori))
             && (!f.jenis || KIND[x.kind].g === f.jenis) && (!f.fav || fv.includes(x.key))
             && (!q || lc([x.title, x.kategori, x.blok, x.sumber, x.matkul].join(' ')).includes(q));
         const shown = all.filter(pass);
