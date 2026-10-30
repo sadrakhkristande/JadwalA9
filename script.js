@@ -254,9 +254,10 @@ function postUpdate(kind, judul, isi, opt) {
 }
 
 // Unggah ke Google Drive kelompok (lewat Apps Script). Mengembalikan tautan file, atau null bila gagal.
-const DRIVE_MAX = 20 * 1024 * 1024;
+const DRIVE_SMALL = 20 * 1024 * 1024;   // sampai sini: dikirim sekali lewat Apps Script
+const DRIVE_MAX = 200 * 1024 * 1024;    // di atas DRIVE_SMALL: dikirim per potongan langsung ke Google Drive
 async function uploadToDrive(file, path) {
-    if (file.size > DRIVE_MAX) { alert('File ' + file.name + ' lebih dari 20 MB. Unggah manual ke Drive lalu tempel tautannya.'); return null; }
+    if (file.size > DRIVE_MAX) { alert('File ' + file.name + ' lebih dari 200 MB. Unggah manual ke Drive lalu tempel tautannya.'); return null; }
     let key = '';
     try { key = localStorage.getItem('a9_drive_key') || ''; } catch (e) { }
     if (!key) {
@@ -267,6 +268,7 @@ async function uploadToDrive(file, path) {
         key = r.k.trim();
         try { localStorage.setItem('a9_drive_key', key); } catch (e) { }
     }
+    if (file.size > DRIVE_SMALL) return await uploadDriveBesar(file, path, key);
     const done = busy('Mengunggah ' + file.name + ' ke Drive...');
     try {
         const data = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = rej; fr.readAsDataURL(file); });
@@ -277,6 +279,57 @@ async function uploadToDrive(file, path) {
     } catch (e) {
         console.error(e); alert('Unggah ke Drive gagal: ' + (e.message || e)); return null;
     } finally { done(); }
+}
+
+// File besar (20-200 MB): Apps Script hanya menyiapkan sesi unggah, lalu browser mengirim file per potongan langsung ke Google
+function putChunk(url, blob, start, end, total) {
+    return new Promise((resolve, reject) => {
+        let tries = 0;
+        const retry = why => { if (++tries >= 4) reject(new Error('Gagal mengirim potongan file (' + why + ')')); else setTimeout(go, 1500 * tries); };
+        function go() {
+            const x = new XMLHttpRequest();
+            x.open('PUT', url);
+            x.setRequestHeader('Content-Range', 'bytes ' + start + '-' + end + '/' + total);
+            x.onload = () => {
+                if (x.status === 308) return resolve(null);                       // potongan diterima, lanjut
+                if (x.status >= 200 && x.status < 300) { let j = null; try { j = JSON.parse(x.responseText); } catch (e) { } return resolve(j); }
+                retry('HTTP ' + x.status + ' ' + String(x.responseText || '').slice(0, 120));
+            };
+            x.onerror = () => retry('jaringan putus atau diblokir');
+            x.send(blob);
+        }
+        go();
+    });
+}
+async function uploadDriveBesar(file, path, key) {
+    const wrap = document.getElementById('toast-wrap') || document.body;
+    const tt = document.createElement('div'); tt.className = 'toast'; wrap.appendChild(tt);
+    const say = p => { tt.textContent = 'Mengunggah ' + file.name + ' ke Drive... ' + p + '%'; };
+    say(0);
+    const call = async payload => {
+        const r = await fetch(DRIVE_UPLOAD_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ key }, payload)) });
+        const j = await r.json();
+        if (!j.ok) { if (/kunci/i.test(j.error || '')) { try { localStorage.removeItem('a9_drive_key'); } catch (e) { } } throw new Error(j.error || 'tidak diketahui'); }
+        return j;
+    };
+    try {
+        const mime = file.type || 'application/octet-stream';
+        const s0 = await call({ action: 'mulaiUnggah', name: file.name, mime, size: file.size, path, origin: location.origin });
+        const CH = 8 * 1024 * 1024;                       // kelipatan 256 KB, syarat Google
+        let off = 0, last = null;
+        while (off < file.size) {
+            const end = Math.min(off + CH, file.size);
+            last = await putChunk(s0.sessionUrl, file.slice(off, end), off, end - 1, file.size);
+            off = end; say(Math.floor(off * 100 / file.size));
+        }
+        if (!last || !last.id) throw new Error('Google tidak mengembalikan ID berkas');
+        const s1 = await call({ action: 'selesaiUnggah', id: last.id });
+        return s1.url;
+    } catch (e) {
+        console.error(e);
+        alert('Unggah file besar ke Drive gagal: ' + (e.message || e) + '\n\nKalau pesannya menyebut aksi tidak dikenal atau izin, pasang code.gs versi 7 dan deploy versi baru. Atau unggah manual ke Drive lalu tempel tautannya.');
+        return null;
+    } finally { tt.remove(); }
 }
 
 // Satu pintu unggah: Drive bila sudah diatur, selain itu Supabase Storage
