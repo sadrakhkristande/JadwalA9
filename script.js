@@ -4776,6 +4776,8 @@ ${trial ? '' : linkCard()}
   <button type="button" class="btn btn-outline" data-reload>${trial ? 'Muat ulang isian coba' : 'Muat ulang'}</button>
   <button type="button" class="btn btn-outline" data-exp="one">${trial ? 'Unduh .doc' : 'Buat Google Docs'} (skenario ${s.n})</button>
   <button type="button" class="btn btn-outline" data-exp="all">${trial ? 'Unduh .doc' : 'Buat Google Docs'} (semua skenario)</button>
+  <button type="button" class="btn btn-outline" data-cp="one">Salin ke Google Docs (skenario ${s.n})</button>
+  <button type="button" class="btn btn-outline" data-cp="all">Salin ke Google Docs (semua skenario)</button>
   <span class="sj-status ${st[1]}" id="sj-state">${esc(st[0])}</span></div>
 <div class="sj-docs sj-status" style="margin-top:8px;">${!trial && dl.length ? 'Dokumen terakhir: ' + dl.slice(0, 3).map(d => `<a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.name)}</a> <button type="button" class="btn btn-outline btn-sm" data-copy="${esc(d.url)}">Salin link</button>`).join(' \u00b7 ') : ''}</div>`;
     }
@@ -4865,6 +4867,7 @@ ${trial ? '' : linkCard()}
                 dropDraft(k); delete conflict[k];
                 fetchAll(true).then(render); return;
             }
+            if (t.dataset.cp) { copyToDocs(t.dataset.cp === 'one' ? [cur] : BLOK[curB].skenario.map(x => x.n)); return; }
             if (t.dataset.exp) { exportDocs(t.dataset.exp === 'one' ? [cur] : BLOK[curB].skenario.map(x => x.n)); return; }
             if (t.dataset.copy) { copyText(t.dataset.copy).then(ok => toast(ok ? 'Link disalin.' : 'Gagal menyalin. Pilih link lalu salin manual.')); return; }
             if (t.hasAttribute('data-share')) { if (lastDoc && navigator.share) navigator.share({ title: lastDoc.name, url: lastDoc.url }).catch(() => { }); return; }
@@ -4881,35 +4884,70 @@ ${trial ? '' : linkCard()}
         return (title ? esc(title) + ' \u2013 ' : '') + `<a href="${esc(url)}">${esc(url)}</a>`;
     }
 
+    // Format dokumen mengikuti contoh "Tutor Skenario":
+    //   judul tengah (SKENARIO n / topik / judul) -> teks kasus -> A. Klasifikasi kata sulit -> B. Rumusan Masalah -> LO -> dst.
     // tokens=true: gambar Drive ditandai [[IMG:id]] supaya Apps Script menyisipkannya ke Docs
     function docHtml(ns, tokens) {
         const b = BLOK[curB];
-        const ol = s => { const a = lines(s); return a.length ? '<ol>' + a.map(x => `<li>${esc(x)}</li>`).join('') + '</ol>' : '<p><em>(belum diisi)</em></p>'; };
+        const U = s => esc(String(s || '').toUpperCase());
+        const ctr = t => `<p style="text-align:center;margin:0"><b>${t}</b></p>`;
+        const sp = '<p style="margin:0">&nbsp;</p>';
+        const none = '<p style="margin:0 0 6pt 36pt"><em>(belum diisi)</em></p>';
+        const ol = a => a.length ? '<ol style="margin-top:0;margin-bottom:6pt">' + a.join('') + '</ol>' : none;
+        const nm = (by, t) => (by ? esc(by) + ' - ' : '') + t;
         const allSrc = [], seen = new Set();
         const body = ns.map(n => {
+            let li = 0; const L = () => String.fromCharCode(65 + li++) + '.';
+            const hd = t => `<p style="margin:12pt 0 4pt 0">${L()} ${t}</p>`;
             const s = b.skenario[n - 1], k = skey(b, n), v = cleanData(view(k)), meta = srv[k] && srv[k].ts ? 'Terakhir disimpan oleh ' + srv[k].by + ', ' + fmtTs(srv[k].ts) : '';
-            const tbl = v.istilah.length
-                ? '<table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;width:100%"><tr><th style="width:30%;background:#eef2ff">Istilah</th><th style="background:#eef2ff">Arti / penjelasan</th></tr>' + v.istilah.map(x => `<tr><td>${esc(x.t)}</td><td>${esc(x.d)}</td></tr>`).join('') + '</table>'
-                : '<p><em>(belum diisi)</em></p>';
+            const istilah = ol(v.istilah.map(x => `<li>${esc(x.t)}${x.d ? ' - ' + esc(x.d) : ''}</li>`));
+            const soal = ol(v.soal.map(x => `<li>${nm(x.by, esc(x.q) || '<em>(belum ditulis)</em>')}` +
+                (x.a.length ? '<ul style="margin-top:0">' + x.a.map(a => `<li>${nm(a.by, esc(a.t))}</li>`).join('') + '</ul>' : '') + '</li>'));
             const gam = v.gambar.map((g, i) => (tokens && g.id ? `<p>[[IMG:${g.id}]]</p>` : `<p><img src="${esc(imgSrc(g))}" width="440"></p>`) +
                 `<p style="font-size:9pt;color:#555"><em>Gambar ${i + 1}${g.cap ? '. ' + esc(g.cap) : ''}</em></p>`).join('');
-            const soalHtml = v.soal.length ? v.soal.map((x, i) => `<p><strong>Masalah ${i + 1}:</strong> ${esc(x.q) || '<em>(belum ditulis)</em>'}${x.by ? ` <em>(${esc(x.by)})</em>` : ''}</p>` +
-                (x.a.length ? `<p style="margin-left:18pt"><u>Jawaban sementara:</u></p><ol>${x.a.map(a => `<li>${esc(a.t)}${a.by ? ` <em>\u2014 ${esc(a.by)}</em>` : ''}</li>`).join('')}</ol>` : '<p style="margin-left:18pt"><em>(belum ada jawaban)</em></p>')).join('') : '<p><em>(belum diisi)</em></p>';
             const sl = lines(v.sumber);
             sl.forEach(x => { const kk = x.toLowerCase(); if (!seen.has(kk)) { seen.add(kk); allSrc.push(x); } });
-            return `<h1>Skenario ${s.n}: ${esc(s.judul)}</h1><p><em>${esc(s.topik)}</em></p>${meta ? `<p style="color:#666">${esc(meta)}</p>` : ''}` +
-                `<h2>Skenario</h2>${s.teks.map(p => `<p>${esc(p)}</p>`).join('')}` +
-                `<h2>1. Klarifikasi istilah</h2>${tbl}` +
-                `<h2>2\u20133. Rumusan masalah dan jawaban sementara</h2>${soalHtml}` +
-                `<h2>4. Learning Objectives (LO)</h2>${ol(v.lo)}` +
-                (v.belajar ? `<h2>5. Hasil belajar mandiri (pertemuan 2)</h2>${ol(v.belajar)}` : '') +
-                (window.__sjxDoc ? window.__sjxDoc(b, n) : '') +
-                (gam ? `<h2>Gambar pendukung</h2>${gam}` : '') +
-                (sl.length ? `<h2>Sumber / referensi</h2><ol>${sl.map(x => `<li>${srcLi(x)}</li>`).join('')}</ol>` : '');
+            return ctr('SKENARIO ' + s.n) + ctr(U(s.topik)) + sp + ctr(U(s.judul)) + sp +
+                s.teks.map(p => `<p>${esc(p)}</p>`).join('') +
+                hd('Klasifikasi kata sulit') + istilah +
+                hd('Rumusan Masalah') + soal +
+                hd('Learning Objectives (LO)') + ol(lines(v.lo).map(x => `<li>${esc(x)}</li>`)) +
+                (v.belajar ? hd('Hasil belajar mandiri (pertemuan 2)') + ol(lines(v.belajar).map(x => `<li>${esc(x)}</li>`)) : '') +
+                (window.__sjxDoc ? window.__sjxDoc(b, n, L) : '') +
+                (gam ? hd('Gambar pendukung') + gam : '') +
+                (sl.length ? hd('Sumber / referensi') + `<ol style="margin-top:0">${sl.map(x => `<li>${srcLi(x)}</li>`).join('')}</ol>` : '') +
+                (meta ? `<p style="color:#888;font-size:9pt">${esc(meta)} \u2013 ${esc(b.label)} \u2013 Kelompok A9</p>` : '');
         }).join('<br style="page-break-before:always">');
-        const gabungan = ns.length > 1 && allSrc.length ? `<br style="page-break-before:always"><h1>Daftar sumber (semua skenario)</h1><ol>${allSrc.map(x => `<li>${srcLi(x)}</li>`).join('')}</ol>` : '';
-        return `<html><head><meta charset="utf-8"><title>Seven Jump ${esc(b.label)}</title></head><body style="font-family:Arial,sans-serif;font-size:11pt">` +
-            `<p style="color:#666">Seven Jump \u2013 ${esc(b.label)} ${esc(b.judul)} \u2013 Kelompok A9</p>${body}${gabungan}</body></html>`;
+        const gabungan = ns.length > 1 && allSrc.length ? `<br style="page-break-before:always"><p style="text-align:center"><b>DAFTAR SUMBER (SEMUA SKENARIO)</b></p><ol>${allSrc.map(x => `<li>${srcLi(x)}</li>`).join('')}</ol>` : '';
+        return `<html><head><meta charset="utf-8"><title>Seven Jump ${esc(b.label)}</title></head><body style="font-family:Arial,sans-serif;font-size:11pt">${body}${gabungan}</body></html>`;
+    }
+
+    // Cara cadangan yang tidak butuh Apps Script: salin isi dokumen (berformat) lalu tempel di Google Docs baru
+    async function copyToDocs(ns) {
+        collect();
+        const html = docHtml(ns, false);
+        const inner = (html.match(/<body[^>]*>([\s\S]*)<\/body>/i) || [0, html])[1];
+        const bodyHtml = '<div style="font-family:Arial,sans-serif;font-size:11pt">' + inner + '</div>';
+        const plain = bodyHtml.replace(/<br[^>]*>/gi, '\n').replace(/<\/(p|li|tr|h\d)>/gi, '\n').replace(/<[^>]+>/g, '')
+            .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+        let ok = false;
+        try {
+            if (navigator.clipboard && window.ClipboardItem) {
+                await navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([bodyHtml], { type: 'text/html' }), 'text/plain': new Blob([plain], { type: 'text/plain' }) })]);
+                ok = true;
+            }
+        } catch (e) { console.error(e); }
+        if (!ok) {
+            try {
+                const d = document.createElement('div'); d.contentEditable = 'true'; d.style.cssText = 'position:fixed;left:-9999px;top:0;width:700px';
+                d.innerHTML = bodyHtml; document.body.appendChild(d);
+                const rg = document.createRange(); rg.selectNodeContents(d); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(rg);
+                ok = document.execCommand('copy'); sel.removeAllRanges(); d.remove();
+            } catch (e) { console.error(e); }
+        }
+        if (!ok) { downloadDoc('Seven Jump ' + BLOK[curB].label + ' - Kelompok A9', html); toast('Salin otomatis gagal, dokumen diunduh sebagai .doc.'); return; }
+        const w = window.open('https://docs.new', '_blank');
+        toast(w ? 'Isi disalin. Di Google Docs yang terbuka, tekan Tempel (Ctrl+V / tahan lalu Tempel).' : 'Isi disalin. Buka docs.new lalu Tempel.');
     }
 
     async function uploadDoc(name, html, path) {
@@ -4980,7 +5018,8 @@ ${trial ? '' : linkCard()}
                 const lc = document.querySelector('#sj-root .sj-link'); if (lc && lc.scrollIntoView) lc.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
-            if (!confirm('Mau unduh sebagai file .doc saja? Nanti bisa diunggah ke Drive dan dibuka dengan Google Dokumen.')) return;
+            if (confirm('Pembuatan otomatis di Drive gagal.\n\nOK = unduh file .doc\nBatal = tutup (lalu pakai tombol "Salin ke Google Docs")')) { downloadDoc(name, docHtml(ns, false)); }
+            return;
         } else {
             alert('Portal belum tersambung ke Google Drive (DRIVE_UPLOAD_URL kosong). File .doc akan diunduh. Unggah ke Drive, klik kanan, lalu Buka dengan Google Dokumen.');
         }
@@ -5356,7 +5395,7 @@ html body.a9soft #login-page h1::after, html body.a9soft #login-page h2::after, 
     function openPicker(btn) {
         if (panel) { closePicker(); return; }
         const cur = stored();
-        const row = (id, nama, ket, sw) => `<button type="button" data-th="${id}" class="${cur === id ? 'on' : ''}"><span class="sw" style="background:${sw[0]}"><i style="background:${sw[1]}"></i></span><span><b>${nama}</b><small>${ket}</small></span>${cur === id ? '<span class="ck">âœ“</span>' : ''}</button>`;
+        const row = (id, nama, ket, sw) => `<button type="button" data-th="${id}" class="${cur === id ? 'on' : ''}"><span class="sw" style="background:${sw[0]}"><i style="background:${sw[1]}"></i></span><span><b>${nama}</b><small>${ket}</small></span>${cur === id ? '<span class="ck">Ã¢Å“â€œ</span>' : ''}</button>`;
         panel = document.createElement('div'); panel.className = 'a9-thm'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Pilih tema');
         panel.innerHTML = '<h4>Pilih tema tampilan</h4>' + THEMES.map(t => row(t.id, t.nama, t.ket, t.sw)).join('') +
             row('auto', 'Otomatis', 'Ikut mode terang / gelap perangkat', ['#f4f6f4', '#2f3a40']);
@@ -5669,30 +5708,37 @@ html body.a9soft #login-page h1::after, html body.a9soft #login-page h2::after, 
     };
 
     // ---------- untuk dokumen Word / Google Docs ----------
-    window.__sjxDoc = function (b, n) {
+    window.__sjxDoc = function (b, n, L) {
+        L = typeof L === 'function' ? L : (() => '');
+        const hd = t => `<p style="margin:12pt 0 4pt 0">${L()} ${t}</p>`;
         const pq = (CACHE[kOf('pq', b, n)] || []).filter(x => !x.del).sort((p, q) => (p.ts || 0) - (q.ts || 0));
         const nt = (CACHE[kOf('nt', b, n)] || []).filter(x => !x.del).sort((p, q) => (p.ts || 0) - (q.ts || 0));
         let h = '';
         if (pq.length) {
             const open = pq.filter(x => x.status !== 'done'), done = pq.filter(x => x.status === 'done');
-            h += '<h2>Pertanyaan belum terjawab</h2>' + (open.length
-                ? '<ol>' + open.map(x => `<li>${esc(x.q)}${x.by ? ` <em>(${esc(x.by)})</em>` : ''}</li>`).join('') + '</ol>'
-                : '<p><em>(semua pertanyaan sudah terjawab)</em></p>');
-            if (done.length) h += '<h3>Pertanyaan yang sudah terjawab</h3><ol>' + done.map(x => `<li><strong>${esc(x.q)}</strong><br>Jawaban: ${linkify(x.a)}${x.aby ? ` <em>(${esc(x.aby)})</em>` : ''}${x.src ? `<br><em>Sumber: ${linkify(x.src)}</em>` : ''}</li>`).join('') + '</ol>';
+            h += hd('Pertanyaan belum terjawab') + (open.length
+                ? '<ol style="margin-top:0">' + open.map(x => `<li>${x.by ? esc(x.by) + ' - ' : ''}${esc(x.q)}</li>`).join('') + '</ol>'
+                : '<p style="margin:0 0 6pt 36pt"><em>(semua pertanyaan sudah terjawab)</em></p>');
+            if (done.length) h += '<p style="margin:6pt 0 2pt 0">Sudah terjawab:</p><ol style="margin-top:0">' + done.map(x => `<li>${x.by ? esc(x.by) + ' - ' : ''}${esc(x.q)}<ul style="margin-top:0"><li>${x.aby ? esc(x.aby) + ' - ' : ''}${linkify(x.a)}${x.src ? ` <em>(Sumber: ${linkify(x.src)})</em>` : ''}</li></ul></li>`).join('') + '</ol>';
         }
         if (nt.length) {
-            h += '<h2>Notulen diskusi</h2>' + nt.map(x => `<h3>Pertemuan ${esc(x.sesi || 1)} \u2013 ${esc(fmt(x.ts))}</h3><p>${esc(x.text).replace(/\n/g, '<br>')}</p><p style="font-size:9pt;color:#666"><em>Dicatat oleh ${esc(x.by)}</em></p>`).join('');
+            h += hd('Notulen diskusi') + nt.map(x => `<p style="margin:6pt 0 2pt 0"><b>Pertemuan ${esc(x.sesi || 1)}</b> \u2013 ${esc(fmt(x.ts))}</p><p style="margin:0">${esc(x.text).replace(/\n/g, '<br>')}</p><p style="font-size:9pt;color:#666;margin:0 0 6pt 0"><em>Dicatat oleh ${esc(x.by)}</em></p>`).join('');
         }
         return h;
     };
 
     // ---------- suara -> teks ----------
+    const UA = navigator.userAgent || '';
+    const IS_ANDROID = /Android/i.test(UA);
+    const IN_APP = /FBAN|FBAV|Instagram|Line\/|MicroMessenger|WhatsApp|Telegram|; wv\)/i.test(UA);
+    let recTimer = null, recFast = 0, recAt = 0;
+    const say = t => { const s = $('sjx-vs'); if (s) s.textContent = t; };
     function stopVoice() {
-        recWant = false;
-        if (rec) { try { rec.onend = null; rec.onresult = null; rec.onerror = null; rec.stop(); } catch (e) { } rec = null; }
+        recWant = false; clearTimeout(recTimer); recTimer = null;
+        if (rec) { try { rec.onstart = null; rec.onend = null; rec.onresult = null; rec.onerror = null; rec.stop(); } catch (e) { } rec = null; }
         if (recSync) { recSync.el.removeEventListener('input', recSync.fn); recSync = null; }
         document.querySelectorAll('.sjx-mic.rec').forEach(b => b.classList.remove('rec'));
-        const s = $('sjx-vs'); if (s) s.textContent = '';
+        say('');
     }
     const addText = (a, t) => {
         t = t.replace(/\s*\b(?:baris baru|paragraf baru)\b\s*/gi, '\n');
@@ -5702,12 +5748,22 @@ html body.a9soft #login-page h1::after, html body.a9soft #login-page h2::after, 
     };
     function startVoice(el, btn) {
         if (btn.classList.contains('rec')) { stopVoice(); return; }
-        if (!SR) { alert('Browser ini belum mendukung voice typing. Pakai Chrome, Edge, atau Safari terbaru. Alternatif: tekan ikon mikrofon di keyboard HP.'); return; }
+        if (!SR) {
+            alert(IN_APP
+                ? 'Voice typing tidak jalan di dalam aplikasi lain (WhatsApp/Instagram/dll). Buka portal lewat Chrome atau Safari.'
+                : 'Browser ini belum mendukung voice typing (Firefox belum bisa). Pakai Chrome, Edge, atau Safari terbaru. Alternatif: tekan ikon mikrofon di keyboard HP.');
+            return;
+        }
+        if (window.isSecureContext === false) { alert('Voice typing hanya jalan di alamat https://. Buka portal lewat alamat https.'); return; }
         stopVoice();
         let committed = el.value;
-        const r = new SR(); rec = r; recWant = true;
-        r.lang = 'id-ID'; r.continuous = true; r.interimResults = true;
+        const r = new SR(); rec = r; recWant = true; recFast = 0; recAt = Date.now();
+        r.lang = 'id-ID';
+        r.continuous = !IS_ANDROID;          // Chrome Android sering menggandakan teks bila continuous; kita sambung otomatis saja
+        r.interimResults = true; r.maxAlternatives = 1;
+        r.onstart = () => { recAt = Date.now(); };
         r.onresult = ev => {
+            recFast = 0;
             let interim = '';
             for (let i = ev.resultIndex; i < ev.results.length; i++) {
                 const res = ev.results[i], t = res[0].transcript;
@@ -5716,20 +5772,28 @@ html body.a9soft #login-page h1::after, html body.a9soft #login-page h2::after, 
             el.value = interim ? addText(committed, interim) : committed;
             el.scrollTop = el.scrollHeight;
             el.dispatchEvent(new Event('input', { bubbles: true }));
+            say('\ud83d\udd34 Merekam... bicara saja. Ucapkan "baris baru" untuk pindah baris. Ketuk mikrofon lagi untuk berhenti.');
         };
         r.onerror = ev => {
-            if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { stopVoice(); alert('Izin mikrofon ditolak. Aktifkan lewat ikon gembok di address bar, lalu coba lagi.'); }
-            else if (ev.error === 'network') { stopVoice(); alert('Voice typing butuh internet. Cek koneksi lalu coba lagi.'); }
-            else if (ev.error === 'audio-capture') { stopVoice(); alert('Mikrofon tidak terdeteksi.'); }
+            const e = ev && ev.error;
+            if (e === 'not-allowed' || e === 'service-not-allowed') { stopVoice(); alert('Izin mikrofon ditolak. Aktifkan lewat ikon gembok di address bar (Pengaturan situs > Mikrofon > Izinkan), lalu coba lagi. Di iPhone: Pengaturan > Safari > Mikrofon, dan pastikan Dikte aktif.'); }
+            else if (e === 'network') { stopVoice(); alert('Voice typing butuh internet. Cek koneksi lalu coba lagi.'); }
+            else if (e === 'audio-capture') { stopVoice(); alert('Mikrofon tidak terdeteksi atau sedang dipakai aplikasi lain.'); }
+            else if (e === 'language-not-supported') { if (r.lang === 'id-ID') r.lang = 'id'; else { stopVoice(); alert('Bahasa Indonesia belum didukung di perangkat ini.'); } }
+            else if (e === 'no-speech') say('\ud83d\udd34 Belum ada suara terdengar. Dekatkan mikrofon dan bicara lagi.');
+            else if (e && e !== 'aborted') { stopVoice(); alert('Voice typing gagal (' + e + '). Coba muat ulang halaman atau pakai ikon mikrofon di keyboard.'); }
         };
         r.onend = () => {   // browser menghentikan sendiri saat hening: sambung lagi selama masih aktif
-            if (recWant && rec === r) { try { r.start(); } catch (e) { stopVoice(); } } else if (rec === r) stopVoice();
+            if (!(recWant && rec === r)) { if (rec === r) stopVoice(); return; }
+            recFast = (Date.now() - recAt < 800) ? recFast + 1 : 0;
+            if (recFast >= 5) { stopVoice(); alert('Mikrofon terus berhenti sendiri. Cek izin mikrofon dan koneksi internet, lalu coba lagi.'); return; }
+            recTimer = setTimeout(() => { if (recWant && rec === r) { recAt = Date.now(); try { r.start(); } catch (e) { stopVoice(); } } }, 250);
         };
         try { r.start(); } catch (e) { rec = null; recWant = false; alert('Mikrofon tidak bisa dimulai. Coba lagi.'); return; }
         const fn = ev => { if (ev.isTrusted) committed = el.value; };   // hanya ketikan manual (bukan event dari voice typing)
         el.addEventListener('input', fn); recSync = { el, fn };
         btn.classList.add('rec');
-        const s = $('sjx-vs'); if (s) s.textContent = '\ud83d\udd34 Merekam... bicara saja. Ucapkan "baris baru" untuk pindah baris. Ketuk mikrofon lagi untuk berhenti.';
+        say('\ud83d\udd34 Menyiapkan mikrofon... izinkan mikrofon bila diminta, lalu bicara. Ketuk mikrofon lagi untuk berhenti.');
     }
 
     // ---------- tampilan ----------
@@ -5901,7 +5965,7 @@ ${view === 'pq' ? pqPane : ntPane}`;
         const c = ctx(); if (!c || !c.b || !c.b.skenario[c.n - 1]) return;
         const s = c.k + '|' + (c.trial ? 't' : 'r');
         let box = $('sjx-box');
-        if (!box || !root.nextElementSibling || root.nextElementSibling !== box) {
+        if (!box || !box.isConnected || box.parentNode !== root.parentNode) {
             if (!box) { box = document.createElement('div'); box.id = 'sjx-box'; box.className = 'card sjx'; css(); wire(box); sig = ''; }
             root.insertAdjacentElement('afterend', box);
         }
