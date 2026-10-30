@@ -24,7 +24,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_-NTQ0VL2xQmIYJ_ieREXkg_WUcU3L0t";
 
 // URL Web App Google Apps Script milik kelompok.a9.2026@gmail.com (lihat drive-uploader.gs dan langkah pasang).
 // Kalau masih kosong, unggahan memakai penyimpanan Supabase seperti sebelumnya.
-const DRIVE_UPLOAD_URL = 'https://script.google.com/macros/s/AKfycbzPkmSZMPQsFq7zbkgLH1bDi6rWCTX5Mkr54v8--6NzFCHIpgQRntYHdZb1TUYxs5iA/exec';
+const DRIVE_UPLOAD_URL = 'https://script.google.com/macros/s/AKfycbxkCOOQGt9BqzMvBFeewZqoTlOngiUZUN4Jq-bOxSHH3NZPAEcByR7QYpH7eeCtKHai/exec';
 
 let supabaseClient = null;
 try {
@@ -1110,7 +1110,7 @@ body { font-size: 16px; }
     const GROUPS = [
         { id: 'home', ico: '\ud83c\udfe0', label: 'Beranda', tabs: [['home', 'Beranda']] },
         { id: 'kuliah', ico: '\ud83d\udcc5', label: 'Kuliah', tabs: [['jadwal', 'Jadwal'], ['tugas', 'Tugas'], ['materi', 'Materi'], ['alat', 'Alat Belajar']] },
-        { id: 'praktikum', ico: '\ud83d\udd2c', label: 'Praktikum', tabs: [['lab', 'Lab'], ['skills', 'Skills Lab'], ['tutorial', 'Tutorial']] },
+        { id: 'praktikum', ico: '\ud83d\udd2c', label: 'Praktikum', tabs: [['lab', 'Lab'], ['skills', 'Skills Lab'], ['checklist', 'Checklist'], ['tutorial', 'Tutorial']] },
         { id: 'latihan', ico: '\u270d\ufe0f', label: 'Latihan', tabs: () => [['soal', 'Soal Isian'], ['cbt', 'Simulasi CBT'], isAdmin() ? ['progres-admin', 'Progres Mahasiswa'] : ['progres', 'Progres Saya'], ['game', 'Game Santai']] },
         { id: 'bantuan', ico: '\ud83d\udcac', label: 'Bantuan', tabs: () => [['panduan', 'Panduan'], isAdmin() ? ['laporan-admin', 'Laporan Masuk'] : ['lapor', 'Lapor Masalah']] }
     ];
@@ -3219,29 +3219,121 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
     window.renderAll();
 
     // ======================== TEMPLATE PENGUMUMAN ========================
-    const JENIS = ['UB (Ujian Blok)', 'Responsi', 'Praktikum', 'Skills Lab', 'OSCE', 'Tutorial', 'Kuis / Tes', 'Kuliah / Kelas'];
     const opt = (s, k) => s ? `\n${k}${s}` : '';
+    // Setiap template: kolom khusus per jenis, hasilnya berupa daftar rinci (apa, kapan, di mana, bawa apa).
+    const rowsOf = r => r.filter(x => x[1]).map(x => `\u2022 ${x[0]}: ${x[1]}`).join('\n');
+    const fin = (f, t, o) => {
+        const s = t === 'santai';
+        return {
+            judul: o.judul, until: o.until || '',
+            isi: [s ? o.santai : o.resmi, rowsOf(o.rows || []), f.cat ? 'Catatan: ' + f.cat : '',
+                s ? (o.tutupS || 'Semangat, A9! \ud83d\udd25') : (o.tutupR || 'Mohon hadir tepat waktu dan mempersiapkan diri dengan baik. Terima kasih.')].filter(Boolean).join('\n')
+        };
+    };
+    const wkt = (tgl, jam) => tglIndo(tgl) + (jam ? ', pukul ' + jam : '');
+    const SEMS = ['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'];
     const TPL = {
         tugas: {
             label: '\ud83d\udcdd Tugas baru', kind: 'tugas',
-            fields: [['mk', 'Mata kuliah / blok'], ['nama', 'Nama tugas'], ['dl', 'Deadline', 'date'], ['cara', 'Cara mengumpulkan (opsional)'], ['cat', 'Catatan (opsional)']],
+            fields: [['mk', 'Mata kuliah / blok'], ['nama', 'Judul tugas'], ['bentuk', 'Bentuk tugas', 'select', ['Individu', 'Kelompok']], ['dl', 'Batas pengumpulan', 'date'], ['jamdl', 'Jam batas (contoh 23.59)'], ['format', 'Format berkas (contoh PDF / Word)'], ['cara', 'Dikumpulkan lewat (contoh portal, e-mail, grup)'], ['ketentuan', 'Ketentuan (halaman, font, isi wajib)'], ['cat', 'Catatan (opsional)']],
             need: ['mk', 'nama', 'dl'],
-            build: (f, t) => ({
+            build: (f, t) => fin(f, t, {
                 judul: `\ud83d\udcdd Tugas ${f.mk}: ${f.nama}`, until: f.dl,
-                isi: t === 'santai'
-                    ? `Halo A9! \ud83d\udc4b Ada tugas ${f.mk}: "${f.nama}". Deadline ${tglIndo(f.dl)}.${f.cara ? ' Kumpulkan lewat ' + f.cara + '.' : ''}${opt(f.cat, 'Catatan: ')}\nJangan ditunda ya, semangat! \ud83d\udcaa`
-                    : `Diberitahukan kepada seluruh mahasiswa A9 bahwa terdapat tugas ${f.mk} berjudul "${f.nama}". Batas pengumpulan: ${tglIndo(f.dl)}.${f.cara ? ' Pengumpulan melalui ' + f.cara + '.' : ''}${opt(f.cat, 'Catatan: ')}\nMohon dikerjakan dan dikumpulkan tepat waktu. Terima kasih.`
+                resmi: `Diberitahukan kepada seluruh mahasiswa A9 bahwa terdapat tugas ${f.mk} dengan rincian berikut:`,
+                santai: `Halo A9! \ud83d\udc4b Ada tugas ${f.mk}, ini rinciannya ya:`,
+                rows: [['Judul tugas', f.nama], ['Bentuk', f.bentuk], ['Batas pengumpulan', f.dl ? wkt(f.dl, f.jamdl) : ''], ['Format berkas', f.format], ['Dikumpulkan lewat', f.cara], ['Ketentuan', f.ketentuan]],
+                tutupR: 'Mohon dikerjakan dan dikumpulkan tepat waktu. Terima kasih.', tutupS: 'Jangan ditunda ya, semangat! \ud83d\udcaa'
             })
         },
-        ujian: {
-            label: '\ud83d\udccc UB / Responsi / Praktikum / Ujian', kind: 'ujian',
-            fields: [['jenis', 'Jenis kegiatan', 'select', JENIS], ['materi', 'Materi / cakupan (opsional)'], ['tgl', 'Tanggal', 'date'], ['jam', 'Jam (contoh 07.50-09.30)'], ['tempat', 'Tempat (opsional)'], ['bawa', 'Yang perlu dibawa (opsional)'], ['cat', 'Catatan (opsional)']],
-            need: ['jenis', 'tgl'],
-            build: (f, t) => ({
-                judul: `\ud83d\udccc ${f.jenis} \u00b7 ${tglIndo(f.tgl)}`, until: f.tgl,
-                isi: t === 'santai'
-                    ? `Heads up A9! \ud83d\udce3 ${f.jenis} pada ${tglIndo(f.tgl)}${f.jam ? ', jam ' + f.jam : ''}${f.tempat ? ', di ' + f.tempat : ''}.${opt(f.materi, 'Materi: ')}${opt(f.bawa, 'Bawa: ')}${opt(f.cat, 'Catatan: ')}\nYuk siap-siap dari sekarang, kamu pasti bisa! \ud83d\udd25`
-                    : `${f.jenis} akan dilaksanakan pada ${tglIndo(f.tgl)}${f.jam ? ', pukul ' + f.jam : ''}${f.tempat ? ', bertempat di ' + f.tempat : ''}.${opt(f.materi, 'Materi: ')}${opt(f.bawa, 'Yang perlu dibawa/disiapkan: ')}${opt(f.cat, 'Catatan: ')}\nMohon hadir tepat waktu dan mempersiapkan diri dengan baik.`
+        ub: {
+            label: '\ud83d\udccc UB (Ujian Blok)', kind: 'ujian',
+            fields: [['blok', 'Blok (contoh Blok 1.3)'], ['tgl', 'Tanggal', 'date'], ['jam', 'Jam (contoh 08.00-10.00)'], ['durasi', 'Durasi (opsional)'], ['bentuk', 'Bentuk ujian', 'select', ['', 'CBT di komputer', 'Tertulis', 'Online']], ['jml', 'Jumlah soal (opsional)'], ['cakupan', 'Cakupan materi'], ['tempat', 'Tempat / ruang'], ['bawa', 'Yang perlu dibawa'], ['cat', 'Catatan (opsional)']],
+            need: ['blok', 'tgl'],
+            build: (f, t) => fin(f, t, {
+                judul: `\ud83d\udccc UB ${f.blok} \u00b7 ${tglIndo(f.tgl)}`, until: f.tgl,
+                resmi: `Ujian Blok (UB) ${f.blok} akan dilaksanakan dengan rincian berikut:`,
+                santai: `Heads up A9! \ud83d\udce3 UB ${f.blok} sudah dekat, ini rinciannya:`,
+                rows: [['Hari/tanggal', f.tgl ? wkt(f.tgl, f.jam) : ''], ['Durasi', f.durasi], ['Bentuk ujian', f.bentuk], ['Jumlah soal', f.jml], ['Cakupan materi', f.cakupan], ['Tempat', f.tempat], ['Yang dibawa', f.bawa]],
+                tutupS: 'Yuk siap-siap dari sekarang, kamu pasti bisa! \ud83d\udd25'
+            })
+        },
+        responsi: {
+            label: '\ud83d\udccc Responsi', kind: 'ujian',
+            fields: [['mk', 'Mata kuliah / blok'], ['tgl', 'Tanggal', 'date'], ['jam', 'Jam (contoh 13.00-15.00)'], ['tempat', 'Tempat / ruang / link'], ['bentuk', 'Bentuk', 'select', ['', 'Tanya jawab', 'Pembahasan soal', 'Tertulis', 'CBT']], ['cakupan', 'Materi yang dibahas'], ['bawa', 'Yang perlu disiapkan'], ['cat', 'Catatan (opsional)']],
+            need: ['mk', 'tgl'],
+            build: (f, t) => fin(f, t, {
+                judul: `\ud83d\udccc Responsi ${f.mk} \u00b7 ${tglIndo(f.tgl)}`, until: f.tgl,
+                resmi: `Responsi ${f.mk} akan dilaksanakan dengan rincian berikut:`,
+                santai: `Info responsi ${f.mk}, A9! \ud83d\udce3`,
+                rows: [['Hari/tanggal', f.tgl ? wkt(f.tgl, f.jam) : ''], ['Tempat', f.tempat], ['Bentuk', f.bentuk], ['Materi', f.cakupan], ['Disiapkan', f.bawa]]
+            })
+        },
+        praktikum: {
+            label: '\ud83d\udd2c Praktikum / Lab', kind: 'ujian',
+            fields: [['nama', 'Nama praktikum / topik'], ['mk', 'Mata kuliah / blok'], ['tgl', 'Tanggal', 'date'], ['jam', 'Jam'], ['tempat', 'Lab / ruang'], ['kelompok', 'Kelompok / sesi'], ['persiapan', 'Yang dipelajari / pretest'], ['bawa', 'Yang dibawa (jas lab, alat, dll)'], ['cat', 'Catatan (opsional)']],
+            need: ['nama', 'tgl'],
+            build: (f, t) => fin(f, t, {
+                judul: `\ud83d\udd2c Praktikum ${f.nama} \u00b7 ${tglIndo(f.tgl)}`, until: f.tgl,
+                resmi: `Praktikum ${f.nama}${f.mk ? ' (' + f.mk + ')' : ''} akan dilaksanakan dengan rincian berikut:`,
+                santai: `Praktikum ${f.nama} segera datang, A9! \ud83d\udd2c Ini infonya:`,
+                rows: [['Hari/tanggal', f.tgl ? wkt(f.tgl, f.jam) : ''], ['Tempat', f.tempat], ['Kelompok / sesi', f.kelompok], ['Dipelajari sebelumnya', f.persiapan], ['Yang dibawa', f.bawa]]
+            })
+        },
+        skills: {
+            label: '\ud83e\ude7a Skills Lab', kind: 'ujian',
+            fields: [['nama', 'Nama Skills Lab (contoh Cuci tangan medis)'], ['tgl', 'Tanggal', 'date'], ['jam', 'Jam'], ['tempat', 'Tempat / ruang'], ['kelompok', 'Kelompok / sesi'], ['persiapan', 'Yang dipelajari sebelumnya (modul, video)'], ['bawa', 'Alat / bahan yang dibawa'], ['pakaian', 'Pakaian (contoh jas lab, sepatu tertutup)'], ['cat', 'Catatan (opsional)']],
+            need: ['nama', 'tgl'],
+            build: (f, t) => fin(f, t, {
+                judul: `\ud83e\ude7a Skills Lab ${f.nama} \u00b7 ${tglIndo(f.tgl)}`, until: f.tgl,
+                resmi: `Skills Lab "${f.nama}" akan dilaksanakan dengan rincian berikut:`,
+                santai: `Skills Lab "${f.nama}" segera datang, A9! \ud83e\ude7a Ini infonya:`,
+                rows: [['Hari/tanggal', f.tgl ? wkt(f.tgl, f.jam) : ''], ['Tempat', f.tempat], ['Kelompok / sesi', f.kelompok], ['Dipelajari sebelumnya', f.persiapan], ['Alat / bahan', f.bawa], ['Pakaian', f.pakaian], ['Latihan mandiri', 'pakai checklist di menu Praktikum \u203a Checklist']],
+                tutupS: 'Latihan dulu pakai checklist ya, supaya lancar! \ud83d\udcaa'
+            })
+        },
+        osce: {
+            label: '\ud83c\udfaf OSCE', kind: 'ujian',
+            fields: [['nama', 'Nama / semester OSCE (contoh OSCE Semester 1)'], ['tgl', 'Tanggal', 'date'], ['jam', 'Jam mulai'], ['tempat', 'Tempat'], ['kelompok', 'Pembagian kelompok / giliran'], ['stase', 'Jumlah stase'], ['durasi', 'Waktu per stase (contoh 10 menit)'], ['materi', 'Skills yang diujikan'], ['bawa', 'Yang dibawa'], ['pakaian', 'Pakaian'], ['cat', 'Catatan (opsional)']],
+            need: ['tgl'],
+            build: (f, t) => fin(f, t, {
+                judul: `\ud83c\udfaf ${f.nama || 'OSCE'} \u00b7 ${tglIndo(f.tgl)}`, until: f.tgl,
+                resmi: `${f.nama || 'OSCE'} akan dilaksanakan dengan rincian berikut:`,
+                santai: `Info ${f.nama || 'OSCE'}, A9! \ud83c\udfaf Catat ya:`,
+                rows: [['Hari/tanggal', f.tgl ? wkt(f.tgl, f.jam) : ''], ['Tempat', f.tempat], ['Kelompok / giliran', f.kelompok], ['Jumlah stase', f.stase], ['Waktu per stase', f.durasi], ['Skills yang diujikan', f.materi], ['Yang dibawa', f.bawa], ['Pakaian', f.pakaian]],
+                tutupS: 'Latihan lewat checklist Skills Lab, kamu pasti bisa! \ud83d\udd25'
+            })
+        },
+        tutorial: {
+            label: '\ud83d\udc65 Tutorial', kind: 'ujian',
+            fields: [['blok', 'Blok (contoh Blok 1.3)'], ['skenario', 'Skenario (nomor / judul)'], ['pertemuan', 'Pertemuan', 'select', ['', 'Pertemuan 1 (Seven Jump langkah 1-5)', 'Pertemuan 2 (langkah 7: laporan belajar mandiri)']], ['tgl', 'Tanggal', 'date'], ['jam', 'Jam'], ['ruang', 'Ruang tutorial'], ['tutor', 'Tutor'], ['persiapan', 'Yang disiapkan (contoh baca skenario, bawa LO)'], ['cat', 'Catatan (opsional)']],
+            need: ['blok', 'skenario', 'tgl'],
+            build: (f, t) => fin(f, t, {
+                judul: `\ud83d\udc65 Tutorial ${f.blok}: ${f.skenario} \u00b7 ${tglIndo(f.tgl)}`, until: f.tgl,
+                resmi: `Tutorial ${f.blok}, skenario "${f.skenario}", akan dilaksanakan dengan rincian berikut:`,
+                santai: `Tutorial ${f.blok} segera berlangsung, A9! \ud83d\udc65`,
+                rows: [['Skenario', f.skenario], ['Pertemuan', f.pertemuan], ['Hari/tanggal', f.tgl ? wkt(f.tgl, f.jam) : ''], ['Ruang', f.ruang], ['Tutor', f.tutor], ['Disiapkan', f.persiapan]]
+            })
+        },
+        kuis: {
+            label: '\u270d\ufe0f Kuis / Pretest / Tes', kind: 'ujian',
+            fields: [['jenis', 'Jenis', 'select', ['Kuis', 'Pretest', 'Posttest', 'Tes']], ['mk', 'Mata kuliah / blok'], ['tgl', 'Tanggal', 'date'], ['jam', 'Jam'], ['durasi', 'Durasi (opsional)'], ['cakupan', 'Cakupan materi'], ['tempat', 'Tempat / link'], ['cat', 'Catatan (opsional)']],
+            need: ['jenis', 'mk', 'tgl'],
+            build: (f, t) => fin(f, t, {
+                judul: `\u270d\ufe0f ${f.jenis} ${f.mk} \u00b7 ${tglIndo(f.tgl)}`, until: f.tgl,
+                resmi: `${f.jenis} ${f.mk} akan dilaksanakan dengan rincian berikut:`,
+                santai: `${f.jenis} ${f.mk} segera datang, A9! \u270d\ufe0f`,
+                rows: [['Hari/tanggal', f.tgl ? wkt(f.tgl, f.jam) : ''], ['Durasi', f.durasi], ['Cakupan materi', f.cakupan], ['Tempat / link', f.tempat]]
+            })
+        },
+        kuliah: {
+            label: '\ud83c\udf93 Kuliah pengganti / tambahan / online', kind: 'jadwal',
+            fields: [['jenis', 'Jenis', 'select', ['Kuliah pengganti', 'Kuliah tambahan', 'Kuliah online', 'Pleno']], ['mk', 'Mata kuliah / blok'], ['topik', 'Topik'], ['dosen', 'Dosen / pengampu'], ['tgl', 'Tanggal', 'date'], ['jam', 'Jam'], ['tempat', 'Ruang / link kuliah online'], ['cat', 'Catatan (opsional)']],
+            need: ['jenis', 'mk', 'tgl'],
+            build: (f, t) => fin(f, t, {
+                judul: `\ud83c\udf93 ${f.jenis} ${f.mk} \u00b7 ${tglIndo(f.tgl)}`, until: f.tgl,
+                resmi: `Diinformasikan bahwa akan ada ${f.jenis.toLowerCase()} dengan rincian berikut:`,
+                santai: `Ada ${f.jenis.toLowerCase()}, A9! \ud83c\udf93 Catat ya:`,
+                rows: [['Mata kuliah', f.mk], ['Topik', f.topik], ['Dosen', f.dosen], ['Hari/tanggal', f.tgl ? wkt(f.tgl, f.jam) : ''], ['Ruang / link', f.tempat]]
             })
         },
         jadwal: {
@@ -3265,43 +3357,63 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
             }
         },
         tiada: {
-            label: '\ud83d\udeab Kelas ditiadakan / diganti', kind: 'jadwal',
-            fields: [['keg', 'Kegiatan'], ['tgl', 'Tanggal', 'date'], ['ganti', 'Pengganti / tindak lanjut (opsional)'], ['alasan', 'Alasan (opsional)']],
+            label: '\ud83d\udeab Kelas / kegiatan ditiadakan', kind: 'jadwal',
+            fields: [['keg', 'Kegiatan / mata kuliah'], ['dosen', 'Dosen / pengampu (opsional)'], ['tgl', 'Tanggal', 'date'], ['jam', 'Jam (opsional)'], ['tempat', 'Tempat (opsional)'], ['alasan', 'Alasan (opsional)'], ['ganti', 'Jadwal pengganti / tindak lanjut'], ['cat', 'Catatan (opsional)']],
             need: ['keg', 'tgl'],
-            build: (f, t) => ({
+            build: (f, t) => fin(f, t, {
                 judul: `\ud83d\udeab ${f.keg} ditiadakan (${tglIndo(f.tgl)})`, until: f.tgl,
-                isi: t === 'santai'
-                    ? `Kabar baik/buruk, A9! ${f.keg} pada ${tglIndo(f.tgl)} ditiadakan.${opt(f.alasan, 'Alasan: ')}${opt(f.ganti, 'Gantinya: ')}\nManfaatkan waktunya untuk belajar mandiri ya! \ud83d\udcda`
-                    : `Diberitahukan bahwa ${f.keg} pada ${tglIndo(f.tgl)} ditiadakan.${opt(f.alasan, 'Alasan: ')}${opt(f.ganti, 'Pengganti/tindak lanjut: ')}\nTerima kasih atas perhatiannya.`
+                resmi: `Diberitahukan bahwa kegiatan berikut ditiadakan:`,
+                santai: `Info penting, A9! \ud83d\udeab Kegiatan ini ditiadakan:`,
+                rows: [['Kegiatan', f.keg], ['Dosen', f.dosen], ['Yang ditiadakan', f.tgl ? wkt(f.tgl, f.jam) : ''], ['Tempat', f.tempat], ['Alasan', f.alasan], ['Pengganti / tindak lanjut', f.ganti]],
+                tutupR: 'Terima kasih atas perhatiannya.', tutupS: 'Manfaatkan waktunya untuk belajar mandiri ya! \ud83d\udcda'
             })
         },
         materi: {
             label: '\ud83d\udcda Materi baru', kind: 'materi',
-            fields: [['mk', 'Mata kuliah / blok'], ['topik', 'Topik materi'], ['lokasi', 'Lokasi di portal (opsional)']],
+            fields: [['mk', 'Mata kuliah / blok'], ['topik', 'Topik materi'], ['dosen', 'Dosen / pengampu (opsional)'], ['jenis', 'Jenis berkas', 'select', ['', 'Slide', 'PDF', 'Video', 'Modul', 'Rekaman kuliah']], ['lokasi', 'Lokasi di portal (kosongkan = Kuliah \u203a Materi)'], ['cat', 'Catatan (opsional)']],
             need: ['mk', 'topik'],
-            build: (f, t) => ({
+            build: (f, t) => fin(f, t, {
                 judul: `\ud83d\udcda Materi baru: ${f.topik}`, until: '',
-                isi: t === 'santai'
-                    ? `Materi baru sudah naik, A9! \ud83d\udcda ${f.mk}: ${f.topik}. Cek di ${f.lokasi || 'menu Kuliah \u203a Materi'}. Selamat belajar! \u2728`
-                    : `Materi ${f.mk} dengan topik "${f.topik}" telah diunggah dan dapat diakses di ${f.lokasi || 'menu Kuliah \u203a Materi'}. Silakan dipelajari. Terima kasih.`
+                resmi: `Materi baru telah diunggah ke portal:`,
+                santai: `Materi baru sudah naik, A9! \ud83d\udcda`,
+                rows: [['Mata kuliah', f.mk], ['Topik', f.topik], ['Dosen', f.dosen], ['Jenis berkas', f.jenis], ['Lokasi', f.lokasi || 'menu Kuliah \u203a Materi']],
+                tutupR: 'Silakan dipelajari. Terima kasih.', tutupS: 'Selamat belajar! \u2728'
+            })
+        },
+        checklist: {
+            label: '\u2705 Checklist Skills Lab baru', kind: 'file',
+            fields: [['sl', 'Nama Skills Lab'], ['sem', 'Semester', 'select', SEMS], ['cat', 'Catatan (opsional)']],
+            need: ['sl'],
+            build: (f, t) => fin(f, t, {
+                judul: `\u2705 Checklist Skills Lab: ${f.sl}`, until: '',
+                resmi: `Checklist tindakan Skills Lab telah tersedia di portal:`,
+                santai: `Checklist baru sudah tersedia, A9! \u2705`,
+                rows: [['Skills Lab', f.sl], ['Semester', f.sem], ['Lokasi', 'menu Praktikum \u203a Checklist']],
+                tutupR: 'Silakan dipakai untuk latihan. Terima kasih.', tutupS: 'Centang tiap tindakan yang sudah kamu kuasai ya! \ud83d\udcaa'
             })
         },
         penting: {
             label: '\u26a0\ufe0f Penting / mendesak', kind: 'penting',
-            fields: [['isi', 'Isi informasi'], ['tgl', 'Berlaku sampai (opsional)', 'date']],
-            need: ['isi'],
-            build: (f, t) => ({
-                judul: '\u26a0\ufe0f PENTING: mohon dibaca', until: f.tgl || '',
-                isi: t === 'santai' ? `Perhatian A9! \u26a0\ufe0f\n${f.isi}\nMohon segera ditindaklanjuti ya. Terima kasih!` : `Perhatian kepada seluruh mahasiswa.\n${f.isi}\nMohon segera ditindaklanjuti. Terima kasih.`
+            fields: [['hal', 'Hal yang diinformasikan'], ['tindakan', 'Yang harus dilakukan mahasiswa'], ['batas', 'Batas waktu tindakan', 'date'], ['kontak', 'Narahubung (opsional)'], ['tgl', 'Tampil sampai (opsional)', 'date']],
+            need: ['hal'],
+            build: (f, t) => fin(f, t, {
+                judul: '\u26a0\ufe0f PENTING: ' + (f.hal.length > 50 ? f.hal.slice(0, 47) + '...' : f.hal), until: f.tgl || f.batas || '',
+                resmi: 'Perhatian kepada seluruh mahasiswa A9.',
+                santai: 'Perhatian A9! \u26a0\ufe0f',
+                rows: [['Informasi', f.hal], ['Yang harus dilakukan', f.tindakan], ['Batas waktu', f.batas ? tglIndo(f.batas) : ''], ['Narahubung', f.kontak]],
+                tutupR: 'Mohon segera ditindaklanjuti. Terima kasih.', tutupS: 'Mohon segera ditindaklanjuti ya. Terima kasih!'
             })
         },
         umum: {
             label: '\ud83d\udce2 Pengumuman umum', kind: 'info',
-            fields: [['judul', 'Judul'], ['isi', 'Isi pengumuman'], ['tgl', 'Berlaku sampai (opsional)', 'date']],
+            fields: [['judul', 'Judul'], ['isi', 'Isi pengumuman'], ['kontak', 'Narahubung (opsional)'], ['tgl', 'Berlaku sampai (opsional)', 'date']],
             need: ['judul', 'isi'],
-            build: (f, t) => ({
+            build: (f, t) => fin(f, t, {
                 judul: f.judul, until: f.tgl || '',
-                isi: t === 'santai' ? `Halo A9! \ud83d\udc4b\n${f.isi}\nTerima kasih, semangat terus! \ud83d\udcaa` : `Kepada seluruh mahasiswa A9,\n${f.isi}\nDemikian disampaikan. Terima kasih.`
+                resmi: `Kepada seluruh mahasiswa A9,\n${f.isi}`,
+                santai: `Halo A9! \ud83d\udc4b\n${f.isi}`,
+                rows: [['Narahubung', f.kontak]],
+                tutupR: 'Demikian disampaikan. Terima kasih.', tutupS: 'Terima kasih, semangat terus! \ud83d\udcaa'
             })
         }
     };
@@ -6341,4 +6453,291 @@ body.tut-full-on { overflow:hidden !important; }
         if (full && getComputedStyle(h).display === 'none') { leave(); return; }
         ensureBar();
     }, 1000);
+})();
+
+// ==========================================================================
+// BAGIAN 18 - CHECKLIST SKILLS LAB (Praktikum > Checklist)
+//   Struktur: Semester > Nama SL > Checklist tindakan. Mahasiswa mencentang tindakan yang
+//   sudah dikuasai untuk latihan (disimpan per akun, di perangkat dan disinkronkan ke server).
+//   Admin menambah / mengubah SL. Data SL disimpan di tabel portal_db, key "skills_checklist".
+//   Format isi checklist (satu tindakan per baris):
+//     # Judul kelompok langkah   (atau baris yang diakhiri titik dua)
+//     1. Cuci tangan
+//     - Pakai handscoon
+//   Untuk memasukkan banyak SL sekaligus, awali tiap SL dengan baris: == Nama SL
+// ==========================================================================
+
+// ---- fungsi murni (tanpa DOM) supaya mudah diuji ----
+function a9CklParse(text) {
+    const out = []; let cur = null, grp = '';
+    String(text || '').split(/\r?\n/).forEach(raw => {
+        let l = raw.trim(); if (!l) return;
+        const h = l.match(/^={2,}\s*(.+?)\s*=*$/);
+        if (h) { cur = { nama: h[1], items: [] }; out.push(cur); grp = ''; return; }
+        const g = l.match(/^#+\s*(.+)$/);
+        if (g) { grp = g[1].replace(/:$/, '').trim(); return; }
+        if (/:$/.test(l) && l.length <= 80) { grp = l.slice(0, -1).trim(); return; }
+        const t = l.replace(/^(?:[-*\u2022\u25cf]|\[\s?[xX]?\s?\]|\d+[.)])\s*/, '').trim();
+        if (!t) return;
+        if (!cur) { cur = { nama: '', items: [] }; out.push(cur); }
+        cur.items.push({ t, g: grp });
+    });
+    return out.filter(x => x.items.length || x.nama);
+}
+function a9CklItems(list) {
+    const seen = {};
+    return list.map(x => {
+        let id = a9Hash((x.g || '') + '|' + x.t);
+        if (seen[id]) { seen[id]++; id += '_' + seen[id]; } else seen[id] = 1;
+        return { id, t: x.t, g: x.g || '' };
+    });
+}
+function a9CklText(items) {
+    let g = null; const out = [];
+    (items || []).forEach(it => {
+        if ((it.g || '') !== g) { g = it.g || ''; if (g) out.push('# ' + g); }
+        out.push('- ' + it.t);
+    });
+    return out.join('\n');
+}
+
+(function () {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const isAdmin = () => !!currentUser && currentUser.role === 'admin';
+    const nim = () => (currentUser && currentUser.nim) || 'admin';
+    const KEY = 'skills_checklist';
+    const lsGet = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
+    const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
+    const parseArr = v => { if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { v = []; } } return Array.isArray(v) ? v : []; };
+
+    let DATA = [], loaded = false, loading = false, loadErr = false;
+    const st = { sem: 1, sl: null, form: null };   // form: null | 'add' | id SL yang diubah
+    let PROG = { t: 0, p: {} }, progFor = '', syncTimer = null;
+
+    const main = document.querySelector('.main-content');
+    if (!main) return;
+    main.insertAdjacentHTML('beforeend', '<div id="tab-checklist" class="tab-content" style="display:none;"><div id="ckl-root"></div></div>');
+
+    const css = document.createElement('style');
+    css.textContent = `
+    .ck-muted { color: var(--text-muted); font-size: 14px; }
+    .ck-head h3 { font-size: 20px; margin-bottom: 4px; }
+    .ck-sems { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+    .ck-chip { border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); border-radius: 999px; padding: 8px 16px; font-size: 14px; font-weight: 600; cursor: pointer; min-height: 40px; }
+    .ck-chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .ck-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+    .ck-card { text-align: left; border: 1px solid var(--border-color); background: var(--bg-card); color: inherit; font: inherit; border-radius: 16px; padding: 14px 16px; cursor: pointer; display: flex; flex-direction: column; gap: 8px; }
+    .ck-card:hover { border-color: var(--primary); box-shadow: var(--shadow-lg); }
+    .ck-card b { font-size: 15px; line-height: 1.3; word-break: break-word; }
+    .ck-bar { height: 8px; border-radius: 999px; background: var(--border-color); overflow: hidden; }
+    .ck-bar i { display: block; height: 100%; background: var(--primary); border-radius: 999px; transition: width .25s; }
+    .ck-bar.full i { background: #16a34a; }
+    .ck-meta { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-muted); }
+    .ck-crumb { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+    .ck-acts { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+    .ck-g { font-size: 13px; font-weight: 700; color: var(--primary); margin: 18px 0 6px; text-transform: uppercase; letter-spacing: .03em; }
+    .ck-row { display: flex; gap: 12px; align-items: flex-start; padding: 12px 10px; border-top: 1px solid var(--border-color); cursor: pointer; line-height: 1.5; border-radius: 8px; }
+    .ck-row:hover { background: var(--primary-light); }
+    .ck-row input { flex: none; width: 22px; height: 22px; margin-top: 1px; accent-color: var(--primary); cursor: pointer; }
+    .ck-row.done span { color: var(--text-muted); text-decoration: line-through; }
+    .ck-form textarea { min-height: 220px; font-family: inherit; line-height: 1.5; }
+    .ck-form .form-group { margin-bottom: 12px; }
+    .ck-empty { text-align: center; color: var(--text-muted); padding: 32px 12px; grid-column: 1 / -1; }
+    .ck-sticky { position: sticky; top: 0; z-index: 4; background: var(--bg-card); padding: 8px 0; }`;
+    document.head.appendChild(css);
+
+    // ---------- data ----------
+    async function fetchData() {
+        const r = await supabaseClient.from('portal_db').select('value').eq('key', KEY).maybeSingle();
+        if (r.error) throw r.error;
+        return r.data ? parseArr(r.data.value) : [];
+    }
+    async function writeData(list) {
+        const r = await supabaseClient.from('portal_db').upsert({ key: KEY, value: list }, { onConflict: 'key' });
+        if (r.error) throw r.error;
+        DATA = list;
+    }
+    async function load(force) {
+        if (loading || (loaded && !force)) return;
+        loading = true; loadErr = false; render();
+        try {
+            if (!supabaseClient) throw new Error('offline');
+            DATA = await fetchData(); loaded = true;
+            if (DATA.length && !DATA.some(x => +x.semester === st.sem)) st.sem = Math.min(...DATA.map(x => +x.semester || 1));
+        } catch (e) { console.error(e); loadErr = true; loaded = true; }
+        loading = false; await pullProgress(); render();
+    }
+
+    // ---------- progres centang (per akun) ----------
+    const pKey = () => 'a9_ckl_' + nim();
+    function loadLocal() { if (progFor === nim()) return; progFor = nim(); PROG = lsGet(pKey(), { t: 0, p: {} }); if (!PROG.p) PROG = { t: 0, p: {} }; }
+    async function pullProgress() {
+        loadLocal();
+        if (isAdmin() || !supabaseClient) return;
+        try {
+            const r = await supabaseClient.from('portal_db').select('value').eq('key', 'ckl_' + nim()).maybeSingle();
+            const v = r && r.data && r.data.value; const sv = typeof v === 'string' ? JSON.parse(v) : v;
+            if (sv && sv.p && (sv.t || 0) > (PROG.t || 0)) { PROG = sv; lsSet(pKey(), PROG); }
+        } catch (e) { /* tidak apa-apa: tetap pakai data di perangkat */ }
+    }
+    function pushProgress() {
+        if (isAdmin() || !supabaseClient) return;
+        clearTimeout(syncTimer);
+        syncTimer = setTimeout(async () => {
+            try { await supabaseClient.from('portal_db').upsert({ key: 'ckl_' + nim(), value: PROG }, { onConflict: 'key' }); } catch (e) { }
+        }, 1500);
+    }
+    const isDone = (sl, id) => !!(PROG.p[sl] && PROG.p[sl][id]);
+    function setDone(sl, id, on) {
+        loadLocal();
+        const m = PROG.p[sl] || (PROG.p[sl] = {});
+        if (on) m[id] = 1; else delete m[id];
+        PROG.t = Date.now(); lsSet(pKey(), PROG); pushProgress();
+    }
+    function count(sl) {
+        const ids = (sl.items || []).map(i => i.id);
+        const n = ids.filter(id => isDone(sl.id, id)).length;
+        return { n, total: ids.length, pct: ids.length ? Math.round(n * 100 / ids.length) : 0 };
+    }
+
+    // ---------- tampilan ----------
+    const bar = c => `<div class="ck-bar ${c.total && c.n === c.total ? 'full' : ''}"><i style="width:${c.pct}%"></i></div>`;
+
+    function viewForm() {
+        const edit = st.form !== 'add' ? DATA.find(x => x.id === st.form) : null;
+        const sem = edit ? +edit.semester : st.sem;
+        const semOpts = [1, 2, 3, 4, 5, 6, 7, 8].map(n => `<option value="${n}"${n === sem ? ' selected' : ''}>Semester ${n}</option>`).join('');
+        return `<div class="card ck-form"><h3>${edit ? 'Ubah checklist' : 'Tambah checklist Skills Lab'}</h3>
+          <div class="form-group"><label>Semester</label><select id="ckl-f-sem" class="modern-input">${semOpts}</select></div>
+          <div class="form-group"><label>Nama Skills Lab${edit ? '' : ' (kosongkan bila memakai baris == Nama SL di bawah)'}</label><input id="ckl-f-nama" class="modern-input" value="${esc(edit ? edit.nama : '')}" placeholder="contoh: Cuci tangan medis"></div>
+          <div class="form-group"><label>Link berkas SL di Drive (opsional)</label><input id="ckl-f-link" class="modern-input" value="${esc(edit ? edit.link || '' : '')}" placeholder="https://drive.google.com/..."></div>
+          <div class="form-group"><label>Isi checklist (satu tindakan per baris)</label><textarea id="ckl-f-isi" class="modern-input" placeholder="# Persiapan&#10;1. Siapkan alat dan bahan&#10;2. Cuci tangan&#10;# Prosedur&#10;3. ...">${esc(edit ? a9CklText(edit.items) : '')}</textarea>
+          <p class="hint" style="margin-top:6px;">Baris yang diawali # atau diakhiri titik dua menjadi judul kelompok langkah. ${edit ? '' : 'Untuk banyak SL sekaligus, awali tiap SL dengan baris <b>== Nama SL</b>.'} Nomor dan tanda - di depan baris dibuang otomatis.</p></div>
+          <div class="ck-acts"><button type="button" class="btn btn-primary" data-a="save">Simpan</button><button type="button" class="btn btn-outline" data-a="cancel">Batal</button></div></div>`;
+    }
+
+    function viewList() {
+        const sems = [...new Set(DATA.map(x => +x.semester || 1).concat([1]))].sort((a, b) => a - b);
+        const list = DATA.filter(x => (+x.semester || 1) === st.sem);
+        let h = `<div class="card ck-head"><h3>\u2705 Checklist Skills Lab</h3><p class="ck-muted">Pilih semester dan Skills Lab, lalu centang tindakan yang sudah kamu kuasai untuk latihan. Centangan tersimpan di akunmu.</p>
+          <div class="ck-sems">${sems.map(n => `<button type="button" class="ck-chip ${n === st.sem ? 'active' : ''}" data-a="sem" data-v="${n}">Semester ${n}</button>`).join('')}</div>
+          ${isAdmin() ? '<div class="ck-acts"><button type="button" class="btn btn-primary btn-sm" data-a="add">\uff0b Tambah SL</button></div>' : ''}</div>`;
+        if (st.form) h += viewForm();
+        h += '<div class="card" style="margin-top:14px;">';
+        if (loadErr) h += '<p class="ck-muted">Checklist belum bisa dimuat. Periksa koneksi lalu <button type="button" class="btn btn-outline btn-sm" data-a="retry">coba lagi</button>.</p>';
+        else if (!list.length) h += `<p class="ck-empty">Belum ada checklist untuk Semester ${st.sem}.${isAdmin() ? ' Klik <b>Tambah SL</b> untuk membuatnya.' : ''}</p>`;
+        else h += `<div class="ck-grid">${list.map(sl => { const c = count(sl); return `<button type="button" class="ck-card" data-a="open" data-id="${esc(sl.id)}"><b>${esc(sl.nama)}</b>${bar(c)}<span class="ck-meta"><span>${c.n} dari ${c.total} tindakan</span><span>${c.pct}%</span></span></button>`; }).join('')}</div>`;
+        return h + '</div>';
+    }
+
+    function viewSL(sl) {
+        const c = count(sl); let g = null, rows = '';
+        (sl.items || []).forEach(it => {
+            if ((it.g || '') !== g) { g = it.g || ''; if (g) rows += `<div class="ck-g">${esc(g)}</div>`; }
+            const d = isDone(sl.id, it.id);
+            rows += `<label class="ck-row ${d ? 'done' : ''}"><input type="checkbox" data-id="${esc(it.id)}"${d ? ' checked' : ''}><span>${esc(it.t)}</span></label>`;
+        });
+        return `<div class="card"><div class="ck-crumb">Semester ${esc(sl.semester)} \u203a ${esc(sl.nama)} \u203a Checklist</div>
+          <button type="button" class="btn btn-outline btn-sm" data-a="back">\u2190 Daftar SL</button>
+          <h3 style="margin:12px 0 4px;">${esc(sl.nama)}</h3>
+          <div class="ck-sticky" id="ckl-prog">${progHtml(c)}</div>
+          <div class="ck-acts">${sl.link ? `<a class="btn btn-outline btn-sm" href="${esc(sl.link)}" target="_blank" rel="noopener">\ud83d\udcc4 Buka berkas SL</a>` : ''}
+            <button type="button" class="btn btn-outline btn-sm" data-a="reset">Kosongkan centang</button>
+            ${isAdmin() ? '<button type="button" class="btn btn-outline btn-sm" data-a="edit">\u270f\ufe0f Ubah</button><button type="button" class="btn btn-danger btn-sm" data-a="del">Hapus SL</button>' : ''}</div>
+          ${st.form ? viewForm() : ''}
+          <div id="ckl-rows">${rows || '<p class="ck-muted">Checklist ini belum berisi tindakan.</p>'}</div></div>`;
+    }
+    const progHtml = c => `${bar(c)}<div class="ck-meta" style="margin-top:6px;"><span>${c.n} dari ${c.total} tindakan dikuasai</span><span>${c.pct}%${c.total && c.n === c.total ? ' \ud83c\udf89' : ''}</span></div>`;
+
+    function render() {
+        const root = $('ckl-root'); if (!root) return;
+        loadLocal();
+        if (!loaded) { root.innerHTML = '<div class="card"><p class="ck-muted">Memuat checklist...</p></div>'; return; }
+        const sl = st.sl ? DATA.find(x => x.id === st.sl) : null;
+        if (st.sl && !sl) st.sl = null;
+        root.innerHTML = sl ? viewSL(sl) : viewList();
+    }
+
+    // ---------- aksi admin ----------
+    const newId = i => 'sl' + Date.now().toString(36) + (i || 0) + Math.floor(Math.random() * 1296).toString(36);
+    async function save() {
+        if (!isAdmin()) return;
+        const sem = +$('ckl-f-sem').value || 1, nama = $('ckl-f-nama').value.trim(), link = $('ckl-f-link').value.trim(), parsed = a9CklParse($('ckl-f-isi').value);
+        try {
+            const cur = await fetchData(); let added = [];
+            if (st.form === 'add') {
+                const bulk = parsed.some(p => p.nama);
+                const src = bulk ? parsed.filter(p => p.nama) : [{ nama, items: (parsed[0] || { items: [] }).items }];
+                if (!src.length || src.some(p => !p.nama)) { alert('Isi nama Skills Lab dulu.'); return; }
+                if (src.some(p => !p.items.length)) { alert('Tiap SL harus punya minimal satu tindakan.'); return; }
+                src.forEach((p, i) => {
+                    const old = cur.find(x => +x.semester === sem && String(x.nama).toLowerCase() === p.nama.toLowerCase());
+                    if (old) { old.items = a9CklItems(p.items); if (link && !bulk) old.link = link; }
+                    else { const o = { id: newId(i), semester: sem, nama: p.nama, link: bulk ? '' : link, items: a9CklItems(p.items), ts: Date.now() }; cur.push(o); added.push(o); }
+                });
+            } else {
+                const it = cur.find(x => x.id === st.form);
+                if (!it) { alert('SL tidak ditemukan.'); return; }
+                if (!nama) { alert('Isi nama Skills Lab dulu.'); return; }
+                const items = (parsed[0] || { items: [] }).items;
+                if (!items.length) { alert('Isi minimal satu tindakan.'); return; }
+                it.semester = sem; it.nama = nama; it.link = link; it.items = a9CklItems(items);
+            }
+            cur.sort((a, b) => (+a.semester || 1) - (+b.semester || 1) || String(a.nama).localeCompare(String(b.nama), 'id', { numeric: true }));
+            await writeData(cur);
+            st.sem = sem; st.form = null;
+            if (added.length && typeof postUpdate === 'function') {
+                try { postUpdate('file', '\u2705 Checklist Skills Lab baru', added.map(a => a.nama).join(', ') + ' (Semester ' + sem + '). Buka menu Praktikum \u203a Checklist untuk berlatih.', { key: 'ckl', until: 14 }); } catch (e) { }
+            }
+            alert('Checklist tersimpan.');
+        } catch (e) { console.error(e); alert('Gagal menyimpan checklist. Coba lagi sebentar lagi.'); }
+        render();
+    }
+    async function removeSL(id) {
+        if (!isAdmin()) return;
+        const sl = DATA.find(x => x.id === id); if (!sl || !confirm('Hapus checklist "' + sl.nama + '"?')) return;
+        try { const cur = (await fetchData()).filter(x => x.id !== id); await writeData(cur); st.sl = null; st.form = null; }
+        catch (e) { console.error(e); alert('Gagal menghapus. Coba lagi.'); }
+        render();
+    }
+
+    // ---------- interaksi ----------
+    const root0 = $('ckl-root');
+    root0.addEventListener('click', e => {
+        const b = e.target.closest('[data-a]'); if (!b) return;
+        const a = b.dataset.a;
+        if (a === 'sem') { st.sem = +b.dataset.v; st.form = null; render(); }
+        else if (a === 'open') { st.sl = b.dataset.id; st.form = null; render(); window.scrollTo({ top: 0 }); }
+        else if (a === 'back') { st.sl = null; st.form = null; render(); }
+        else if (a === 'add') { st.form = 'add'; render(); }
+        else if (a === 'edit') { st.form = st.sl; render(); }
+        else if (a === 'cancel') { st.form = null; render(); }
+        else if (a === 'save') save();
+        else if (a === 'del') removeSL(st.sl);
+        else if (a === 'retry') load(true);
+        else if (a === 'reset') {
+            const sl = DATA.find(x => x.id === st.sl); if (!sl || !confirm('Kosongkan semua centang di "' + sl.nama + '"?')) return;
+            loadLocal(); delete PROG.p[sl.id]; PROG.t = Date.now(); lsSet(pKey(), PROG); pushProgress(); render();
+        }
+    });
+    root0.addEventListener('change', e => {
+        const cb = e.target; if (!cb.matches || !cb.matches('#ckl-rows input[type=checkbox]')) return;
+        const sl = DATA.find(x => x.id === st.sl); if (!sl) return;
+        setDone(sl.id, cb.dataset.id, cb.checked);
+        const row = cb.closest('.ck-row'); if (row) row.classList.toggle('done', cb.checked);
+        const p = $('ckl-prog'); if (p) p.innerHTML = progHtml(count(sl));
+    });
+
+    // buka tab: muat data terbaru
+    const prev = window.switchTab;
+    window.switchTab = function (t, b) {
+        const r = prev ? prev(t, b) : undefined;
+        if (t === 'checklist') { st.form = null; if (loaded) { render(); load(true); } else load(); }
+        return r;
+    };
+    // ganti akun: reset tampilan
+    const prevLogin = window.finishLogin;
+    window.finishLogin = function () { const r = prevLogin ? prevLogin.apply(this, arguments) : undefined; progFor = ''; st.sl = null; st.form = null; return r; };
 })();
