@@ -200,6 +200,32 @@ function busy(msg) {
     return () => t.remove();
 }
 
+// Panggil Supabase Edge Function dan tampilkan alasan gagal yang sebenarnya (bukan hanya "non-2xx")
+async function invokeEdge(name, body) {
+    if (!supabaseClient) throw new Error('Server belum terhubung.');
+    const { data, error } = await supabaseClient.functions.invoke(name, { body });
+    if (!error) {
+        if (data && typeof data === 'object' && data.error) throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
+        return data;
+    }
+    let status = 0, detail = '';
+    try {
+        const res = error.context;
+        if (res && typeof res.status === 'number') {
+            status = res.status;
+            const txt = await res.text();
+            try { const j = JSON.parse(txt); detail = j.error || j.message || j.msg || txt; } catch (e) { detail = txt; }
+            if (typeof detail !== 'string') detail = JSON.stringify(detail);
+        }
+    } catch (e) { }
+    let hint = '';
+    if (status === 404) hint = ' \u2014 fungsi "' + name + '" belum di-deploy atau namanya berbeda';
+    else if (status === 401 || /jwt/i.test(detail)) hint = ' \u2014 matikan "Verify JWT" pada fungsi "' + name + '" (portal memakai kunci sb_publishable)';
+    else if (!status) hint = ' \u2014 permintaan tidak sampai ke fungsi: cek nama fungsi, deploy, dan CORS';
+    const e2 = new Error('[' + name + (status ? ' ' + status : '') + '] ' + String(detail || error.message || 'gagal').slice(0, 300) + hint);
+    e2.status = status; throw e2;
+}
+
 const isoLocal = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 function tglIndo(iso) {
     const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return String(iso || '');
@@ -2339,9 +2365,8 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
     }
     async function generate(body) {
         if (!supabaseClient) throw new Error('Server belum terhubung.');
-        const { data, error } = await supabaseClient.functions.invoke('video-summary', { body });
-        if (error) throw error;
-        if (!data || data.error) throw new Error((data && data.error) || 'Respons tidak valid');
+        const data = await invokeEdge('video-summary', body);
+        if (!data) throw new Error('Respons tidak valid');
         return data;
     }
     function sumHtml(s, canSeek) {
@@ -2375,7 +2400,7 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
                 lsSet('a9_sum_' + ref, s); if (tok === vTok) ready(s);
             } catch (e) {
                 console.error(e);
-                paint(`<div class="sm-card"><div class="sm-h"><b>\ud83e\udd16 Rangkuman video</b></div><p class="sm-ring">${esc(isAdmin() ? 'Rangkuman gagal dibuat: ' + (e.message || e) + '. Pastikan fungsi video-summary sudah di-deploy.' : 'Rangkuman belum tersedia untuk video ini.')}</p><div class="sm-acts"><button type="button" class="btn btn-outline btn-sm" data-sm="retry">Coba lagi</button></div></div>`);
+                paint(`<div class="sm-card"><div class="sm-h"><b>\ud83e\udd16 Rangkuman video</b></div><p class="sm-ring">${esc(isAdmin() ? 'Rangkuman gagal dibuat: ' + (e.message || e) : 'Rangkuman belum tersedia untuk video ini.')}</p><div class="sm-acts"><button type="button" class="btn btn-outline btn-sm" data-sm="retry">Coba lagi</button></div></div>`);
                 box.onclick = ev => { if (ev.target.closest('[data-sm="retry"]')) run(false); };
             }
         };
@@ -2896,15 +2921,15 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
         if (draft.stase.some(s => String(s.kasus.skenario).trim()) && !confirm('Soal yang sudah terisi akan ditimpa hasil AI. Lanjutkan?')) return;
         st.textContent = '\u23f3 AI sedang menyusun soal, tunggu sekitar 20-60 detik...';
         try {
-            const { data, error } = await supabaseClient.functions.invoke('osce-ai', { body: { n, pdf, text, extra: $('ai-extra').value, judul: draft.judul, adminCode: dbData.adminCode || 'A9ACOR' } });
-            if (error) throw error; if (!data || !Array.isArray(data.kasus)) throw new Error((data && data.error) || 'Respons tidak valid');
+            const data = await invokeEdge('osce-ai', { n, pdf, text, extra: $('ai-extra').value, judul: draft.judul, adminCode: dbData.adminCode || 'A9ACOR' });
+            if (!data || !Array.isArray(data.kasus)) throw new Error('Respons tidak valid');
             data.kasus.slice(0, n).forEach((k, i) => {
                 const j = x => Array.isArray(x) ? x.join('\n') : String(x || '');
                 draft.stase[i].kasus = { judul: j(k.judul), skenario: j(k.skenario), instruksi: j(k.instruksi), tugas: j(k.tugas), checklist: j(k.checklist) };
                 if (k.nama && /^stase \d+$/i.test(draft.stase[i].nama)) draft.stase[i].nama = String(k.nama);
             });
             renderOsce(); alert('Soal dari AI sudah masuk. Periksa & edit dulu, lalu Simpan setelan.');
-        } catch (e) { console.error(e); st.textContent = ''; alert('AI gagal: ' + (e.message || e) + '. Pastikan fungsi osce-ai sudah di-deploy.'); }
+        } catch (e) { console.error(e); st.textContent = ''; alert('AI gagal: ' + (e.message || e)); }
     }
 
     // ---- event delegasi di tab OSCE ----
@@ -4619,7 +4644,7 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
     // ---------- Draf, penyimpanan manual & autosave ----------
     function persistDraft(k) { try { localStorage.setItem(DRK(k), JSON.stringify({ data: draft[k], base: base[k] || 0, ts: Date.now() })); } catch (e) { } }
     function dropDraft(k) { delete draft[k]; delete base[k]; try { localStorage.removeItem(DRK(k)); } catch (e) { } }
-    function setDraft(k, d) { if (!draft[k]) base[k] = (srv[k] && srv[k].ts) || 0; draft[k] = d; persistDraft(k); schedule(); }
+    function setDraft(k, d) { if (!draft[k]) base[k] = (srv[k] && srv[k].ts) || 0; draft[k] = d; persistDraft(k); schedule(); queueLive(2500); }
     function setState(msg, cls) { const st = $('sj-state'); if (st) { st.textContent = msg; st.className = 'sj-status ' + (cls || ''); } }
 
     // Tulis satu skenario ke server. force=true: timpa walau teman sudah menyimpan versi lebih baru.
@@ -4993,20 +5018,19 @@ ${trial ? '' : docsPanel()}`;
     }
 
     // Sinkron otomatis: dokumen yang dibuat lewat portal diperbarui bila isi skenario berubah
-    let liveBusy = false, lastLive = 0, liveT = null;
-    function queueLive() { if (trial) return; clearTimeout(liveT); liveT = setTimeout(() => liveSync(false), 6000); }
+    let liveBusy = false, livePending = false, lastLive = 0, liveT = null;
+    function queueLive(ms) { if (trial) return; clearTimeout(liveT); liveT = setTimeout(() => liveSync(false), ms || 2500); }
+    window.__sjLiveKick = () => queueLive(2000);   // dipanggil modul pertanyaan/notulen setelah menyimpan
     async function liveSync(force, manual) {
-        if (trial || liveBusy || !DRIVE_UPLOAD_URL || !currentUser) return;
+        if (trial || !DRIVE_UPLOAD_URL || !currentUser) return;
+        if (liveBusy) { livePending = true; return; }   // ada pembaruan berjalan: ulangi sesudahnya supaya ketikan terbaru ikut
         if (!manual && !getDriveKey()) return;          // otomatis berjalan diam-diam; kunci hanya diminta saat tombol ditekan
         const b = BLOK[curB];
         const list = (docs[b.key] || []).filter(e => e && e.live && !e.gone && e.id && Array.isArray(e.ns) && e.ns.length);
         lastLive = Date.now();
         if (!list.length) { if (manual) toast('Belum ada dokumen yang tersambung untuk blok ini.'); return; }
         if (!lastFetch) { if (manual) toast('Data belum selesai dimuat. Coba lagi sebentar.'); return; }   // jangan sampai dokumen ditimpa data kosong
-        if (b.skenario.some(x => draft[skey(b, x.n)])) {
-            if (!manual) return;                          // tunggu sampai perubahan tersimpan
-            collect(); await autosaveNow();
-        }
+        if (manual) { collect(); await autosaveNow(); }     // isi dokumen memakai tampilan terkini, termasuk ketikan yang belum tersimpan
         liveBusy = true;
         let n = 0, fail = '';
         try {
@@ -5026,6 +5050,7 @@ ${trial ? '' : docsPanel()}`;
             }
         } catch (er) { console.error(er); fail = er.message || 'gagal'; }
         liveBusy = false;
+        if (livePending) { livePending = false; queueLive(1500); }
         if (manual) toast(fail ? 'Sinkron gagal: ' + fail : n ? n + ' dokumen diperbarui.' : 'Semua dokumen sudah yang terbaru.');
         const r = $('sj-root'); if (r && !r.contains(document.activeElement)) render();
     }
@@ -5853,6 +5878,7 @@ html body.a9soft #login-page h1::after, html body.a9soft #login-page h2::after, 
         const out = list.filter(x => !(x.del && stamp(x) < cut));
         await rPut(k, out, trial);
         CACHE[k] = out;
+        try { if (!trial && window.__sjLiveKick) window.__sjLiveKick(); } catch (e) { }
         return out;
     }
     window.__sjxLoad = async function (b, ns) {
