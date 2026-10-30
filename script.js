@@ -6134,3 +6134,114 @@ ${view === 'pq' ? pqPane : ntPane}`;
     document.addEventListener('visibilitychange', () => { if (document.hidden) stopVoice(); });
     window.addEventListener('pagehide', stopVoice);
 })();
+
+// ==========================================================================
+// BAGIAN 18 - TUTORIAL: LAYAR PENUH + UKURAN TULISAN (BESAR/KECIL) UNTUK DITAMPILKAN DI TV
+//   Bilah kecil di atas menu Tutorial: Layar penuh, A-, A+, dan reset. Ukuran diingat di perangkat ini.
+//   Papan tombol: + / = perbesar, - perkecil, 0 reset (tidak aktif saat sedang mengetik).
+//   Hanya menambah tampilan, tidak menyentuh data.
+// ==========================================================================
+(function () {
+    'use strict';
+    const KEY = 'a9_tut_zoom', MIN = 0.7, MAX = 2.6, STEP = 0.1;
+    let zoom = 1, full = false;
+    try { const v = parseFloat(localStorage.getItem(KEY)); if (v >= MIN && v <= MAX) zoom = v; } catch (e) { }
+
+    const host = () => { const l = document.getElementById('tutorial-list'); return l ? l.closest('.tab-content') : null; };
+    const visible = h => !!h && h.offsetParent !== null || (!!h && h.classList.contains('tut-full') && getComputedStyle(h).display !== 'none');
+
+    if (!document.getElementById('tut-view-css')) {
+        const st = document.createElement('style'); st.id = 'tut-view-css';
+        st.textContent = `
+#tut-bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 12px; padding:6px 0; }
+#tut-bar .tb-z { min-width:58px; text-align:center; font-weight:700; }
+#tut-bar .tb-hint { font-size:12px; color:var(--text-muted); }
+#tut-bar button { white-space:nowrap; }
+body.tut-full-on { overflow:hidden !important; }
+.tab-content.tut-full { position:fixed !important; inset:0 !important; z-index:15000 !important; overflow:auto !important; -webkit-overflow-scrolling:touch;
+  background:var(--bg-base,#fff) !important; padding:10px 22px 48px !important; margin:0 !important; width:auto !important; max-width:none !important;
+  animation:none !important; transform:none !important; border-radius:0 !important; }
+.tab-content.tut-full > * { max-width:1600px; margin-left:auto; margin-right:auto; }
+.tab-content.tut-full #tut-bar { position:sticky; top:0; z-index:5; background:var(--bg-base,#fff); border-bottom:1px solid var(--border-color); }`;
+        document.head.appendChild(st);
+    }
+
+    function apply() {
+        const h = host(); if (!h) return;
+        h.classList.toggle('tut-full', full);
+        document.body.classList.toggle('tut-full-on', full);
+        ['sj-root', 'sjx-box', 'tutorial-list'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el && el.style.zoom !== String(zoom)) el.style.zoom = String(zoom);
+        });
+        const z = document.getElementById('tut-zoom-val'); if (z) z.textContent = Math.round(zoom * 100) + '%';
+        const f = document.getElementById('tut-full-btn'); if (f) f.textContent = full ? '\u2715 Keluar layar penuh' : '\u26f6 Layar penuh';
+    }
+
+    function setZoom(v) {
+        zoom = Math.min(MAX, Math.max(MIN, Math.round(v * 10) / 10));
+        try { localStorage.setItem(KEY, String(zoom)); } catch (e) { }
+        apply();
+    }
+
+    function enter() {
+        full = true; apply();
+        const de = document.documentElement;
+        try {
+            const p = de.requestFullscreen ? de.requestFullscreen({ navigationUI: 'hide' }) : (de.webkitRequestFullscreen ? de.webkitRequestFullscreen() : null);
+            if (p && p.catch) p.catch(() => { });          // iPhone/iPad: tanpa layar penuh peramban, tampilan tetap memenuhi layar
+        } catch (e) { }
+    }
+    function leave() {
+        full = false; apply();
+        if (document.fullscreenElement || document.webkitFullscreenElement) {
+            try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) { }
+        }
+    }
+
+    function ensureBar() {
+        const h = host(); if (!h) return;
+        let bar = document.getElementById('tut-bar');
+        if (!bar) {
+            bar = document.createElement('div'); bar.id = 'tut-bar';
+            bar.innerHTML = '<button type="button" class="btn btn-primary btn-sm" id="tut-full-btn"></button>' +
+                '<button type="button" class="btn btn-outline btn-sm" data-tz="-" title="Perkecil tulisan" aria-label="Perkecil tulisan">A\u2212</button>' +
+                '<span class="tb-z" id="tut-zoom-val"></span>' +
+                '<button type="button" class="btn btn-outline btn-sm" data-tz="+" title="Perbesar tulisan" aria-label="Perbesar tulisan">A+</button>' +
+                '<button type="button" class="btn btn-outline btn-sm" data-tz="0" title="Kembali ke ukuran normal">Reset</button>' +
+                '<span class="tb-hint">Papan tombol: + perbesar, \u2212 perkecil, 0 reset</span>';
+            bar.addEventListener('click', e => {
+                const b = e.target.closest('button'); if (!b) return;
+                if (b.id === 'tut-full-btn') { full ? leave() : enter(); return; }
+                if (b.dataset.tz === '+') setZoom(zoom + STEP);
+                else if (b.dataset.tz === '-') setZoom(zoom - STEP);
+                else if (b.dataset.tz === '0') setZoom(1);
+            });
+        }
+        if (h.firstChild !== bar) h.insertBefore(bar, h.firstChild);
+        apply();
+    }
+
+    document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && full) { full = false; apply(); } });
+    document.addEventListener('webkitfullscreenchange', () => { if (!document.webkitFullscreenElement && full) { full = false; apply(); } });
+
+    document.addEventListener('keydown', e => {
+        const h = host(); if (!h) return;
+        if (e.key === 'Escape' && full && !document.fullscreenElement && !document.webkitFullscreenElement && !document.querySelector('.fd-ov')) { leave(); return; }
+        if (e.ctrlKey || e.metaKey || e.altKey || !visible(h)) return;
+        const t = e.target, tag = t && t.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
+        if (document.querySelector('.fd-ov')) return;
+        if (e.key === '+' || e.key === '=') { setZoom(zoom + STEP); e.preventDefault(); }
+        else if (e.key === '-' || e.key === '_') { setZoom(zoom - STEP); e.preventDefault(); }
+        else if (e.key === '0') { setZoom(1); e.preventDefault(); }
+    });
+
+    // Pindah ke menu lain saat layar penuh: keluar otomatis. Elemen yang dibuat ulang ikut diberi ukuran yang sama.
+    setInterval(() => {
+        const h = host(); if (!h) return;
+        if (full && h.offsetParent === null && getComputedStyle(h).position !== 'fixed') { leave(); return; }
+        if (full && getComputedStyle(h).display === 'none') { leave(); return; }
+        ensureBar();
+    }, 1000);
+})();
