@@ -282,6 +282,23 @@ async function uploadToDrive(file, path) {
 }
 
 // File besar (20-200 MB): Apps Script hanya menyiapkan sesi unggah, lalu browser mengirim file per potongan langsung ke Google
+function bukaSesiDrive(token, folderId, name, mime, size) {
+    return new Promise((resolve, reject) => {
+        const x = new XMLHttpRequest();
+        x.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true');
+        x.setRequestHeader('Authorization', 'Bearer ' + token);
+        x.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+        x.setRequestHeader('X-Upload-Content-Type', mime);
+        x.setRequestHeader('X-Upload-Content-Length', String(size));
+        x.onload = () => {
+            const loc = x.getResponseHeader('Location');
+            if (x.status === 200 && loc) resolve(loc);
+            else reject(new Error('Google menolak membuat sesi unggah (' + x.status + '): ' + String(x.responseText || '').slice(0, 160)));
+        };
+        x.onerror = () => reject(new Error('Tidak bisa menghubungi Google Drive (jaringan putus atau diblokir)'));
+        x.send(JSON.stringify({ name, mimeType: mime, parents: [folderId] }));
+    });
+}
 function putChunk(url, blob, start, end, total) {
     return new Promise((resolve, reject) => {
         let tries = 0;
@@ -314,12 +331,13 @@ async function uploadDriveBesar(file, path, key) {
     };
     try {
         const mime = file.type || 'application/octet-stream';
-        const s0 = await call({ action: 'mulaiUnggah', name: file.name, mime, size: file.size, path, origin: location.origin });
+        const s0 = await call({ action: 'mulaiUnggah', name: file.name, mime, size: file.size, path });
+        const sesi = await bukaSesiDrive(s0.token, s0.folderId, file.name, mime, file.size);
         const CH = 8 * 1024 * 1024;                       // kelipatan 256 KB, syarat Google
         let off = 0, last = null;
         while (off < file.size) {
             const end = Math.min(off + CH, file.size);
-            last = await putChunk(s0.sessionUrl, file.slice(off, end), off, end - 1, file.size);
+            last = await putChunk(sesi, file.slice(off, end), off, end - 1, file.size);
             off = end; say(Math.floor(off * 100 / file.size));
         }
         if (!last || !last.id) throw new Error('Google tidak mengembalikan ID berkas');
@@ -327,7 +345,7 @@ async function uploadDriveBesar(file, path, key) {
         return s1.url;
     } catch (e) {
         console.error(e);
-        alert('Unggah file besar ke Drive gagal: ' + (e.message || e) + '\n\nKalau pesannya menyebut aksi tidak dikenal atau izin, pasang code.gs versi 7 dan deploy versi baru. Atau unggah manual ke Drive lalu tempel tautannya.');
+        alert('Unggah file besar ke Drive gagal: ' + (e.message || e) + '\n\nKalau pesannya menyebut aksi tidak dikenal atau izin, pasang code.gs versi 8 dan deploy versi baru. Atau unggah manual ke Drive lalu tempel tautannya.');
         return null;
     } finally { tt.remove(); }
 }
