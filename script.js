@@ -4553,6 +4553,13 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
 .sj-link strong { color:var(--text-main); }
 .sj-link .sj-linkrow { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; align-items:center; }
 .sj-link input { flex:1 1 220px; min-width:0; }
+.sj-docs-box { border:1px solid var(--border-color); border-radius:12px; padding:12px; margin-top:12px; }
+.sj-docs-box h4 { margin:0; }
+.sj-docs-head { display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.sj-doc { padding:10px 0; border-top:1px solid var(--border-color); }
+.sj-doc .sj-dn { font-weight:600; word-break:break-word; }
+.sj-doc .sj-linkrow { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; align-items:center; }
+.sj-danger { color:#b91c1c !important; border-color:#b91c1c !important; }
 @media (max-width:640px) { .sj-row, .sj-qhead, .sj-a { grid-template-columns:1fr; } .sj-ans { margin-left:4px; } .sj-bloks button { flex:1 1 100%; } }
 `;
     document.head.appendChild(css);
@@ -4624,7 +4631,7 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
         if (!force && latest && (latest.ts || 0) > (base[k] || 0) && latest.by !== me()) { conflict[k] = latest; return { conflict: latest }; }
         const out = Object.assign(cleanData(d), { by: me(), ts: Date.now() });
         await remotePut(k, out);
-        srv[k] = Object.assign(blank(), out); delete conflict[k];
+        srv[k] = Object.assign(blank(), out); delete conflict[k]; queueLive();
         // bila selama menyimpan ada ketikan baru, draft tetap dipertahankan
         if (draft[k] && JSON.stringify(cleanData(draft[k])) === snap) dropDraft(k); else { base[k] = out.ts; persistDraft(k); }
         return { ok: out.ts };
@@ -4730,9 +4737,10 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
   <div class="sj-linkrow"><input class="modern-input" id="sj-linkinput" readonly value="${esc(lastDoc.url)}" onfocus="this.select()">
   <button type="button" class="btn btn-primary btn-sm" data-copy="${esc(lastDoc.url)}">Salin link</button>
   <a class="btn btn-outline btn-sm" href="${esc(lastDoc.url)}" target="_blank" rel="noopener">Buka</a>
+  ${docxUrl(lastDoc) ? `<a class="btn btn-outline btn-sm" href="${esc(docxUrl(lastDoc))}" target="_blank" rel="noopener">\u2b07 Unduh .docx</a>` : ''}
   ${navigator.share ? '<button type="button" class="btn btn-outline btn-sm" data-share>Bagikan</button>' : ''}
   <button type="button" class="btn btn-outline btn-sm" data-closelink>Tutup</button></div>
-  <div class="sj-status" style="margin-top:6px;">${lastDoc.shared === false ? 'Akses "siapa saja yang memiliki link" belum bisa diatur otomatis. Atur manual lewat tombol Bagikan di Google Docs.' : 'Siapa saja yang memiliki link ini bisa melihat dokumennya.'}</div></div>`;
+  <div class="sj-status" style="margin-top:6px;">${lastDoc.shared === false ? 'Akses "siapa saja yang memiliki link" belum bisa diatur otomatis. Atur manual lewat tombol Bagikan di Google Docs.' : 'Siapa saja yang memiliki link ini bisa melihat dokumennya. Isinya ikut berubah otomatis saat skenario diisi atau diubah di portal.'}</div></div>`;
     }
 
     function render() {
@@ -4779,7 +4787,7 @@ ${trial ? '' : linkCard()}
   <button type="button" class="btn btn-outline" data-cp="one">Salin ke Google Docs (skenario ${s.n})</button>
   <button type="button" class="btn btn-outline" data-cp="all">Salin ke Google Docs (semua skenario)</button>
   <span class="sj-status ${st[1]}" id="sj-state">${esc(st[0])}</span></div>
-<div class="sj-docs sj-status" style="margin-top:8px;">${!trial && dl.length ? 'Dokumen terakhir: ' + dl.slice(0, 3).map(d => `<a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.name)}</a> <button type="button" class="btn btn-outline btn-sm" data-copy="${esc(d.url)}">Salin link</button>`).join(' \u00b7 ') : ''}</div>`;
+${trial ? '' : docsPanel()}`;
     }
 
     // ambil isi form ke draft
@@ -4869,10 +4877,157 @@ ${trial ? '' : linkCard()}
             }
             if (t.dataset.cp) { copyToDocs(t.dataset.cp === 'one' ? [cur] : BLOK[curB].skenario.map(x => x.n)); return; }
             if (t.dataset.exp) { exportDocs(t.dataset.exp === 'one' ? [cur] : BLOK[curB].skenario.map(x => x.n)); return; }
+            if (t.dataset.docdel != null) { deleteDocEntry(+t.dataset.docdel); return; }
+            if (t.hasAttribute('data-docdelall')) { deleteAllDocs(); return; }
+            if (t.hasAttribute('data-docsync')) { liveSync(true, true); return; }
             if (t.dataset.copy) { copyText(t.dataset.copy).then(ok => toast(ok ? 'Link disalin.' : 'Gagal menyalin. Pilih link lalu salin manual.')); return; }
             if (t.hasAttribute('data-share')) { if (lastDoc && navigator.share) navigator.share({ title: lastDoc.name, url: lastDoc.url }).catch(() => { }); return; }
             if (t.hasAttribute('data-closelink')) { lastDoc = null; render(); return; }
         });
+    }
+
+    // ---------- Dokumen Google Docs yang tersambung (sinkron otomatis, unduh .docx, hapus oleh admin) ----------
+    const isAdm = () => !!currentUser && currentUser.role === 'admin';
+    const docIdOf = u => { const m = String(u || '').match(/docs\.google\.com\/document\/d\/([\w-]+)/); return m ? m[1] : null; };
+    const docxUrl = e => { const id = e && (e.id || docIdOf(e.url)); return id ? 'https://docs.google.com/document/d/' + id + '/export?format=docx' : ''; };
+    const hashStr = str => { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return String(h) + ':' + str.length; };
+    const getDriveKey = () => { try { return localStorage.getItem('a9_drive_key') || ''; } catch (e) { return ''; } };
+
+    // Satu pintu ke Apps Script. interactive=true: minta kunci bila belum ada. Mengembalikan {ok, ...} dan tidak melempar error.
+    async function scriptCall(payload, interactive) {
+        let key = getDriveKey();
+        if (!key) {
+            if (!interactive) return { ok: false, silent: true, error: 'kunci belum diisi' };
+            const r = await askDialog('Kunci unggah ke Drive', [
+                { type: 'note', text: 'Masukkan kunci unggah (UPLOAD_KEY) dari Apps Script. Cukup sekali di perangkat ini.' },
+                { id: 'k', label: 'Kunci unggah', type: 'password' }], 'Simpan');
+            if (!r || !r.k.trim()) return { ok: false, silent: true, error: 'kunci tidak diisi' };
+            key = r.k.trim(); try { localStorage.setItem('a9_drive_key', key); } catch (e) { }
+        }
+        try {
+            const r = await fetch(DRIVE_UPLOAD_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ key }, payload)) });
+            const txt = await r.text(); let j = null; try { j = JSON.parse(txt); } catch (e) { }
+            if (!j) return { ok: false, error: 'Apps Script tidak membalas dengan benar. Biasanya deploy belum diatur "Siapa saja" atau URL di script.js bukan deploy terbaru.' };
+            if (!j.ok && /kunci/i.test(j.error || '')) { try { localStorage.removeItem('a9_drive_key'); } catch (e) { } }
+            return j;
+        } catch (e) {
+            return { ok: false, error: (e && e.name === 'TypeError') ? 'Tidak bisa menghubungi Apps Script. Cek internet, dan pastikan akses deploy = "Siapa saja".' : (e.message || String(e)) };
+        }
+    }
+
+    // Ubah daftar dokumen satu blok: baca versi terbaru di server dulu supaya perubahan teman tidak tertimpa
+    async function mutateDocs(b, fn) {
+        const dk = docsKey(b);
+        let cur = docs[b.key] || [];
+        if (supabaseClient) {
+            try {
+                const r = await supabaseClient.from('portal_db').select('value').eq('key', dk).maybeSingle();
+                if (!r.error && r.data) { const v = parse(r.data.value); if (Array.isArray(v)) cur = v; }
+            } catch (e) { }
+        }
+        const out = fn(cur.slice());
+        if (supabaseClient) {
+            const w = await supabaseClient.from('portal_db').upsert({ key: dk, value: out }, { onConflict: 'key' });
+            if (w.error) throw w.error;
+        }
+        docs[b.key] = out;
+        return out;
+    }
+
+    function docsPanel() {
+        const b = BLOK[curB], dl = docs[b.key] || [], adm = isAdm();
+        if (!dl.length) return `<div class="sj-docs-box"><h4>\ud83d\udcc4 Dokumen Google Docs</h4><p class="sj-status" style="margin:6px 0 0;">Belum ada dokumen untuk ${esc(b.label)}. Klik <em>Buat Google Docs</em>. Dokumen yang dibuat bisa dibuka, diunduh sebagai .docx, dan ikut berubah otomatis saat isi portal berubah.</p></div>`;
+        const rows = dl.map((e, i) => {
+            const dx = docxUrl(e);
+            const st = e.gone ? '\u26a0 Dokumen tidak ditemukan di Drive (mungkin sudah dihapus).'
+                : e.live ? '\ud83d\udd04 Ikut berubah otomatis \u00b7 diperbarui ' + fmtTs(e.upd || e.ts)
+                : 'Salinan lama (tidak ikut berubah). Klik Buat Google Docs lagi untuk membuat dokumen yang otomatis diperbarui.';
+            return `<div class="sj-doc"><div class="sj-dn">${esc(e.name)}</div><div class="sj-status">${esc(st)}${e.by ? ' \u00b7 dibuat oleh ' + esc(e.by) : ''}</div>
+  <div class="sj-linkrow"><a class="btn btn-primary btn-sm" href="${esc(e.url)}" target="_blank" rel="noopener">Buka</a>${dx ? `<a class="btn btn-outline btn-sm" href="${esc(dx)}" target="_blank" rel="noopener">\u2b07 Unduh .docx</a>` : ''}<button type="button" class="btn btn-outline btn-sm" data-copy="${esc(e.url)}">Salin link</button>${adm ? `<button type="button" class="btn btn-outline btn-sm sj-danger" data-docdel="${i}">Hapus</button>` : ''}</div></div>`;
+        }).join('');
+        return `<div class="sj-docs-box"><div class="sj-docs-head"><h4>\ud83d\udcc4 Dokumen Google Docs (${esc(b.label)})</h4><span><button type="button" class="btn btn-outline btn-sm" data-docsync>\ud83d\udd04 Perbarui sekarang</button>${adm && dl.length > 1 ? ' <button type="button" class="btn btn-outline btn-sm sj-danger" data-docdelall>Hapus semua</button>' : ''}</span></div>${rows}</div>`;
+    }
+
+    async function deleteDocEntry(i) {
+        if (!isAdm()) return;
+        const b = BLOK[curB], e = (docs[b.key] || [])[i]; if (!e) return;
+        if (!confirm('Hapus dokumen ini?\n\n' + e.name + '\n\nFile Google Docs dipindah ke Sampah Drive (bisa dipulihkan 30 hari) dan link-nya hilang dari portal.')) return;
+        const done = busy('Menghapus dokumen...');
+        try {
+            const id = e.id || docIdOf(e.url);
+            if (id) {
+                const j = await scriptCall({ action: 'deleteDoc', id }, true);
+                if (!j.ok) {
+                    done();
+                    if (!confirm('Dokumen belum terhapus di Drive (' + (j.error || 'gagal') + ').\n\nHapus dari daftar portal saja?')) return;
+                }
+            }
+            await mutateDocs(b, l => l.filter(x => !(x && x.url === e.url && x.ts === e.ts)));
+            if (lastDoc && lastDoc.url === e.url) lastDoc = null;
+            toast('Dokumen dihapus.');
+        } catch (er) { console.error(er); alert('Gagal menghapus dari daftar. Cek koneksi lalu coba lagi.'); }
+        finally { done(); }
+        render();
+    }
+
+    async function deleteAllDocs() {
+        if (!isAdm()) return;
+        const b = BLOK[curB], all = (docs[b.key] || []).slice(); if (!all.length) return;
+        if (!confirm('Hapus SEMUA ' + all.length + ' dokumen untuk ' + b.label + '?\n\nFile dipindah ke Sampah Drive (bisa dipulihkan 30 hari) dan semua link hilang dari portal.')) return;
+        const done = busy('Menghapus ' + all.length + ' dokumen...');
+        const failed = [];
+        try {
+            for (const e of all) {
+                const id = e.id || docIdOf(e.url);
+                if (!id) continue;
+                const j = await scriptCall({ action: 'deleteDoc', id }, true);
+                if (!j.ok) { failed.push(e); if (j.silent) break; }
+            }
+            const keep = new Set(failed.map(e => e.url + '|' + e.ts));
+            await mutateDocs(b, l => l.filter(x => x && keep.has(x.url + '|' + x.ts)));
+            lastDoc = null;
+        } catch (er) { console.error(er); alert('Gagal memperbarui daftar dokumen.'); }
+        finally { done(); }
+        toast(failed.length ? failed.length + ' dokumen gagal dihapus dan tetap ada di daftar.' : 'Semua dokumen dihapus.');
+        render();
+    }
+
+    // Sinkron otomatis: dokumen yang dibuat lewat portal diperbarui bila isi skenario berubah
+    let liveBusy = false, lastLive = 0, liveT = null;
+    function queueLive() { if (trial) return; clearTimeout(liveT); liveT = setTimeout(() => liveSync(false), 6000); }
+    async function liveSync(force, manual) {
+        if (trial || liveBusy || !DRIVE_UPLOAD_URL || !currentUser) return;
+        if (!manual && !getDriveKey()) return;          // otomatis berjalan diam-diam; kunci hanya diminta saat tombol ditekan
+        const b = BLOK[curB];
+        const list = (docs[b.key] || []).filter(e => e && e.live && !e.gone && e.id && Array.isArray(e.ns) && e.ns.length);
+        lastLive = Date.now();
+        if (!list.length) { if (manual) toast('Belum ada dokumen yang tersambung untuk blok ini.'); return; }
+        if (!lastFetch) { if (manual) toast('Data belum selesai dimuat. Coba lagi sebentar.'); return; }   // jangan sampai dokumen ditimpa data kosong
+        if (b.skenario.some(x => draft[skey(b, x.n)])) {
+            if (!manual) return;                          // tunggu sampai perubahan tersimpan
+            collect(); await autosaveNow();
+        }
+        liveBusy = true;
+        let n = 0, fail = '';
+        try {
+            const allNs = Array.from(new Set([].concat(...list.map(e => e.ns))));
+            if (window.__sjxLoad) { try { await window.__sjxLoad(b, allNs); } catch (e) { console.error(e); } }
+            for (const e of list) {
+                if (e.ns.some(x => !b.skenario[x - 1])) continue;
+                const html = docHtml(e.ns, true), h = hashStr(html + '|' + e.name);
+                if (!force && e.hash === h) continue;
+                const j = await scriptCall({ action: 'updateDoc', id: e.id, name: e.name, html }, !!manual);
+                if (j.ok) {
+                    n++;
+                    await mutateDocs(b, l => l.map(x => x && x.id === e.id ? Object.assign({}, x, { hash: h, upd: Date.now(), updBy: me() }) : x));
+                } else if (/tidak ditemukan/i.test(j.error || '')) {
+                    await mutateDocs(b, l => l.map(x => x && x.id === e.id ? Object.assign({}, x, { gone: true }) : x));
+                } else if (!j.silent) { fail = j.error || 'gagal'; console.error('Sinkron dokumen gagal:', fail); }
+            }
+        } catch (er) { console.error(er); fail = er.message || 'gagal'; }
+        liveBusy = false;
+        if (manual) toast(fail ? 'Sinkron gagal: ' + fail : n ? n + ' dokumen diperbarui.' : 'Semua dokumen sudah yang terbaru.');
+        const r = $('sj-root'); if (r && !r.contains(document.activeElement)) render();
     }
 
     // ---------- Ekspor ke Google Docs ----------
@@ -4951,28 +5106,14 @@ ${trial ? '' : linkCard()}
     }
 
     async function uploadDoc(name, html, path) {
-        let key = ''; try { key = localStorage.getItem('a9_drive_key') || ''; } catch (e) { }
-        if (!key) {
-            const r = await askDialog('Kunci unggah ke Drive', [
-                { type: 'note', text: 'Masukkan kunci unggah (UPLOAD_KEY) dari Apps Script. Cukup sekali di perangkat ini.' },
-                { id: 'k', label: 'Kunci unggah', type: 'password' }], 'Simpan');
-            if (!r || !r.k.trim()) return null;
-            key = r.k.trim(); try { localStorage.setItem('a9_drive_key', key); } catch (e) { }
-        }
         const done = busy('Membuat Google Docs di Drive...');
-        try {
-            const r = await fetch(DRIVE_UPLOAD_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key, action: 'createDoc', name, path, html }) });
-            const txt = await r.text(); let j = null; try { j = JSON.parse(txt); } catch (e) { }
-            if (!j) throw new Error('Apps Script tidak membalas dengan benar. Biasanya deploy belum diatur "Siapa saja" atau URL di script.js bukan deploy terbaru.');
-            if (!j.ok) { if (/kunci/i.test(j.error || '')) { try { localStorage.removeItem('a9_drive_key'); } catch (e) { } } throw new Error(j.error || 'Apps Script belum mendukung createDoc. Pasang drive-uploader.gs terbaru, jalankan fungsi otorisasi sekali, lalu Deploy > Kelola deployment > versi baru.'); }
-            return { url: j.url, shared: j.shared !== false };
-        } catch (e) {
-            console.error(e);
-            const m = (e && e.name === 'TypeError') ? 'Tidak bisa menghubungi Apps Script. Cek internet, dan pastikan akses deploy = "Siapa saja".' : (e.message || String(e));
-            await askDialog('Gagal membuat Google Docs', [{ type: 'note', text: m }, { type: 'note', text: 'File .doc tetap bisa diunduh setelah ini.' }], 'Mengerti');
-            return null;
-        }
-        finally { done(); }
+        let j;
+        try { j = await scriptCall({ action: 'createDoc', name, path, html }, true); } finally { done(); }
+        if (j && j.ok) return { url: j.url, id: j.id || docIdOf(j.url), shared: j.shared !== false };
+        if (j && j.silent) return null;
+        const m = (j && j.error) || 'Apps Script belum mendukung createDoc. Pasang drive-uploader.gs terbaru, jalankan fungsi authorize sekali, lalu Deploy > Kelola deployment > versi baru.';
+        await askDialog('Gagal membuat Google Docs', [{ type: 'note', text: m }, { type: 'note', text: 'File .doc tetap bisa diunduh setelah ini.' }], 'Mengerti');
+        return null;
     }
 
     function downloadDoc(name, html) {
@@ -5001,19 +5142,36 @@ ${trial ? '' : linkCard()}
         const b = BLOK[curB];
         const unsaved = ns.filter(n => draft[skey(b, n)]);
         if (unsaved.length && !trial && !confirm('Skenario ' + unsaved.join(', ') + ' belum tersimpan di server (mungkin ada konflik dengan versi teman). Dokumen akan memakai isi yang tampil sekarang. Lanjutkan?')) return;
-        const name = (trial ? 'COBA - ' : '') + 'Seven Jump ' + b.label + ' - Kelompok A9 - ' + (ns.length === 1 ? 'Skenario ' + ns[0] : 'Semua Skenario') + ' - ' + isoLocal(new Date());
+        const baseName = 'Seven Jump ' + b.label + ' - Kelompok A9 - ' + (ns.length === 1 ? 'Skenario ' + ns[0] : 'Semua Skenario');
+        const name = trial ? 'COBA - ' + baseName + ' - ' + isoLocal(new Date()) : baseName;   // dokumen asli bernama tetap supaya bisa diperbarui di tempat
         if (trial) {
             downloadDoc(name, docHtml(ns, false));
             toast('Mode Coba: dokumen hanya diunduh (.doc), tidak dibuat di Drive.');
             return;
         }
         if (DRIVE_UPLOAD_URL) {
-            const res = await uploadDoc(name, docHtml(ns, true), b.folder);
+            const scope = ns.length === 1 ? 'one-' + ns[0] : 'all';
+            const html = docHtml(ns, true), h = hashStr(html + '|' + name);
+            const old = (docs[b.key] || []).find(e => e && e.live && !e.gone && e.id && e.scope === scope);
+            let res = null, renewed = false;
+            if (old) {
+                // dokumen untuk bagian yang sama sudah ada: perbarui di tempat, link tetap sama
+                const dn = busy('Memperbarui Google Docs...');
+                let j; try { j = await scriptCall({ action: 'updateDoc', id: old.id, name, html }, true); } finally { dn(); }
+                if (j && j.ok) { res = { url: old.url, id: old.id, shared: true }; renewed = true; }
+                else if (j && j.silent) return;
+                else if (!/tidak ditemukan/i.test((j && j.error) || '')) {
+                    await askDialog('Gagal memperbarui Google Docs', [{ type: 'note', text: (j && j.error) || 'gagal' }, { type: 'note', text: 'Pastikan drive-uploader.gs terbaru sudah dipasang dan di-deploy ulang (versi baru).' }], 'Mengerti');
+                    return;
+                }
+            }
+            if (!res) res = await uploadDoc(name, html, b.folder);
             if (res && res.url) {
-                lastDoc = { name, url: res.url, shared: res.shared };
-                const list = [{ name, url: res.url, by: me(), ts: Date.now() }].concat(docs[b.key] || []).slice(0, 10);
-                docs[b.key] = list;
-                if (supabaseClient) { try { await supabaseClient.from('portal_db').upsert({ key: docsKey(b), value: list }, { onConflict: 'key' }); } catch (e) { } }
+                lastDoc = { name, url: res.url, id: res.id, shared: res.shared };
+                const entry = { id: res.id || docIdOf(res.url), name, url: res.url, ns: ns.slice(), scope, live: true, by: me(), ts: Date.now(), upd: Date.now(), hash: h };
+                try { await mutateDocs(b, l => [entry].concat(l.filter(e => e && !(e.id && e.id === entry.id) && !(e.live && e.scope === scope))).slice(0, 30)); }
+                catch (er) { console.error(er); alert('Dokumen sudah jadi, tapi daftar dokumen belum tersimpan di server. Salin linknya dulu.'); }
+                toast(renewed ? 'Google Docs diperbarui. Link tetap sama.' : 'Google Docs dibuat. Isinya akan ikut berubah otomatis.');
                 render();
                 const lc = document.querySelector('#sj-root .sj-link'); if (lc && lc.scrollIntoView) lc.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
@@ -5031,7 +5189,7 @@ ${trial ? '' : linkCard()}
         if (!currentUser) return;
         const r = ensureRoot(); if (!r) return;
         if (!booted) { booted = true; if (Object.keys(draft).length) schedule(); }   // draf lama dari perangkat ikut disimpan
-        if (r.offsetParent !== null) fetchAll(false);   // hanya saat menu Tutorial terbuka
+        if (r.offsetParent !== null) { fetchAll(false); if (Date.now() - lastLive > 30000) liveSync(false); }   // hanya saat menu Tutorial terbuka
     }
     const prev = window.switchTab;
     window.switchTab = function (t, b) {
@@ -5395,7 +5553,7 @@ html body.a9soft #login-page h1::after, html body.a9soft #login-page h2::after, 
     function openPicker(btn) {
         if (panel) { closePicker(); return; }
         const cur = stored();
-        const row = (id, nama, ket, sw) => `<button type="button" data-th="${id}" class="${cur === id ? 'on' : ''}"><span class="sw" style="background:${sw[0]}"><i style="background:${sw[1]}"></i></span><span><b>${nama}</b><small>${ket}</small></span>${cur === id ? '<span class="ck">Ã¢Å“â€œ</span>' : ''}</button>`;
+        const row = (id, nama, ket, sw) => `<button type="button" data-th="${id}" class="${cur === id ? 'on' : ''}"><span class="sw" style="background:${sw[0]}"><i style="background:${sw[1]}"></i></span><span><b>${nama}</b><small>${ket}</small></span>${cur === id ? '<span class="ck">ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“</span>' : ''}</button>`;
         panel = document.createElement('div'); panel.className = 'a9-thm'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Pilih tema');
         panel.innerHTML = '<h4>Pilih tema tampilan</h4>' + THEMES.map(t => row(t.id, t.nama, t.ket, t.sw)).join('') +
             row('auto', 'Otomatis', 'Ikut mode terang / gelap perangkat', ['#f4f6f4', '#2f3a40']);
