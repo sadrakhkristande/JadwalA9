@@ -24,7 +24,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_-NTQ0VL2xQmIYJ_ieREXkg_WUcU3L0t";
 
 // URL Web App Google Apps Script milik kelompok.a9.2026@gmail.com (lihat drive-uploader.gs dan langkah pasang).
 // Kalau masih kosong, unggahan memakai penyimpanan Supabase seperti sebelumnya.
-const DRIVE_UPLOAD_URL = 'https://script.google.com/macros/s/AKfycbxkCOOQGt9BqzMvBFeewZqoTlOngiUZUN4Jq-bOxSHH3NZPAEcByR7QYpH7eeCtKHai/exec';
+const DRIVE_UPLOAD_URL = 'https://script.google.com/macros/s/AKfycbzPkmSZMPQsFq7zbkgLH1bDi6rWCTX5Mkr54v8--6NzFCHIpgQRntYHdZb1TUYxs5iA/exec';
 
 let supabaseClient = null;
 try {
