@@ -361,8 +361,12 @@ async function uploadDriveBesar(file, path, key) {
             if (u) return u;
             return null;
         }
+        let vAktif = 'tidak diketahui';
+        if (lama) {
+            try { const rv = await fetch(DRIVE_UPLOAD_URL); const jv = await rv.json(); vAktif = jv && jv.versi ? String(jv.versi) : 'lama (belum ada nomor versi)'; } catch (e2) { }
+        }
         alert(lama
-            ? 'Unggah file besar ke Drive gagal karena Apps Script yang aktif masih versi lama (belum mendukung file di atas 20 MB).\n\nCara memperbaiki:\n1. Buka script.google.com, buka proyek uploader.\n2. Tempel code.gs versi 8, lalu Simpan.\n3. Deploy > Kelola deployment > ikon pensil > Versi: Versi baru > Deploy.\n(URL Web App tidak berubah.)\n\nSementara itu, unggah manual ke Drive lalu tempel tautannya.'
+            ? 'Unggah file besar ke Drive gagal: Web App di DRIVE_UPLOAD_URL masih menjalankan versi ' + vAktif + ' (dibutuhkan versi 8).\n\nCara memperbaiki:\n1. Buka proyek Apps Script yang PERSIS memiliki URL itu (jangan proyek baru).\n2. Tempel code.gs versi 8, lalu Simpan.\n3. Deploy > Kelola deployment > ikon pensil > Versi: Versi baru > Deploy.\n4. Buka URL /exec di browser, harus muncul versi 8.\n\nKalau memakai proyek baru, salin URL /exec-nya ke DRIVE_UPLOAD_URL di script.js.\n\nSementara itu, unggah manual ke Drive lalu tempel tautannya.'
             : 'Unggah file besar ke Drive gagal: ' + msg + '\n\nKalau pesannya menyebut izin, deploy ulang Apps Script dan setujui izin Drive. Atau unggah manual ke Drive lalu tempel tautannya.');
         return null;
     } finally { tt.remove(); }
