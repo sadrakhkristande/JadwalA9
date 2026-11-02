@@ -5761,7 +5761,7 @@ html body.a9soft #login-page h1::after, html body.a9soft #login-page h2::after, 
     function openPicker(btn) {
         if (panel) { closePicker(); return; }
         const cur = stored();
-        const row = (id, nama, ket, sw) => `<button type="button" data-th="${id}" class="${cur === id ? 'on' : ''}"><span class="sw" style="background:${sw[0]}"><i style="background:${sw[1]}"></i></span><span><b>${nama}</b><small>${ket}</small></span>${cur === id ? '<span class="ck">ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“</span>' : ''}</button>`;
+        const row = (id, nama, ket, sw) => `<button type="button" data-th="${id}" class="${cur === id ? 'on' : ''}"><span class="sw" style="background:${sw[0]}"><i style="background:${sw[1]}"></i></span><span><b>${nama}</b><small>${ket}</small></span>${cur === id ? '<span class="ck">ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ</span>' : ''}</button>`;
         panel = document.createElement('div'); panel.className = 'a9-thm'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Pilih tema');
         panel.innerHTML = '<h4>Pilih tema tampilan</h4>' + THEMES.map(t => row(t.id, t.nama, t.ket, t.sw)).join('') +
             row('auto', 'Otomatis', 'Ikut mode terang / gelap perangkat', ['#f4f6f4', '#2f3a40']);
@@ -6740,4 +6740,367 @@ function a9CklText(items) {
     // ganti akun: reset tampilan
     const prevLogin = window.finishLogin;
     window.finishLogin = function () { const r = prevLogin ? prevLogin.apply(this, arguments) : undefined; progFor = ''; st.sl = null; st.form = null; return r; };
+})();
+
+// ==========================================================================
+// BAGIAN 19 - JADWAL BERJALAN (TICKER) + EDITOR JADWAL PER TANGGAL + MENU BARU (HP LEBIH SIMPEL)
+//   TEMPEL DI PALING BAWAH script.js (setelah Bagian "CHECKLIST SKILLS LAB"), tanpa menghapus apa pun.
+//   1) Ticker: teks berjalan berisi kegiatan HARI INI dan BESOK di bawah menu atas.
+//   2) Admin: tambah / ubah / hapus jadwal dengan MEMILIH TANGGAL. Hanya jadwal hari itu yang tampil.
+//   3) Menu: Beranda, Kuliah, Laboratorium, Skills, Tutorial, Latihan, Bantuan, OSCE.
+//      Di HP: bilah bawah hanya 5 tombol (Beranda, Kuliah, Latihan, OSCE, Lainnya).
+//   Memakai fungsi yang sudah ada: a9ParseTgl, a9TglStr, saveCategoryData, postUpdate, tglIndo.
+// ==========================================================================
+(function () {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const isAdmin = () => !!currentUser && currentUser.role === 'admin';
+    const sod = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const isoOf = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const fromIso = s => { const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
+    const startMin = x => { const m = String(x.jam || '').match(/(\d{1,2})[.:](\d{2})/); return m ? +m[1] * 60 + +m[2] : 99999; };
+    const clone = o => JSON.parse(JSON.stringify(o));
+    const dayLabel = d => d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short' });
+
+    // ======================================================================
+    // CSS
+    // ======================================================================
+    const css = document.createElement('style');
+    css.id = 'a9-b19';
+    css.textContent = `
+/* ---------- Ticker jadwal ---------- */
+#jb-ticker { display: none; align-items: stretch; position: sticky; top: var(--a9-nav-h, 0px); z-index: 899; background: var(--primary-light); border-bottom: 1px solid var(--border-color); color: var(--text-main); font-size: 14px; overflow: hidden; }
+#jb-ticker.on { display: flex; }
+body.cbt-locked #jb-ticker { display: none !important; }
+.jb-lbl { flex: none; display: flex; align-items: center; padding: 0 14px; font-weight: 800; background: var(--primary); color: var(--on-primary, #fff); white-space: nowrap; }
+.jb-view { flex: 1; min-width: 0; overflow: hidden; cursor: pointer; white-space: nowrap; display: flex; align-items: center; }
+.jb-track { display: inline-flex; white-space: nowrap; animation: jbscroll var(--jb-dur, 30s) linear infinite; will-change: transform; padding: 9px 0; }
+#jb-ticker:hover .jb-track, .jb-view:active .jb-track { animation-play-state: paused; }
+.jb-copy { flex: none; display: inline-flex; align-items: center; gap: 10px; min-width: 100vw; padding-right: 64px; }
+@keyframes jbscroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.jb-seg { display: inline-flex; align-items: center; gap: 8px; }
+.jb-tag { font-weight: 800; border-radius: 999px; padding: 1px 10px; background: var(--primary); color: var(--on-primary, #fff); font-size: 12.5px; }
+.jb-tag.b { background: transparent; color: var(--primary-text, var(--primary)); box-shadow: inset 0 0 0 1px var(--primary-bd, var(--primary)); }
+.jb-it b { font-variant-numeric: tabular-nums; }
+.jb-it.hot { color: var(--danger); font-weight: 700; }
+.jb-it.now { font-weight: 800; }
+.jb-it.end { opacity: .55; text-decoration: line-through; }
+.jb-it.none { color: var(--text-muted); font-style: italic; }
+.jb-it em { color: var(--warning); font-style: normal; font-weight: 600; }
+.jb-sep { opacity: .45; }
+.jb-x { flex: none; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; padding: 0 12px; font-size: 15px; min-height: 0; }
+@media (max-width: 768px) { #jb-ticker { font-size: 13px; } .jb-lbl { padding: 0 10px; } }
+@media (prefers-reduced-motion: reduce) {
+  .jb-view { overflow-x: auto; }
+  .jb-track { animation: none !important; }
+  .jb-copy:nth-child(2) { display: none; }
+  .jb-copy { min-width: 0; }
+}
+
+/* ---------- Editor jadwal per tanggal ---------- */
+.jde2-pick { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 10px 0 6px; }
+.jde2-pick .modern-input { margin: 0; flex: 1 1 160px; max-width: 220px; }
+.jde2-info { font-size: 14px; margin: 6px 0 12px; font-weight: 600; }
+.jde2-info.new { color: var(--warning); }
+.jde2-ses { display: grid; grid-template-columns: 150px 1fr auto; gap: 8px; margin-bottom: 8px; }
+.jde2-ses .modern-input { margin: 0; }
+.jde2-acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+@media (max-width: 768px) { .jde2-ses { grid-template-columns: 1fr auto; } .jde2-ses input:first-child { grid-column: 1 / -1; } .jde2-pick .modern-input { max-width: none; } }
+#jde { display: none !important; }   /* editor lama (semua hari sekaligus) diganti editor per tanggal */
+
+/* ---------- Menu baru ---------- */
+#sn-main .nav-pill { position: relative; display: inline-flex; align-items: center; gap: 6px; }
+#sn-main .mx-moreb { display: none !important; }
+#sn-main .mx-i { line-height: 1; }
+#sn-main .live-dot { margin-left: 4px; }
+#mx-sheet { position: fixed; inset: 0; z-index: 1200; display: none; background: rgba(10, 14, 22, .5); }
+#mx-sheet.open { display: block; }
+#mx-sheet .mx-pan { position: absolute; left: 0; right: 0; bottom: 0; background: var(--bg-card); color: var(--text-main); border-radius: 22px 22px 0 0; padding: 16px 16px calc(22px + env(safe-area-inset-bottom)); max-height: 82vh; overflow: auto; box-shadow: 0 -14px 40px rgba(0, 0, 0, .3); }
+.mx-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 17px; }
+.mx-close { border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); border-radius: 50%; width: 38px; height: 38px; font-size: 15px; cursor: pointer; padding: 0; }
+.mx-grp { padding: 12px 0; border-top: 1px solid var(--border-color); }
+.mx-gt { font-weight: 700; margin-bottom: 8px; font-size: 15px; display: flex; align-items: center; gap: 6px; }
+.mx-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.mx-b { flex: 1 1 130px; min-height: 48px; border: 1px solid var(--border-color); background: var(--bg-base); color: var(--text-main); border-radius: 14px; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; padding: 8px 14px; }
+.mx-b.on { background: var(--primary-light); color: var(--primary-text, var(--primary)); border-color: var(--primary-bd, var(--primary)); }
+@media (max-width: 768px) {
+  #sn-main { justify-content: space-around !important; gap: 0 !important; overflow: visible !important; }
+  #sn-main .mx-more { display: none !important; }
+  #sn-main .mx-moreb { display: inline-flex !important; }
+  #sn-main .nav-pill { flex: 1 1 0 !important; min-width: 0 !important; flex-direction: column !important; justify-content: center !important; gap: 3px !important; min-height: 58px !important; padding: 6px 2px !important; }
+  #sn-main .mx-i { font-size: 22px; }
+  #sn-main .mx-l { font-size: 12px !important; font-weight: 700; white-space: nowrap; }
+  #sn-main .sn-badge { position: absolute; top: 2px; left: calc(50% + 6px); margin: 0; }
+  #sn-sub { padding: 6px !important; }
+  #sn-sub .sn-chip { font-size: 14px !important; padding: 10px 16px !important; min-height: 42px; }
+}
+`;
+    document.head.appendChild(css);
+
+    // ======================================================================
+    // 1) TICKER JADWAL HARI INI & BESOK
+    // ======================================================================
+    const tk = document.createElement('div');
+    tk.id = 'jb-ticker'; tk.setAttribute('role', 'region'); tk.setAttribute('aria-label', 'Jadwal berjalan hari ini dan besok');
+    tk.innerHTML = '<span class="jb-lbl">\ud83d\udce2 Jadwal</span><div class="jb-view" id="jb-view" title="Klik untuk membuka jadwal"><div class="jb-track" id="jb-track"></div></div><button type="button" class="jb-x" id="jb-x" aria-label="Tutup jadwal berjalan">\u2715</button>';
+    const navEl = document.querySelector('.simple-nav');
+    if (navEl) navEl.after(tk); else document.body.prepend(tk);
+
+    let tkSig = '';
+    const HOT = /\bUB\b|ujian|responsi|osce|kuis|quiz|praktikum/i;
+    const dismissed = () => { try { return sessionStorage.getItem('a9_jb_off') === '1'; } catch (e) { return false; } };
+
+    function itemsOf(J, d) {
+        const e = J.find(x => x.d.getTime() === d.getTime());
+        if (!e) return null;
+        return e.j.sesi.filter(s => s && s.kegiatan && String(s.kegiatan).trim() !== '-');
+    }
+    function itemHtml(s, isToday, nowMin) {
+        let cls = '';
+        if (HOT.test(s.kegiatan)) cls += ' hot';
+        let pre = '';
+        if (isToday) {
+            const m = String(s.jam || '').match(/(\d{1,2})[.:](\d{2})\s*[-\u2013]\s*(\d{1,2})[.:](\d{2})/);
+            if (m) {
+                const a = +m[1] * 60 + +m[2], b = +m[3] * 60 + +m[4];
+                if (nowMin >= b) cls += ' end'; else if (nowMin >= a) { cls += ' now'; pre = '\u25b6 '; }
+            }
+        }
+        return `<span class="jb-it${cls}">${pre}${s.jam ? '<b>' + esc(s.jam) + '</b> ' : ''}${esc(s.kegiatan)}${s.pindahDari ? ' <em>(jadwal berubah)</em>' : ''}</span>`;
+    }
+    function segHtml(label, d, items, isToday, nowMin) {
+        const body = items === null ? '<span class="jb-it none">jadwal belum diisi</span>'
+            : !items.length ? '<span class="jb-it none">tidak ada kegiatan</span>'
+                : items.map(s => itemHtml(s, isToday, nowMin)).join('<span class="jb-sep">\u2022</span>');
+        return `<span class="jb-seg"><span class="jb-tag${isToday ? '' : ' b'}">${label} \u00b7 ${esc(dayLabel(d))}</span>${body}</span>`;
+    }
+    function updateTicker() {
+        const J = (dbData.jadwalCustom || []).filter(j => j && Array.isArray(j.sesi)).map(j => ({ j, d: a9ParseTgl(j.tgl) })).filter(x => x.d);
+        const show = !!currentUser && J.length > 0 && !dismissed();
+        tk.classList.toggle('on', show);
+        if (!show) { tkSig = ''; return; }
+        const now = new Date(), today = sod(now), tmr = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        const one = segHtml('Hari ini', today, itemsOf(J, today), true, nowMin) + '<span class="jb-sep">|</span>' + segHtml('Besok', tmr, itemsOf(J, tmr), false, nowMin);
+        if (one === tkSig) return;
+        tkSig = one;
+        const copy = '<span class="jb-copy">' + one + '</span>';
+        const len = (tk.textContent || '').length;
+        $('jb-track').innerHTML = copy + copy;
+        tk.style.setProperty('--jb-dur', Math.max(22, Math.round(len * 0.22)) + 's');
+    }
+    $('jb-view').addEventListener('click', () => { if (typeof window.switchTab === 'function') window.switchTab('jadwal', null); });
+    $('jb-x').addEventListener('click', () => { try { sessionStorage.setItem('a9_jb_off', '1'); } catch (e) { } tk.classList.remove('on'); });
+    setInterval(updateTicker, 60 * 1000);   // penanda "sedang berlangsung" dan pergantian hari ikut diperbarui
+
+    // ======================================================================
+    // 2) EDITOR JADWAL PER TANGGAL (admin)
+    // ======================================================================
+    const box = document.createElement('details');
+    box.id = 'jde2'; box.className = 'admin-form-box'; box.style.cssText = 'display:none;margin-top:20px;';
+    box.innerHTML = `<summary>\u270f\ufe0f Admin: tambah / ubah jadwal (pilih tanggal)</summary>
+      <p class="hint">Pilih tanggal, lalu hanya jadwal hari itu yang tampil. Tidak perlu menggulir seluruh jadwal.</p>
+      <div class="jde2-pick">
+        <button type="button" class="btn btn-outline btn-sm" data-j2="prev" aria-label="Hari sebelumnya">\u25c0</button>
+        <input type="date" id="jde2-date" class="modern-input" aria-label="Pilih tanggal">
+        <button type="button" class="btn btn-outline btn-sm" data-j2="next" aria-label="Hari berikutnya">\u25b6</button>
+        <button type="button" class="btn btn-outline btn-sm" data-j2="today">Hari ini</button>
+        <button type="button" class="btn btn-outline btn-sm" data-j2="tmr">Besok</button>
+      </div>
+      <div class="jde2-info" id="jde2-info"></div>
+      <div id="jde2-ses"></div>
+      <div class="jde2-acts">
+        <button type="button" class="btn btn-outline btn-sm" data-j2="addses">+ Tambah sesi</button>
+        <button type="button" class="btn btn-primary" data-j2="save">\ud83d\udcbe Simpan jadwal tanggal ini</button>
+        <button type="button" class="btn btn-danger btn-sm" data-j2="delday" id="jde2-del">Hapus jadwal tanggal ini</button>
+      </div>`;
+    const jdView = $('jd-view');
+    if (jdView) jdView.after(box);
+
+    const ed = { iso: '', sesi: [], had: false, dirty: false };
+    const findDay = (list, d) => (list || []).findIndex(j => { const x = j && a9ParseTgl(j.tgl); return x && x.getTime() === d.getTime(); });
+
+    function paintInfo() {
+        const d = fromIso(ed.iso), el = $('jde2-info');
+        if (!d) { el.textContent = ''; el.className = 'jde2-info'; return; }
+        el.className = 'jde2-info' + (ed.had ? '' : ' new');
+        el.textContent = dayLabel(d) + (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : '') + (ed.had ? ' \u00b7 sudah ada jadwal, kamu sedang mengubahnya' : ' \u00b7 belum ada jadwal, isi lalu simpan untuk menambahkan');
+        $('jde2-del').style.display = ed.had ? '' : 'none';
+    }
+    function paintSes() {
+        $('jde2-ses').innerHTML = ed.sesi.map((s, i) => `<div class="jde2-ses">
+          <input class="modern-input" data-i="${i}" data-f="jam" value="${esc(s.jam)}" placeholder="07.50-09.30" aria-label="Jam sesi ${i + 1}">
+          <input class="modern-input" data-i="${i}" data-f="kegiatan" value="${esc(s.kegiatan)}" placeholder="Kegiatan / dosen" aria-label="Kegiatan sesi ${i + 1}">
+          <button type="button" class="btn btn-outline btn-sm" data-j2="delses" data-i="${i}" aria-label="Hapus sesi ${i + 1}">\u2715</button></div>`).join('');
+    }
+    function loadDay(iso) {
+        const d = fromIso(iso); if (!d) return;
+        const i = findDay(dbData.jadwalCustom, d);
+        ed.iso = iso; ed.had = i >= 0; ed.dirty = false;
+        ed.sesi = i >= 0 ? clone(dbData.jadwalCustom[i].sesi) : [{ jam: '', kegiatan: '' }];
+        if (!ed.sesi.length) ed.sesi.push({ jam: '', kegiatan: '' });
+        $('jde2-date').value = iso;
+        paintInfo(); paintSes();
+    }
+    function gotoDay(iso) {
+        if (ed.dirty && ed.iso !== iso && !confirm('Perubahan di tanggal ini belum disimpan. Pindah tanggal dan buang perubahan?')) { $('jde2-date').value = ed.iso; return; }
+        loadDay(iso);
+    }
+    const shift = n => { const d = fromIso(ed.iso) || sod(new Date()); return isoOf(new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)); };
+
+    async function commit(list, okMsg, postFn) {
+        const before = dbData.jadwalCustom;
+        dbData.jadwalCustom = list;
+        if (!(await saveCategoryData('jadwal'))) { dbData.jadwalCustom = before; renderAll(); return false; }
+        alert(okMsg);
+        try { postFn && postFn(); } catch (e) { }
+        return true;
+    }
+    async function saveDay() {
+        const d = fromIso(ed.iso); if (!d) { alert('Pilih tanggal dulu.'); return; }
+        const sesi = ed.sesi.map(s => Object.assign({}, s, { jam: String(s.jam || '').trim(), kegiatan: String(s.kegiatan || '').trim() })).filter(s => s.jam || s.kegiatan);
+        if (!sesi.length) { alert('Belum ada sesi yang diisi. Untuk menghapus seluruh jadwal tanggal ini, pakai tombol Hapus jadwal tanggal ini.'); return; }
+        if (sesi.some(s => !s.kegiatan)) { alert('Ada sesi yang kegiatannya masih kosong. Isi atau hapus barisnya.'); return; }
+        if (d < sod(new Date()) && !confirm('Tanggal ini sudah lewat, jadwalnya akan terhapus otomatis oleh sistem. Tetap simpan?')) return;
+        sesi.sort((a, b) => startMin(a) - startMin(b));
+        const list = clone(dbData.jadwalCustom || []), i = findDay(list, d), baru = i < 0;
+        if (baru) list.push({ tgl: a9TglStr(d), sesi }); else list[i].sesi = sesi;
+        list.sort((a, b) => { const x = a9ParseTgl(a.tgl), y = a9ParseTgl(b.tgl); return x && y ? x - y : 0; });
+        const iso = ed.iso;
+        const ok = await commit(list, 'Jadwal ' + dayLabel(d) + (baru ? ' ditambahkan.' : ' diperbarui.'), () =>
+            postUpdate('jadwal', '\ud83d\uddd3\ufe0f Jadwal diperbarui', 'Jadwal ' + tglIndo(iso) + (baru ? ' ditambahkan.' : ' diubah.') + ' Cek menu Kuliah \u203a Jadwal.', { key: 'jadwal-edit', merge: n => n + ' perubahan jadwal. Cek menu Kuliah \u203a Jadwal.', until: iso }));
+        if (ok) loadDay(iso);
+    }
+    async function delDay() {
+        const d = fromIso(ed.iso); if (!d) return;
+        if (!confirm('Hapus seluruh jadwal ' + dayLabel(d) + '? Tindakan ini tidak bisa dibatalkan.')) return;
+        const list = clone(dbData.jadwalCustom || []), i = findDay(list, d);
+        if (i < 0) { loadDay(ed.iso); return; }
+        list.splice(i, 1);
+        const iso = ed.iso;
+        if (await commit(list, 'Jadwal ' + dayLabel(d) + ' dihapus.')) loadDay(iso);
+    }
+
+    box.addEventListener('toggle', () => { if (box.open) loadDay(ed.iso || isoOf(new Date())); });
+    $('jde2-date').addEventListener('change', e => { if (e.target.value) gotoDay(e.target.value); else e.target.value = ed.iso; });
+    box.addEventListener('input', e => {
+        const t = e.target, i = t.dataset.i; if (i === undefined || !t.dataset.f || !ed.sesi[+i]) return;
+        ed.sesi[+i][t.dataset.f] = t.value; ed.dirty = true;
+    });
+    box.addEventListener('click', e => {
+        const b = e.target.closest('[data-j2]'); if (!b) return;
+        const a = b.dataset.j2;
+        if (a === 'prev') gotoDay(shift(-1));
+        else if (a === 'next') gotoDay(shift(1));
+        else if (a === 'today') gotoDay(isoOf(new Date()));
+        else if (a === 'tmr') { const t = new Date(); gotoDay(isoOf(new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1))); }
+        else if (a === 'addses') { ed.sesi.push({ jam: '', kegiatan: '' }); ed.dirty = true; paintSes(); const l = $('jde2-ses').querySelectorAll('input[data-f="jam"]'); if (l.length) l[l.length - 1].focus(); }
+        else if (a === 'delses') { ed.sesi.splice(+b.dataset.i, 1); if (!ed.sesi.length) ed.sesi.push({ jam: '', kegiatan: '' }); ed.dirty = true; paintSes(); }
+        else if (a === 'save') saveDay();
+        else if (a === 'delday') delDay();
+    });
+
+    // ======================================================================
+    // 3) MENU BARU
+    //   Beranda | Kuliah | Laboratorium (Lab) | Skills (Checklist, Skills Lab) | Tutorial | Latihan | Bantuan | OSCE
+    //   Di HP bilah bawah hanya 5 tombol; Laboratorium, Skills, Tutorial, Bantuan masuk ke lembar "Lainnya".
+    // ======================================================================
+    const NG = [
+        { id: 'home', ico: '\ud83c\udfe0', label: 'Beranda', tabs: () => [['home', 'Beranda']] },
+        { id: 'kuliah', ico: '\ud83d\udcc5', label: 'Kuliah', tabs: () => [['jadwal', 'Jadwal'], ['tugas', 'Tugas'], ['materi', 'Materi'], ['alat', 'Alat Belajar']] },
+        { id: 'lab', ico: '\ud83d\udd2c', label: 'Laboratorium', more: 1, tabs: () => [['lab', 'Lab']] },
+        { id: 'skills', ico: '\ud83d\udc89', label: 'Skills', more: 1, tabs: () => [['checklist', 'Checklist'], ['skills', 'Skills Lab']] },
+        { id: 'tutorial', ico: '\ud83d\udc65', label: 'Tutorial', more: 1, tabs: () => [['tutorial', 'Tutorial']] },
+        { id: 'latihan', ico: '\u270d\ufe0f', label: 'Latihan', tabs: () => [['soal', 'Soal Isian'], ['cbt', 'Simulasi CBT'], isAdmin() ? ['progres-admin', 'Progres Mahasiswa'] : ['progres', 'Progres Saya'], ['game', 'Game Santai']] },
+        { id: 'bantuan', ico: '\ud83d\udcac', label: 'Bantuan', more: 1, tabs: () => [['panduan', 'Panduan'], isAdmin() ? ['laporan-admin', 'Laporan Masuk'] : ['lapor', 'Lapor Masalah']] }
+    ];
+    const main = $('sn-main'), sub = $('sn-sub');
+
+    function curTabId() {
+        const el = Array.from(document.querySelectorAll('.tab-content')).find(e => getComputedStyle(e).display !== 'none');
+        return el && el.id ? el.id.replace(/^tab-/, '') : 'home';
+    }
+    function readBadge() {
+        const b = main.querySelector('[data-g="bantuan"] .sn-badge, [data-mg="bantuan"] .sn-badge');
+        return b ? (parseInt(b.textContent, 10) || 0) : 0;
+    }
+    function renderNav() {
+        const badge = readBadge(), tab = curTabId();
+        const g = NG.find(x => x.tabs().some(t => t[0] === tab));
+        const bd = n => n ? `<span class="sn-badge">${n}</span>` : '';
+        main.innerHTML = NG.map(x => `<button type="button" class="nav-pill${x.more ? ' mx-more' : ''}${x === g ? ' active' : ''}" data-mg="${x.id}"><span class="mx-i">${x.ico}</span><span class="mx-l">${x.label}</span>${x.id === 'bantuan' ? bd(badge) : ''}</button>`).join('') +
+            `<button type="button" class="nav-pill${tab === 'osce' ? ' active' : ''}" id="sn-osce"><span class="mx-i">\ud83e\ude7a</span><span class="mx-l">OSCE</span></button>` +
+            `<button type="button" class="nav-pill mx-moreb${g && g.more ? ' active' : ''}" data-mx="more"><span class="mx-i">\u2630</span><span class="mx-l">Lainnya</span>${bd(badge)}</button>`;
+        const ts = g ? g.tabs() : [];
+        sub.style.display = ts.length > 1 ? 'flex' : 'none';
+        sub.innerHTML = ts.length > 1 ? ts.map(t => `<button type="button" class="sn-chip${t[0] === tab ? ' active' : ''}" data-t="${t[0]}">${t[1]}${t[0] === 'laporan-admin' ? bd(badge) : ''}</button>`).join('') : '';
+    }
+    // tombol OSCE dibuat/diubah oleh bagian OSCE: bentuk ulang supaya ikon dan teks tersusun sama dengan tombol lain
+    function fixOsce() {
+        const b = $('sn-osce');
+        if (!b || b.querySelector('.mx-l')) return;
+        const live = !!b.querySelector('.live-dot');
+        b.innerHTML = '<span class="mx-i">\ud83e\ude7a</span><span class="mx-l">OSCE' + (live ? '<span class="live-dot"></span>' : '') + '</span>';
+    }
+    function sync() { if (!main.querySelector('[data-mg]')) renderNav(); fixOsce(); }
+    const obs = new MutationObserver(sync);
+    obs.observe(main, { childList: true, subtree: true });
+    obs.observe(sub, { childList: true });
+
+    main.addEventListener('click', e => {
+        if (e.target.closest('[data-mx]')) { openSheet(); return; }
+        const b = e.target.closest('[data-mg]'); if (!b) return;
+        const g = NG.find(x => x.id === b.dataset.mg); if (!g) return;
+        const ts = g.tabs(), go = (g.id === 'bantuan' && readBadge() && ts[1]) ? ts[1][0] : ts[0][0];
+        window.switchTab(go, null);
+    });
+
+    // lembar "Lainnya" (HP)
+    const sheet = document.createElement('div');
+    sheet.id = 'mx-sheet';
+    document.body.appendChild(sheet);
+    function closeSheet() { sheet.classList.remove('open'); }
+    function openSheet() {
+        const badge = readBadge(), tab = curTabId();
+        sheet.innerHTML = `<div class="mx-pan" role="dialog" aria-modal="true" aria-label="Menu lainnya"><div class="mx-hd"><b>Menu lainnya</b><button type="button" class="mx-close" data-mxc aria-label="Tutup">\u2715</button></div>` +
+            NG.filter(x => x.more).map(x => `<div class="mx-grp"><div class="mx-gt">${x.ico} ${x.label}${x.id === 'bantuan' && badge ? `<span class="sn-badge">${badge}</span>` : ''}</div><div class="mx-btns">${x.tabs().map(t => `<button type="button" class="mx-b${t[0] === tab ? ' on' : ''}" data-go="${t[0]}">${t[1]}</button>`).join('')}</div></div>`).join('') + '</div>';
+        sheet.classList.add('open');
+    }
+    sheet.addEventListener('click', e => {
+        if (e.target === sheet || e.target.closest('[data-mxc]')) { closeSheet(); return; }
+        const b = e.target.closest('[data-go]'); if (!b) return;
+        closeSheet(); window.switchTab(b.dataset.go, null);
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheet.classList.contains('open')) closeSheet(); });
+    window.addEventListener('resize', () => { if (window.innerWidth > 768) closeSheet(); });
+
+    // teks Panduan ikut menyesuaikan nama menu baru
+    function fixGuide() {
+        try {
+            document.querySelectorAll('#tab-panduan p').forEach(p => {
+                if (p.innerHTML.indexOf('Beranda, Kuliah, Praktikum, Latihan, Bantuan') >= 0)
+                    p.innerHTML = p.innerHTML.replace('<strong>Beranda, Kuliah, Praktikum, Latihan, Bantuan</strong>', '<strong>Beranda, Kuliah, Laboratorium, Skills, Tutorial, Latihan, Bantuan, OSCE</strong> (di HP: tombol <strong>Lainnya</strong> membuka Laboratorium, Skills, Tutorial, dan Bantuan)');
+            });
+            document.querySelectorAll('#tab-panduan details').forEach(d => {
+                const s = d.querySelector('summary');
+                if (s && /^4\. Lab, Skills Lab, dan Tutorial/.test(s.textContent)) {
+                    s.textContent = '4. Lab, Skills, dan Tutorial';
+                    const p = d.querySelector('p');
+                    if (p) p.innerHTML = 'Menu <strong>Laboratorium</strong> berisi Lab. Menu <strong>Skills</strong> berisi Checklist dan Skills Lab. Menu <strong>Tutorial</strong> berisi Seven Jump. Klik <strong>Buka Berkas</strong> untuk melihat modul.';
+                }
+            });
+        } catch (e) { }
+    }
+    fixGuide();
+
+    // ======================================================================
+    // Pemasangan
+    // ======================================================================
+    const prevRender = window.renderAll;
+    window.renderAll = function () {
+        prevRender();
+        try { updateTicker(); box.style.display = isAdmin() ? 'block' : 'none'; } catch (e) { console.error(e); }
+    };
+    renderNav(); fixOsce(); updateTicker();
 })();
