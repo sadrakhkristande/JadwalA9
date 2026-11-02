@@ -289,7 +289,15 @@ async function uploadDriveKecil(file, path, key) {
 }
 
 // File besar (20-200 MB): Apps Script hanya menyiapkan sesi unggah, lalu browser mengirim file per potongan langsung ke Google
-function bukaSesiDrive(token, folderId, name, mime, size) {
+// Minta ID berkas lebih dulu ke Google, supaya ID tetap diketahui walau jawaban akhir unggahan tidak terbaca browser
+async function buatIdDrive(token) {
+    try {
+        const r = await fetch('https://www.googleapis.com/drive/v3/files/generateIds?count=1&space=drive', { headers: { Authorization: 'Bearer ' + token } });
+        const j = await r.json();
+        return (j && j.ids && j.ids[0]) || null;
+    } catch (e) { return null; }
+}
+function bukaSesiDrive(token, folderId, name, mime, size, id) {
     return new Promise((resolve, reject) => {
         const x = new XMLHttpRequest();
         x.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true');
@@ -303,10 +311,10 @@ function bukaSesiDrive(token, folderId, name, mime, size) {
             else reject(new Error('Google menolak membuat sesi unggah (' + x.status + '): ' + String(x.responseText || '').slice(0, 160)));
         };
         x.onerror = () => reject(new Error('Tidak bisa menghubungi Google Drive (jaringan putus atau diblokir)'));
-        x.send(JSON.stringify({ name, mimeType: mime, parents: [folderId] }));
+        x.send(JSON.stringify(id ? { id, name, mimeType: mime, parents: [folderId] } : { name, mimeType: mime, parents: [folderId] }));
     });
 }
-function putChunk(url, blob, start, end, total) {
+function putChunk(url, blob, start, end, total, isLast) {
     return new Promise((resolve, reject) => {
         let tries = 0;
         const retry = why => { if (++tries >= 4) reject(new Error('Gagal mengirim potongan file (' + why + ')')); else setTimeout(go, 1500 * tries); };
@@ -319,11 +327,22 @@ function putChunk(url, blob, start, end, total) {
                 if (x.status >= 200 && x.status < 300) { let j = null; try { j = JSON.parse(x.responseText); } catch (e) { } return resolve(j); }
                 retry('HTTP ' + x.status + ' ' + String(x.responseText || '').slice(0, 120));
             };
-            x.onerror = () => retry('jaringan putus atau diblokir');
+            // Potongan terakhir: kalau jawabannya tidak terbaca (sering di Safari), file biasanya sudah masuk. Jangan dikirim ulang, cukup diverifikasi.
+            x.onerror = () => { if (isLast) resolve({ takPasti: true }); else retry('jaringan putus atau diblokir'); };
             x.send(blob);
         }
         go();
     });
+}
+// Tanya Apps Script lewat jalur POST yang sama dengan unggahan: versi apa yang benar-benar aktif?
+async function cekServerDrive(key) {
+    try {
+        const r = await fetch(DRIVE_UPLOAD_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key, action: 'ping' }) });
+        const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch (e) { }
+        if (!j) return { ok: false, aksi: [], teks: 'balasan bukan JSON (HTTP ' + r.status + '): ' + t.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140) };
+        if (j.ok && j.versi) return { ok: true, versi: j.versi, aksi: j.aksi || [], teks: 'versi ' + j.versi };
+        return { ok: false, aksi: [], teks: 'ping ditolak: ' + (j.error || 'tidak diketahui') };
+    } catch (e) { return { ok: false, aksi: [], teks: 'tidak bisa menghubungi Apps Script (' + (e.message || e) + ')' }; }
 }
 async function uploadDriveBesar(file, path, key) {
     const wrap = document.getElementById('toast-wrap') || document.body;
@@ -336,19 +355,35 @@ async function uploadDriveBesar(file, path, key) {
         if (!j.ok) { if (/kunci/i.test(j.error || '')) { try { localStorage.removeItem('a9_drive_key'); } catch (e) { } } throw new Error(j.error || 'tidak diketahui'); }
         return j;
     };
+    let langkah = 'menyiapkan unggahan';
     try {
         const mime = file.type || 'application/octet-stream';
+        langkah = 'menghubungi Apps Script (mulaiUnggah)';
         const s0 = await call({ action: 'mulaiUnggah', name: file.name, mime, size: file.size, path });
-        const sesi = await bukaSesiDrive(s0.token, s0.folderId, file.name, mime, file.size);
+        langkah = 'meminta ID berkas ke Google';
+        const preId = await buatIdDrive(s0.token);
+        langkah = 'membuka sesi unggah di Google Drive';
+        const sesi = await bukaSesiDrive(s0.token, s0.folderId, file.name, mime, file.size, preId);
         const CH = 8 * 1024 * 1024;                       // kelipatan 256 KB, syarat Google
         let off = 0, last = null;
         while (off < file.size) {
             const end = Math.min(off + CH, file.size);
-            last = await putChunk(sesi, file.slice(off, end), off, end - 1, file.size);
+            langkah = 'mengirim potongan ' + (Math.floor(off / CH) + 1) + ' dari ' + Math.ceil(file.size / CH);
+            last = await putChunk(sesi, file.slice(off, end), off, end - 1, file.size, end >= file.size);
             off = end; say(Math.floor(off * 100 / file.size));
         }
-        if (!last || !last.id) throw new Error('Google tidak mengembalikan ID berkas');
-        const s1 = await call({ action: 'selesaiUnggah', id: last.id });
+        langkah = 'memverifikasi file di Apps Script (selesaiUnggah)';
+        tt.textContent = 'Menyelesaikan ' + file.name + '...';
+        const id = (last && last.id) || preId;
+        const lokasi = 'Portal A9/' + (path || 'Umum');
+        if (!id) throw new Error('Google tidak mengembalikan ID berkas. File mungkin sudah masuk ke folder "' + lokasi + '" di Drive. Cek di sana, lalu salin tautannya dan tempel manual.');
+        // Verifikasi lewat Apps Script (sekaligus mengatur berbagi). Diulang beberapa kali karena Drive butuh beberapa detik.
+        let s1 = null;
+        for (let i = 0; i < 6 && !s1; i++) {
+            try { s1 = await call({ action: 'selesaiUnggah', id }); }
+            catch (e) { if (!/tidak ditemukan/i.test(String(e.message || e))) throw e; await new Promise(r => setTimeout(r, 2000)); }
+        }
+        if (!s1) throw new Error('Pengiriman selesai, tapi file belum terlihat di Drive' + (last && last.takPasti ? ' (jawaban potongan terakhir tidak terbaca browser, kemungkinan unggahan tidak selesai)' : '') + '. Cek folder "' + lokasi + '". Kalau file sudah ada, salin tautannya dan tempel manual.');
         return s1.url;
     } catch (e) {
         console.error(e);
@@ -361,13 +396,16 @@ async function uploadDriveBesar(file, path, key) {
             if (u) return u;
             return null;
         }
-        let vAktif = 'tidak diketahui';
-        if (lama) {
-            try { const rv = await fetch(DRIVE_UPLOAD_URL); const jv = await rv.json(); vAktif = jv && jv.versi ? String(jv.versi) : 'lama (belum ada nomor versi)'; } catch (e2) { }
-        }
-        alert(lama
-            ? 'Unggah file besar ke Drive gagal: Web App di DRIVE_UPLOAD_URL masih menjalankan versi ' + vAktif + ' (dibutuhkan versi 8).\n\nCara memperbaiki:\n1. Buka proyek Apps Script yang PERSIS memiliki URL itu (jangan proyek baru).\n2. Tempel code.gs versi 8, lalu Simpan.\n3. Deploy > Kelola deployment > ikon pensil > Versi: Versi baru > Deploy.\n4. Buka URL /exec di browser, harus muncul versi 8.\n\nKalau memakai proyek baru, salin URL /exec-nya ke DRIVE_UPLOAD_URL di script.js.\n\nSementara itu, unggah manual ke Drive lalu tempel tautannya.'
-            : 'Unggah file besar ke Drive gagal: ' + msg + '\n\nKalau pesannya menyebut izin, deploy ulang Apps Script dan setujui izin Drive. Atau unggah manual ke Drive lalu tempel tautannya.');
+        tt.textContent = 'Memeriksa Apps Script...';
+        const dg = await cekServerDrive(key);
+        const versiLama = lama || (!dg.ok && /data file kosong|tidak dikenal/i.test(dg.teks));
+        let saran;
+        if (versiLama) saran = 'Web App di DRIVE_UPLOAD_URL belum menjalankan versi 8.\n1. Buka proyek Apps Script yang PERSIS memiliki URL itu.\n2. Tempel code.gs versi 8 lalu Simpan.\n3. Deploy > Kelola deployment > pensil > Versi baru > Deploy.\n4. Buka URL /exec di browser, harus muncul versi 8.';
+        else if (/menolak membuat sesi/i.test(msg)) saran = 'Apps Script sudah benar, tapi Google menolak token. Pastikan appsscript.json memuat scope https://www.googleapis.com/auth/drive, jalankan fungsi otorisasi, lalu deploy Versi baru.';
+        else if (/Tidak bisa menghubungi Google Drive|jaringan putus|potongan file/i.test(msg)) saran = 'Koneksi langsung ke googleapis.com terputus atau diblokir. Coba Chrome, matikan pemblokir iklan atau VPN, atau pakai jaringan lain.';
+        else if (/belum terlihat di Drive|tidak ditemukan/i.test(msg)) saran = 'Google tidak mengonfirmasi bahwa unggahan selesai, jadi file belum masuk. Cek folder Portal A9 di Drive; kalau tidak ada, ulangi unggahan.';
+        else saran = 'Kirim seluruh teks pesan ini ke pengembang.';
+        alert('Unggah file besar ke Drive gagal.\n\nLangkah: ' + langkah + '\nPesan: ' + msg + '\nApps Script: ' + dg.teks + '\n\n' + saran + '\n\nSementara itu, unggah manual ke Drive lalu tempel tautannya.');
         return null;
     } finally { tt.remove(); }
 }
