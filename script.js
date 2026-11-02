@@ -255,9 +255,11 @@ function postUpdate(kind, judul, isi, opt) {
 
 // Unggah ke Google Drive kelompok (lewat Apps Script). Mengembalikan tautan file, atau null bila gagal.
 const DRIVE_SMALL = 20 * 1024 * 1024;   // sampai sini: dikirim sekali lewat Apps Script
+const DRIVE_FALLBACK = 30 * 1024 * 1024; // batas cara biasa bila Apps Script masih versi lama (base64 menambah ~33%)
 const DRIVE_MAX = 200 * 1024 * 1024;    // di atas DRIVE_SMALL: dikirim per potongan langsung ke Google Drive
 async function uploadToDrive(file, path) {
     if (file.size > DRIVE_MAX) { alert('File ' + file.name + ' lebih dari 200 MB. Unggah manual ke Drive lalu tempel tautannya.'); return null; }
+    if (!file.size) { alert('File ' + file.name + ' kosong (0 KB), jadi tidak bisa diunggah. Pilih ulang berkasnya.'); return null; }
     let key = '';
     try { key = localStorage.getItem('a9_drive_key') || ''; } catch (e) { }
     if (!key) {
@@ -269,6 +271,11 @@ async function uploadToDrive(file, path) {
         try { localStorage.setItem('a9_drive_key', key); } catch (e) { }
     }
     if (file.size > DRIVE_SMALL) return await uploadDriveBesar(file, path, key);
+    return await uploadDriveKecil(file, path, key);
+}
+
+// Kirim sekali lewat Apps Script (dipakai untuk file kecil, dan sebagai cadangan bila Apps Script masih versi lama)
+async function uploadDriveKecil(file, path, key) {
     const done = busy('Mengunggah ' + file.name + ' ke Drive...');
     try {
         const data = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = rej; fr.readAsDataURL(file); });
@@ -345,7 +352,18 @@ async function uploadDriveBesar(file, path, key) {
         return s1.url;
     } catch (e) {
         console.error(e);
-        alert('Unggah file besar ke Drive gagal: ' + (e.message || e) + '\n\nKalau pesannya menyebut aksi tidak dikenal atau izin, pasang code.gs versi 8 dan deploy versi baru. Atau unggah manual ke Drive lalu tempel tautannya.');
+        const msg = String(e.message || e);
+        // "Data file kosong" / "aksi tidak dikenal" = Apps Script yang aktif masih versi lama (belum mengenal mulaiUnggah)
+        const lama = /data file kosong|aksi.*tidak dikenal|unknown action/i.test(msg);
+        if (lama && file.size <= DRIVE_FALLBACK) {
+            tt.textContent = 'Apps Script masih versi lama, mencoba cara biasa untuk ' + file.name + '...';
+            const u = await uploadDriveKecil(file, path, key);
+            if (u) return u;
+            return null;
+        }
+        alert(lama
+            ? 'Unggah file besar ke Drive gagal karena Apps Script yang aktif masih versi lama (belum mendukung file di atas 20 MB).\n\nCara memperbaiki:\n1. Buka script.google.com, buka proyek uploader.\n2. Tempel code.gs versi 8, lalu Simpan.\n3. Deploy > Kelola deployment > ikon pensil > Versi: Versi baru > Deploy.\n(URL Web App tidak berubah.)\n\nSementara itu, unggah manual ke Drive lalu tempel tautannya.'
+            : 'Unggah file besar ke Drive gagal: ' + msg + '\n\nKalau pesannya menyebut izin, deploy ulang Apps Script dan setujui izin Drive. Atau unggah manual ke Drive lalu tempel tautannya.');
         return null;
     } finally { tt.remove(); }
 }
