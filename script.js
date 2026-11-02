@@ -3183,6 +3183,8 @@ const a9CmpBlok = (a, b) => a9BlokNo(a) - a9BlokNo(b) || String(a).localeCompare
     }
 
     function renderReminder() {
+        const old = $('smart-rem'); if (old) old.remove();   // Pengingat sudah digabung ke kartu "Jadwal & Pengingat" (Bagian 19)
+        return;
         const home = $('tab-home'); if (!home || !currentUser) return;
         let c = $('smart-rem');
         if (!c) {
@@ -6770,7 +6772,7 @@ function a9CklText(items) {
     css.id = 'a9-b19';
     css.textContent = `
 /* ---------- Jadwal hari ini & besok (tampilan biasa, tanpa teks berjalan) ---------- */
-#jb-ticker { display: none; position: relative; margin: 12px auto; width: calc(100% - 24px); max-width: 1100px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; color: var(--text-main); font-size: 14px; overflow: hidden; }
+#jb-ticker { display: none; position: relative; margin: 0 0 18px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; color: var(--text-main); font-size: 14px; overflow: hidden; }
 #jb-ticker.on { display: block; }
 body.cbt-locked #jb-ticker { display: none !important; }
 .jb-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px; background: var(--primary); color: var(--on-primary, #fff); font-weight: 800; }
@@ -6789,7 +6791,13 @@ body.cbt-locked #jb-ticker { display: none !important; }
 .jb-it.none { color: var(--text-muted); font-style: italic; margin-top: 6px; }
 .jb-it em { color: var(--warning); font-style: normal; font-weight: 600; }
 .jb-x { flex: none; border: 0; background: transparent; color: inherit; cursor: pointer; padding: 0 6px; font-size: 15px; min-height: 0; }
-@media (max-width: 768px) { #jb-ticker { font-size: 13px; margin: 10px auto; } }
+.jb-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.jb-sm { color: var(--text-muted); }
+.jb-pill { flex: none; border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 700; background: var(--primary-light); color: var(--primary-text, var(--primary)); white-space: nowrap; }
+.jb-pill.late, .jb-pill.today, .jb-pill.lv5 { background: #ef4444; color: #fff; }
+.jb-pill.soon, .jb-pill.lv3 { background: #f59e0b; color: #fff; }
+.jb-pill.lv4 { background: #f97316; color: #fff; }
+@media (max-width: 768px) { #jb-ticker { font-size: 13px; } .jb-row { align-items: flex-start; } }
 
 /* ---------- Editor jadwal per tanggal ---------- */
 .jde2-pick { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 10px 0 6px; }
@@ -6836,7 +6844,7 @@ body.cbt-locked #jb-ticker { display: none !important; }
     // ======================================================================
     const tk = document.createElement('div');
     tk.id = 'jb-ticker'; tk.setAttribute('role', 'region'); tk.setAttribute('aria-label', 'Jadwal hari ini dan besok');
-    tk.innerHTML = '<div class="jb-head"><span>\ud83d\udcc5 Jadwal Kuliah</span><span class="jb-hbtns"><button type="button" class="jb-open" id="jb-view">Buka jadwal</button><button type="button" class="jb-x" id="jb-x" aria-label="Tutup jadwal">\u2715</button></span></div><div class="jb-body" id="jb-track"></div>';
+    tk.innerHTML = '<div class="jb-head"><span>\ud83d\udcc5 Jadwal &amp; Pengingat</span><span class="jb-hbtns"><button type="button" class="jb-open" id="jb-view">Buka jadwal</button><button type="button" class="jb-x" id="jb-x" aria-label="Tutup jadwal">\u2715</button></span></div><div class="jb-body" id="jb-track"></div>';
     const navEl = document.querySelector('.simple-nav');
     if (navEl) navEl.after(tk); else document.body.prepend(tk);
 
@@ -6868,15 +6876,48 @@ body.cbt-locked #jb-ticker { display: none !important; }
                 : '<ul class="jb-list">' + items.map(s => '<li>' + itemHtml(s, isToday, nowMin) + '</li>').join('') + '</ul>';
         return `<div class="jb-day"><span class="jb-tag${isToday ? '' : ' b'}">${label} \u00b7 ${esc(dayLabel(d))}</span>${body}</div>`;
     }
-    function onHomeTab() { try { return curTabId() === 'home'; } catch (e) { return true; } }
+    // ---- Gabungan: Pengingat (deadline tugas + kegiatan penting) ikut tampil di kartu ini ----
+    const RANKS = [
+        [/\bUB\b|ujian\s*blok/i, 5, 'UB'],
+        [/responsi/i, 4, 'Responsi'],
+        [/osce|ujian|praktikum|skills?\s*lab|\blab(oratorium)?\b|kuis|quiz|\btes\b/i, 3, 'Praktikum / Ujian']
+    ];
+    const rankOf = txt => { for (const [re, sc, lb] of RANKS) if (re.test(txt)) return { sc, lb }; return null; };
+    const pillDays = n => n < 0 ? ['Terlewat', 'late'] : n === 0 ? ['Hari ini', 'today'] : n === 1 ? ['Besok', 'soon'] : [n + ' hari lagi', ''];
+
+    function tugasHtml(today) {
+        const list = (dbData.tugas || []).map(t => {
+            const m = String(t.deadline || '').match(/^\d{4}-\d{2}-\d{2}/); if (!m) return null;
+            return { nama: t.nama, days: Math.round((new Date(m[0] + 'T00:00:00') - today) / 86400000) };
+        }).filter(t => t && t.days <= 3).sort((a, b) => a.days - b.days);
+        const body = list.length
+            ? '<ul class="jb-list">' + list.map(t => { const [lb, cl] = pillDays(t.days); return `<li class="jb-row"><span>${esc(t.nama)}</span><span class="jb-pill ${cl}">${lb}</span></li>`; }).join('') + '</ul>'
+            : '<div class="jb-it none">Tidak ada tugas yang mepet \ud83c\udf89</div>';
+        return `<div class="jb-day"><span class="jb-tag b">\u23f0 Deadline tugas</span>${body}</div>`;
+    }
+    function pentingHtml(J, today) {
+        const out = [];
+        for (let o = 2; o <= 7; o++) {
+            const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + o), it = itemsOf(J, d);
+            if (!it) continue;
+            it.forEach(s => { const r = rankOf(String(s.kegiatan)); if (r) out.push({ o, d, s, r }); });
+        }
+        out.sort((a, b) => a.o - b.o || b.r.sc - a.r.sc);
+        const body = out.length
+            ? '<ul class="jb-list">' + out.slice(0, 6).map(x => `<li class="jb-row"><span>${esc(x.s.kegiatan)}<br><small class="jb-sm">${esc(dayLabel(x.d))}${x.s.jam ? ' \u00b7 ' + esc(x.s.jam) : ''}</small></span><span class="jb-pill lv${x.r.sc}">${esc(x.r.lb)} \u00b7 ${x.o} hari</span></li>`).join('') + '</ul>'
+            : '<div class="jb-it none">Belum ada kegiatan penting dalam 7 hari ke depan.</div>';
+        return `<div class="jb-day"><span class="jb-tag b">\u2b50 Kegiatan penting (7 hari ke depan)</span>${body}</div>`;
+    }
+
     function updateTicker() {
+        const g = $('greeting'); if (g && g.nextElementSibling !== tk) g.after(tk);   // letaknya tepat di bawah sapaan
         const J = (dbData.jadwalCustom || []).filter(j => j && Array.isArray(j.sesi)).map(j => ({ j, d: a9ParseTgl(j.tgl) })).filter(x => x.d);
-        const show = !!currentUser && J.length > 0 && !dismissed() && onHomeTab();
+        const show = !!currentUser && !dismissed();
         tk.classList.toggle('on', show);
         if (!show) { tkSig = ''; return; }
         const now = new Date(), today = sod(now), tmr = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
         const nowMin = now.getHours() * 60 + now.getMinutes();
-        const html = segHtml('Hari ini', today, itemsOf(J, today), true, nowMin) + segHtml('Besok', tmr, itemsOf(J, tmr), false, nowMin);
+        const html = segHtml('Hari ini', today, itemsOf(J, today), true, nowMin) + segHtml('Besok', tmr, itemsOf(J, tmr), false, nowMin) + tugasHtml(today) + pentingHtml(J, today);
         if (html === tkSig) return;
         tkSig = html;
         $('jb-track').innerHTML = html;
