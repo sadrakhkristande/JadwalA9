@@ -6743,7 +6743,7 @@ function a9CklText(items) {
 })();
 
 // ==========================================================================
-// BAGIAN 19 - JADWAL BERJALAN (TICKER) + EDITOR JADWAL PER TANGGAL + MENU BARU (HP LEBIH SIMPEL)
+// BAGIAN 19 - JADWAL HARI INI & BESOK DI BERANDA (TAMPILAN BIASA) + EDITOR JADWAL PER TANGGAL + MENU BARU (HP LEBIH SIMPEL)
 //   TEMPEL DI PALING BAWAH script.js (setelah Bagian "CHECKLIST SKILLS LAB"), tanpa menghapus apa pun.
 //   1) Ticker: teks berjalan berisi kegiatan HARI INI dan BESOK di bawah menu atas.
 //   2) Admin: tambah / ubah / hapus jadwal dengan MEMILIH TANGGAL. Hanya jadwal hari itu yang tampil.
@@ -6769,34 +6769,27 @@ function a9CklText(items) {
     const css = document.createElement('style');
     css.id = 'a9-b19';
     css.textContent = `
-/* ---------- Ticker jadwal ---------- */
-#jb-ticker { display: none; align-items: stretch; position: sticky; top: var(--a9-nav-h, 0px); z-index: 899; background: var(--primary-light); border-bottom: 1px solid var(--border-color); color: var(--text-main); font-size: 14px; overflow: hidden; }
-#jb-ticker.on { display: flex; }
+/* ---------- Jadwal hari ini & besok (tampilan biasa, tanpa teks berjalan) ---------- */
+#jb-ticker { display: none; position: relative; margin: 12px auto; width: calc(100% - 24px); max-width: 1100px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; color: var(--text-main); font-size: 14px; overflow: hidden; }
+#jb-ticker.on { display: block; }
 body.cbt-locked #jb-ticker { display: none !important; }
-.jb-lbl { flex: none; display: flex; align-items: center; padding: 0 14px; font-weight: 800; background: var(--primary); color: var(--on-primary, #fff); white-space: nowrap; }
-.jb-view { flex: 1; min-width: 0; overflow: hidden; cursor: pointer; white-space: nowrap; display: flex; align-items: center; }
-.jb-track { display: inline-flex; white-space: nowrap; animation: jbscroll var(--jb-dur, 30s) linear infinite; will-change: transform; padding: 9px 0; }
-#jb-ticker:hover .jb-track, .jb-view:active .jb-track { animation-play-state: paused; }
-.jb-copy { flex: none; display: inline-flex; align-items: center; gap: 10px; min-width: 100vw; padding-right: 64px; }
-@keyframes jbscroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-.jb-seg { display: inline-flex; align-items: center; gap: 8px; }
-.jb-tag { font-weight: 800; border-radius: 999px; padding: 1px 10px; background: var(--primary); color: var(--on-primary, #fff); font-size: 12.5px; }
+.jb-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px; background: var(--primary); color: var(--on-primary, #fff); font-weight: 800; }
+.jb-hbtns { display: flex; align-items: center; gap: 6px; }
+.jb-open { border: 0; background: rgba(255, 255, 255, .2); color: inherit; border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; min-height: 0; }
+.jb-body { padding: 4px 14px 10px; }
+.jb-day { padding: 10px 0; border-top: 1px solid var(--border-color); }
+.jb-day:first-child { border-top: 0; }
+.jb-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.jb-tag { font-weight: 800; border-radius: 999px; padding: 2px 10px; background: var(--primary); color: var(--on-primary, #fff); font-size: 12.5px; display: inline-block; }
 .jb-tag.b { background: transparent; color: var(--primary-text, var(--primary)); box-shadow: inset 0 0 0 1px var(--primary-bd, var(--primary)); }
 .jb-it b { font-variant-numeric: tabular-nums; }
 .jb-it.hot { color: var(--danger); font-weight: 700; }
 .jb-it.now { font-weight: 800; }
 .jb-it.end { opacity: .55; text-decoration: line-through; }
-.jb-it.none { color: var(--text-muted); font-style: italic; }
+.jb-it.none { color: var(--text-muted); font-style: italic; margin-top: 6px; }
 .jb-it em { color: var(--warning); font-style: normal; font-weight: 600; }
-.jb-sep { opacity: .45; }
-.jb-x { flex: none; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; padding: 0 12px; font-size: 15px; min-height: 0; }
-@media (max-width: 768px) { #jb-ticker { font-size: 13px; } .jb-lbl { padding: 0 10px; } }
-@media (prefers-reduced-motion: reduce) {
-  .jb-view { overflow-x: auto; }
-  .jb-track { animation: none !important; }
-  .jb-copy:nth-child(2) { display: none; }
-  .jb-copy { min-width: 0; }
-}
+.jb-x { flex: none; border: 0; background: transparent; color: inherit; cursor: pointer; padding: 0 6px; font-size: 15px; min-height: 0; }
+@media (max-width: 768px) { #jb-ticker { font-size: 13px; margin: 10px auto; } }
 
 /* ---------- Editor jadwal per tanggal ---------- */
 .jde2-pick { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 10px 0 6px; }
@@ -6842,8 +6835,8 @@ body.cbt-locked #jb-ticker { display: none !important; }
     // 1) TICKER JADWAL HARI INI & BESOK
     // ======================================================================
     const tk = document.createElement('div');
-    tk.id = 'jb-ticker'; tk.setAttribute('role', 'region'); tk.setAttribute('aria-label', 'Jadwal berjalan hari ini dan besok');
-    tk.innerHTML = '<span class="jb-lbl">\ud83d\udce2 Jadwal</span><div class="jb-view" id="jb-view" title="Klik untuk membuka jadwal"><div class="jb-track" id="jb-track"></div></div><button type="button" class="jb-x" id="jb-x" aria-label="Tutup jadwal berjalan">\u2715</button>';
+    tk.id = 'jb-ticker'; tk.setAttribute('role', 'region'); tk.setAttribute('aria-label', 'Jadwal hari ini dan besok');
+    tk.innerHTML = '<div class="jb-head"><span>\ud83d\udcc5 Jadwal Kuliah</span><span class="jb-hbtns"><button type="button" class="jb-open" id="jb-view">Buka jadwal</button><button type="button" class="jb-x" id="jb-x" aria-label="Tutup jadwal">\u2715</button></span></div><div class="jb-body" id="jb-track"></div>';
     const navEl = document.querySelector('.simple-nav');
     if (navEl) navEl.after(tk); else document.body.prepend(tk);
 
@@ -6870,25 +6863,23 @@ body.cbt-locked #jb-ticker { display: none !important; }
         return `<span class="jb-it${cls}">${pre}${s.jam ? '<b>' + esc(s.jam) + '</b> ' : ''}${esc(s.kegiatan)}${s.pindahDari ? ' <em>(jadwal berubah)</em>' : ''}</span>`;
     }
     function segHtml(label, d, items, isToday, nowMin) {
-        const body = items === null ? '<span class="jb-it none">jadwal belum diisi</span>'
-            : !items.length ? '<span class="jb-it none">tidak ada kegiatan</span>'
-                : items.map(s => itemHtml(s, isToday, nowMin)).join('<span class="jb-sep">\u2022</span>');
-        return `<span class="jb-seg"><span class="jb-tag${isToday ? '' : ' b'}">${label} \u00b7 ${esc(dayLabel(d))}</span>${body}</span>`;
+        const body = items === null ? '<div class="jb-it none">jadwal belum diisi</div>'
+            : !items.length ? '<div class="jb-it none">tidak ada kegiatan</div>'
+                : '<ul class="jb-list">' + items.map(s => '<li>' + itemHtml(s, isToday, nowMin) + '</li>').join('') + '</ul>';
+        return `<div class="jb-day"><span class="jb-tag${isToday ? '' : ' b'}">${label} \u00b7 ${esc(dayLabel(d))}</span>${body}</div>`;
     }
+    function onHomeTab() { try { return curTabId() === 'home'; } catch (e) { return true; } }
     function updateTicker() {
         const J = (dbData.jadwalCustom || []).filter(j => j && Array.isArray(j.sesi)).map(j => ({ j, d: a9ParseTgl(j.tgl) })).filter(x => x.d);
-        const show = !!currentUser && J.length > 0 && !dismissed();
+        const show = !!currentUser && J.length > 0 && !dismissed() && onHomeTab();
         tk.classList.toggle('on', show);
         if (!show) { tkSig = ''; return; }
         const now = new Date(), today = sod(now), tmr = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
         const nowMin = now.getHours() * 60 + now.getMinutes();
-        const one = segHtml('Hari ini', today, itemsOf(J, today), true, nowMin) + '<span class="jb-sep">|</span>' + segHtml('Besok', tmr, itemsOf(J, tmr), false, nowMin);
-        if (one === tkSig) return;
-        tkSig = one;
-        const copy = '<span class="jb-copy">' + one + '</span>';
-        const len = (tk.textContent || '').length;
-        $('jb-track').innerHTML = copy + copy;
-        tk.style.setProperty('--jb-dur', Math.max(22, Math.round(len * 0.22)) + 's');
+        const html = segHtml('Hari ini', today, itemsOf(J, today), true, nowMin) + segHtml('Besok', tmr, itemsOf(J, tmr), false, nowMin);
+        if (html === tkSig) return;
+        tkSig = html;
+        $('jb-track').innerHTML = html;
     }
     $('jb-view').addEventListener('click', () => { if (typeof window.switchTab === 'function') window.switchTab('jadwal', null); });
     $('jb-x').addEventListener('click', () => { try { sessionStorage.setItem('a9_jb_off', '1'); } catch (e) { } tk.classList.remove('on'); });
@@ -7102,5 +7093,114 @@ body.cbt-locked #jb-ticker { display: none !important; }
         prevRender();
         try { updateTicker(); box.style.display = isAdmin() ? 'block' : 'none'; } catch (e) { console.error(e); }
     };
+    const prevSwitch = window.switchTab;
+    window.switchTab = function () { const r = prevSwitch.apply(this, arguments); try { updateTicker(); } catch (e) { } return r; };
     renderNav(); fixOsce(); updateTicker();
+})();
+
+// ==========================================================================
+// BAGIAN 20 - PAKET SOAL (pilih paket sebelum mengerjakan Soal Isian / Simulasi CBT)
+//   Paket diambil dari field "paket" pada tiap soal. Kalau kosong dipakai "blok", "category", "topic",
+//   dan kalau semuanya kosong masuk paket "Umum". Opsi "Semua soal" selalu ada.
+// ==========================================================================
+(function () {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const ALL = '__all__';
+    const labelOf = q => String((q && (q.paket || q.blok || q.category || q.topic)) || 'Umum').trim() || 'Umum';
+    const nice = s => s.charAt(0).toUpperCase() + s.slice(1);
+    const sel = { isian: ALL, cbt: ALL };
+    let quizKey = ALL;
+
+    function groups(list) {
+        const m = {};
+        (list || []).forEach(q => { const k = labelOf(q); m[k] = (m[k] || 0) + 1; });
+        return Object.keys(m).sort((a, b) => a.localeCompare(b, 'id', { numeric: true })).map(k => ({ k, n: m[k] }));
+    }
+    const pick = (list, key) => (!key || key === ALL) ? (list || []) : (list || []).filter(q => labelOf(q) === key);
+
+    const st = document.createElement('style');
+    st.textContent = `
+    .pk-wrap { margin: 14px 0; padding: 14px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--bg-base); }
+    .pk-wrap label { display: block; font-weight: 700; margin-bottom: 8px; }
+    .pk-wrap select { width: 100%; margin: 0; }
+    .pk-info { margin-top: 8px; font-size: 13px; color: var(--text-muted); }`;
+    document.head.appendChild(st);
+
+    function build(cardId, wrapId, selId, list, kind, extra) {
+        const card = $(cardId); if (!card) return;
+        let wrap = $(wrapId);
+        if (!wrap) {
+            wrap = document.createElement('div'); wrap.id = wrapId; wrap.className = 'pk-wrap';
+            let anchor = card.querySelector('button');
+            while (anchor && anchor.parentElement !== card) anchor = anchor.parentElement;
+            if (anchor) card.insertBefore(wrap, anchor); else card.appendChild(wrap);
+            wrap.addEventListener('change', e => {
+                if (e.target.id !== selId) return;
+                sel[kind] = e.target.value; wrap.dataset.sig = ''; paint();
+            });
+        }
+        const g = groups(list);
+        if (sel[kind] !== ALL && !g.some(x => x.k === sel[kind])) sel[kind] = ALL;
+        const sig = kind + '|' + sel[kind] + '|' + g.map(x => x.k + ':' + x.n).join(',');
+        if (wrap.dataset.sig === sig) return;
+        wrap.dataset.sig = sig;
+        const n = pick(list, sel[kind]).length;
+        const shown = kind === 'cbt' ? Math.min(n, 100) : n;
+        wrap.innerHTML = `<label for="${selId}">\ud83d\udcda Pilih paket soal</label>
+            <select id="${selId}" class="modern-input">
+              <option value="${ALL}"${sel[kind] === ALL ? ' selected' : ''}>Semua soal (${(list || []).length})</option>
+              ${g.map(x => `<option value="${esc(x.k)}"${sel[kind] === x.k ? ' selected' : ''}>${esc(nice(x.k))} (${x.n} soal)</option>`).join('')}
+            </select>
+            <div class="pk-info">${shown} soal akan dikerjakan${extra || ''}.</div>`;
+    }
+
+    // tombol "Pilih paket lain" di hasil Soal Isian
+    function addBack() {
+        const rc = $('quiz-result-card'); if (!rc || $('pk-back-isian')) return;
+        const b = document.createElement('button');
+        b.type = 'button'; b.id = 'pk-back-isian'; b.className = 'btn btn-outline'; b.style.marginTop = '10px';
+        b.textContent = '\u21a9 Pilih paket lain';
+        b.addEventListener('click', () => {
+            const sc = $('quiz-start-card'), ac = $('quiz-active-area');
+            if (sc) sc.style.display = 'block'; if (ac) ac.style.display = 'none'; rc.style.display = 'none';
+            window.scrollTo({ top: 0 });
+        });
+        rc.appendChild(b);
+    }
+
+    function paint() {
+        build('quiz-start-card', 'pk-wrap-isian', 'pk-sel-isian', dbData.soal, 'isian', '');
+        build('cbt-start-card', 'pk-wrap-cbt', 'pk-sel-cbt', dbData.cbt_soal, 'cbt', ' (diacak, maksimal 100)');
+        addBack();
+    }
+
+    // --- Soal Isian: filter dipakai sementara selama fungsi asli berjalan, lalu data asli dikembalikan ---
+    function withSoal(fn, ctx, args) {
+        const full = dbData.soal, f = pick(full, quizKey);
+        if (!f.length) { alert('Paket ini belum berisi soal.'); return; }
+        dbData.soal = f;
+        try { return fn.apply(ctx, args); } finally { dbData.soal = full; }
+    }
+    const origStart = window.startQuiz, origSubmit = window.submitQuiz;
+    window.startQuiz = function () {
+        const sc = $('quiz-start-card');
+        if (sc && sc.style.display !== 'none') quizKey = sel.isian;   // "Ulangi" memakai paket yang sama
+        return withSoal(origStart, this, arguments);
+    };
+    window.submitQuiz = function () { return withSoal(origSubmit, this, arguments); };
+
+    // --- Simulasi CBT ---
+    const origCbt = window.startCBT;
+    window.startCBT = function () {
+        const full = dbData.cbt_soal || [], f = pick(full, sel.cbt);
+        if (full.length && !f.length) { alert('Paket ini belum berisi soal.'); return; }
+        dbData.cbt_soal = f;
+        try { return origCbt.apply(this, arguments); } finally { dbData.cbt_soal = full; }
+    };
+
+    const prevRender = window.renderAll;
+    window.renderAll = function () { const r = prevRender.apply(this, arguments); try { paint(); } catch (e) { console.error(e); } return r; };
+    paint();
 })();
