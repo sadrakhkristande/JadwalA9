@@ -7603,7 +7603,7 @@ body.cbt-locked #a9-notif, body.cbt-locked #a9-quick, body.cbt-locked #a9-crumb 
 // Format tiap soal: t = topik, s = sumber, q = soal, o = pilihan, a = indeks jawaban benar,
 // e = pembahasan, f = 1 bila urutan pilihan tidak boleh diacak (mis. "1 dan 3", "Semua benar").
 // ==========================================================================
-// Bank soal TIDAK lagi ditanam di script. Diambil dari tabel Supabase "bank_soal" (lihat loadBank di bawah).
+// Bank soal TIDAK lagi ditanam di script. Soal diambil dari paket-paket di Supabase (portal_db, key = "paket:<nama>"). Lihat modul di bawah.
 let LATIHAN_BANK = [];
 
 (function () {
@@ -7676,6 +7676,10 @@ let LATIHAN_BANK = [];
 
     // ---------------- layar pengaturan ----------------
     function paintSetup() {
+        syncBank();
+        if (!LATIHAN_BANK.length) { curP = null; paintHome(); return; }
+        const pkNama = curP === ALLP ? 'Campuran semua paket' : curPaket().nama;
+        const pkDesk = curP === ALLP ? 'Soal diacak dari seluruh paket.' : (curPaket().desk || '');
         const seen = new Set(ls.get(seenKey(), []));
         const topics = {}, sources = {};
         LATIHAN_BANK.forEach(q => { topics[q.t] = (topics[q.t] || 0) + 1; sources[q.s] = (sources[q.s] || 0) + 1; });
@@ -7684,8 +7688,8 @@ let LATIHAN_BANK = [];
         const eff = Math.min(cfg.n, p.length);
         host.innerHTML = `
         <div class="card">
-          <div class="card-header"><h3 class="card-title">\u270d\ufe0f Soal Latihan Fisiologi</h3></div>
-          <p style="color:var(--text-muted);margin-bottom:4px;">Bank <strong>${LATIHAN_BANK.length} soal</strong> Blok 1.3 Termoregulasi dari Pretest 2023 dan materi PPT. Setiap latihan, soal diambil acak dari bank dan diutamakan yang belum pernah kamu kerjakan.</p>
+          <div class="card-header"><h3 class="card-title">\u270d\ufe0f ${esc(pkNama)}</h3></div>${PAKET.length > 1 ? '<button type="button" class="btn btn-outline btn-sm" data-act="paket" style="margin-bottom:10px;">\u2190 Ganti paket</button>' : ''}
+          <p style="color:var(--text-muted);margin-bottom:4px;">${pkDesk ? esc(pkDesk) + ' ' : ''}Paket ini berisi <strong>${LATIHAN_BANK.length} soal</strong>. Setiap latihan, soal diambil acak dan diutamakan yang belum pernah kamu kerjakan.</p>
           <div class="lat-box">
             <label>Jumlah soal</label>
             <div class="lat-pills">${COUNTS.map(c => `<button type="button" class="lat-pill${cfg.n === c ? ' on' : ''}" data-n="${c}">${c}<small>soal</small></button>`).join('')}</div>
@@ -7828,7 +7832,7 @@ let LATIHAN_BANK = [];
         c.done = true;
         c.result = { benar, salah, kosong, skor, durasi, wrong, prev: await lastScore() };
         if (L === c) paintReport(c);   // pengguna mungkin sudah pindah layar saat menunggu
-        saveRes({ t: Date.now(), jenis: 'isian', bank: 'lat200', skor, benar, total: n, kosong, durasi, wrong });
+        saveRes({ t: Date.now(), jenis: 'isian', bank: 'lat200', paket: curP, skor, benar, total: n, kosong, durasi, wrong });
     }
 
     function paintReport(c) {
@@ -7872,6 +7876,8 @@ let LATIHAN_BANK = [];
 
     function bind() {
         host.addEventListener('click', e => {
+            const pkb = e.target.closest('[data-pk]');
+            if (pkb && !L) { curP = pkb.dataset.pk; cfg.f = ALL; ls.set('a9_lat_cfg_v1', cfg); paintSetup(); window.scrollTo({ top: 0 }); return; }
             const pill = e.target.closest('[data-n]');
             if (pill && !L) { cfg.n = +pill.dataset.n; ls.set('a9_lat_cfg_v1', cfg); paintSetup(); return; }
             const g = e.target.closest('[data-go]');
@@ -7881,6 +7887,7 @@ let LATIHAN_BANK = [];
             const b = e.target.closest('[data-act]'); if (!b) return;
             const act = b.dataset.act;
             if (act === 'start') start();
+            else if (act === 'paket') { if (!L) { curP = null; paintPaket(); window.scrollTo({ top: 0 }); } }
             else if (act === 'resetseen') { ls.set(seenKey(), []); paintSetup(); }
             else if (!L) return;
             else if (act === 'prev') go(L.idx - 1);
@@ -7920,28 +7927,94 @@ let LATIHAN_BANK = [];
     }
 
 
-    // ---------------- muat bank soal dari Supabase (tabel bank_soal) ----------------
-    const BANK_CACHE = 'a9_lat_bank_v1';
-    function rowToQ(r) {
-        const key = Object.keys(SRC).find(k => SRC[k] === r.sumber) || r.sumber || 'lainnya';
-        if (!SRC[key]) SRC[key] = key;   // sumber baru otomatis muncul di pilihan filter
-        const o = [r.opsi_a, r.opsi_b, r.opsi_c, r.opsi_d, r.opsi_e].filter(x => x != null && String(x).trim() !== '');
-        return { id: r.id, t: r.topik || 'Umum', s: key, q: r.pertanyaan, o: o, a: 'ABCDE'.indexOf(String(r.jawaban_benar || '').toUpperCase()), e: r.pembahasan || '', f: r.urutan_tetap ? 1 : 0 };
+    // ---------------- PAKET SOAL: tiap paket = 1 baris di portal_db (key "paket:<nama>") ----------------
+    // value: { nama, deskripsi, urutan, aktif, soal: [ { id, topic, question, options[], answer, explanation, fixed_order } ] }
+    const PK_CACHE = 'a9_paket_v1', ALLP = '__semua__';
+    let bankReady = false, curP = null, PAKET = [];
+    let paketRows = ls.get(PK_CACHE, []);
+
+    const st2 = document.createElement('style');
+    st2.textContent = `
+    .lat-pkgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 14px; }
+    .lat-pk { display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 16px; border: 2px solid var(--border-color); border-radius: 14px; background: var(--bg-card); color: var(--text-main); font: inherit; cursor: pointer; }
+    .lat-pk:hover { border-color: var(--primary); background: var(--primary-light); }
+    .lat-pk strong { font-size: 16px; }
+    .lat-pk-d { font-size: 13px; color: var(--text-muted); }
+    .lat-pk-m { font-size: 12px; color: var(--text-muted); margin-top: auto; padding-top: 6px; }`;
+    document.head.appendChild(st2);
+
+    function parseVal(v) { if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { return null; } } return v; }
+    function toQ(x, pk, i) {
+        if (!x || !Array.isArray(x.options) || x.options.length < 2 || !x.question) return null;   // lewati data yang tidak lengkap
+        const o = x.options.map(v => String(v));
+        let a = -1;
+        if (typeof x.answer === 'number') a = x.answer;
+        else {
+            a = o.indexOf(String(x.answer));
+            if (a < 0 && /^[A-Ea-e]$/.test(String(x.answer).trim())) a = 'ABCDE'.indexOf(String(x.answer).trim().toUpperCase());
+        }
+        if (a < 0 || a >= o.length) return null;
+        return { id: pk.key + '#' + (x.id != null ? x.id : i), t: x.topic || x.category || 'Umum', s: pk.key, q: String(x.question), o: o, a: a, e: String(x.explanation || ''), f: x.fixed_order ? 1 : 0 };
     }
-    function applyBank(rows) {
-        const list = (rows || []).map(rowToQ).filter(q => q.q && q.o.length >= 2 && q.a >= 0 && q.a < q.o.length);
-        if (list.length) LATIHAN_BANK = list;
-        return list.length;
+    function makePaket(key, nama, desk, urut, list) {
+        const pk = { key: key, nama: nama, desk: desk, urut: urut, soal: [] };
+        SRC[key] = nama;   // supaya nama paket muncul di filter "Berdasarkan sumber" saat memilih Campuran
+        pk.soal = (list || []).map((x, i) => toQ(x, pk, i)).filter(Boolean);
+        return pk;
     }
-    async function loadBank() {
-        if (!supabaseClient) return false;
+    function syncPaket() {
+        const out = [];
+        (paketRows || []).forEach(r => {
+            const v = parseVal(r && r.value); if (!v) return;
+            const key = String(r.key || '').replace(/^paket:/, ''); if (!key) return;
+            const isArr = Array.isArray(v);
+            if (!isArr && v.aktif === false) return;   // aktif:false = disembunyikan dari mahasiswa
+            const pk = makePaket(key, (!isArr && v.nama) || key, (!isArr && v.deskripsi) || '', (!isArr && +v.urutan) || 999, isArr ? v : v.soal);
+            if (pk.soal.length) out.push(pk);
+        });
+        if (!out.length && Array.isArray(dbData.soal)) {   // cadangan: data "soal" lama dikelompokkan per sumber / paket
+            const g = {};
+            dbData.soal.forEach(x => { const n = String((x && (x.source || x.paket)) || 'Umum'); (g[n] = g[n] || []).push(x); });
+            Object.keys(g).forEach((n, i) => { const pk = makePaket('lama-' + i, n, '', 900 + i, g[n]); if (pk.soal.length) out.push(pk); });
+        }
+        out.sort((a, b) => a.urut - b.urut || a.nama.localeCompare(b.nama, 'id'));
+        PAKET = out;
+    }
+    const curPaket = () => PAKET.find(p => p.key === curP) || null;
+    function syncBank() {
+        syncPaket();
+        if (curP === ALLP) LATIHAN_BANK = [].concat.apply([], PAKET.map(p => p.soal));
+        else { const p = curPaket(); LATIHAN_BANK = p ? p.soal : []; }
+    }
+    async function loadPaket() {
+        if (typeof supabaseClient === 'undefined' || !supabaseClient) return false;
         try {
-            const { data, error } = await supabaseClient.from('bank_soal').select('*').order('id', { ascending: true }).limit(5000);
-            if (error || !Array.isArray(data) || !data.length) return false;
-            applyBank(data);
-            ls.set(BANK_CACHE, data);
+            const { data, error } = await supabaseClient.from('portal_db').select('key,value').like('key', 'paket:%');
+            if (error || !Array.isArray(data)) return false;
+            paketRows = data; ls.set(PK_CACHE, data);
             return true;
-        } catch (e) { console.error('bank_soal:', e); return false; }
+        } catch (e) { console.error('paket soal:', e); return false; }
+    }
+    function paintMsg(t) { host.innerHTML = '<div class="card"><p style="color:var(--text-muted);">' + t + '</p></div>'; }
+    function paintHome() {
+        syncPaket();
+        if (!PAKET.length) { paintMsg(bankReady ? 'Belum ada paket soal. Admin perlu mengisi paket soal di database (portal_db, key: paket:...).' : '\u23f3 Memuat paket soal...'); return; }
+        if (PAKET.length === 1) { curP = PAKET[0].key; paintSetup(); return; }   // hanya satu paket: langsung ke pengaturan
+        paintPaket();
+    }
+    function paintPaket() {
+        const seen = new Set(ls.get(seenKey(), []));
+        const card = (key, nama, desk, list) => {
+            const topik = new Set(list.map(q => q.t)).size, fresh = list.filter(q => !seen.has(q.id)).length;
+            return '<button type="button" class="lat-pk" data-pk="' + esc(key) + '"><strong>' + esc(nama) + '</strong>'
+                + (desk ? '<span class="lat-pk-d">' + esc(desk) + '</span>' : '')
+                + '<span class="lat-pk-m">' + list.length + ' soal \u00b7 ' + topik + ' topik \u00b7 ' + fresh + ' belum dikerjakan</span></button>';
+        };
+        const all = [].concat.apply([], PAKET.map(p => p.soal));
+        host.innerHTML = '<div class="card"><div class="card-header"><h3 class="card-title">\u270d\ufe0f Soal Latihan</h3></div>'
+            + '<p style="color:var(--text-muted);margin-bottom:4px;">Pilih paket soal yang mau kamu kerjakan. Setelah itu kamu bisa mengatur jumlah soal dan topiknya.</p>'
+            + '<div class="lat-pkgrid">' + PAKET.map(p => card(p.key, p.nama, p.desk, p.soal)).join('')
+            + card(ALLP, 'Campuran semua paket', 'Soal diacak dari seluruh paket.', all) + '</div></div>';
     }
 
     function init() {
@@ -7949,18 +8022,12 @@ let LATIHAN_BANK = [];
         if (!host) return;
         host.innerHTML = '';
         bind();
-        applyBank(ls.get(BANK_CACHE, []));   // tampilkan dari cache dulu supaya cepat
-        if (LATIHAN_BANK.length) paintSetup();
-        else host.innerHTML = '<div class="card"><p style="color:var(--text-muted);">\u23f3 Memuat soal latihan...</p></div>';
-        loadBank().then(ok => {
-            if (L) return;   // jangan ganggu latihan yang sedang berjalan
-            if (LATIHAN_BANK.length) paintSetup();
-            else host.innerHTML = '<div class="card"><p style="color:var(--text-muted);">Soal latihan belum tersedia. Pastikan tabel bank_soal sudah terisi dan punya policy baca (select).</p></div>';
-        });
+        paintHome();   // tampil dari cache dulu, lalu diperbarui setelah data dari server masuk
+        Promise.all([Promise.resolve(dbReady), loadPaket()]).then(() => { bankReady = true; if (!L) { if (curP) paintSetup(); else paintHome(); } });
         const prev = window.switchTab;
         window.switchTab = function (t) {
             const r = prev.apply(this, arguments);
-            try { if (t === 'soal' && !L) paintSetup(); } catch (e) { }
+            try { if (t === 'soal' && !L) { if (curP) paintSetup(); else paintHome(); } } catch (e) { }
             return r;
         };
     }
