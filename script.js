@@ -1097,12 +1097,12 @@ body { font-size: 16px; }
           <ul><li><strong>Jadwal:</strong> kegiatan hari ini dan besok per sesi.</li><li><strong>Tugas:</strong> daftar tugas dengan label sisa waktu (hijau aman, kuning mendekati, merah terlewat). Gunakan kolom pencarian untuk mencari.</li><li><strong>Materi:</strong> klik <em>Buka</em> untuk membuka berkas.</li></ul></details>
         <details><summary>4. Lab, Skills Lab, dan Tutorial (menu Praktikum)</summary>
           <p>Pilih halamannya, lalu klik <strong>Buka Berkas</strong> untuk melihat modul.</p></details>
-        <details><summary>5. Latihan soal isian</summary>
-          <ol><li>Buka <strong>Latihan, Soal Isian</strong>, lalu klik <strong>Mulai Latihan</strong>.</li><li>Ketik jawaban. Huruf besar-kecil dan awalan "Os", "M.", "N." tidak berpengaruh.</li><li>Klik <strong>Submit Jawaban</strong> untuk melihat skor dan pembahasan.</li></ol></details>
+        <details><summary>5. Soal Latihan</summary>
+          <ol><li>Buka <strong>Latihan, Soal Latihan</strong>. Bank berisi 200 soal Fisiologi Blok 1.3 Termoregulasi (Pretest 2023 dan materi PPT).</li><li>Pilih jumlah soal <strong>10, 20, atau 30</strong>. Kalau mau, pilih juga topik atau sumber tertentu, misalnya Demam atau Pretest 2023.</li><li>Klik <strong>Mulai Latihan</strong>. Soal diacak dan diutamakan yang belum pernah kamu kerjakan. Pilih jawaban, lalu klik <strong>Periksa jawaban</strong> untuk melihat benar atau salah beserta pembahasan.</li><li>Klik <strong>Selesai Latihan</strong> untuk melihat nilai, rekomendasi topik yang perlu diperkuat, dan review semua pembahasan. Tombol A-E atau 1-5 memilih jawaban, panah kiri/kanan pindah soal.</li></ol></details>
         <details><summary>6. Simulasi CBT</summary>
           <ul><li><strong>Tampilan:</strong> satu soal per halaman. Pakai tombol Sebelumnya/Berikutnya, atau klik nomor di <strong>Daftar Soal</strong> untuk memilih soal mana yang mau dikerjakan.</li><li><strong>Warna nomor:</strong> abu-abu = belum dikerjakan, hijau = sudah dijawab, titik oranye = ditandai ragu-ragu.</li><li><strong>Mode Latihan:</strong> tanpa waktu. Jawaban yang kamu pilih disimpan dulu dan bisa diganti. Tekan <em>Periksa jawaban</em> untuk melihat benar/salah dan pembahasan soal itu. Menu lain tetap bisa dibuka.</li><li><strong>Mode CBT:</strong> ada waktu 100 menit (timer merah di 10 menit terakhir). Jawaban boleh diubah sebelum dikumpulkan, dan <strong>menu lain terkunci</strong> sampai jawaban dikumpulkan. Pembahasan bisa dilihat setelah dikumpulkan lewat tombol <em>Review &amp; Pembahasan</em>.</li><li><strong>Ganti mode:</strong> tombol <em>Beranda CBT</em> membawamu kembali ke pilihan mode (latihan atau ujian yang sedang jalan dibatalkan).</li><li><strong>Tombol cepat:</strong> A-E atau 1-5 untuk memilih jawaban, panah kiri/kanan untuk pindah soal, F untuk tandai ragu.</li><li>Di akhir sesi kamu mendapat apresiasi, laporan nilai, dan rekomendasi topik belajar. Hasilnya otomatis tersimpan.</li></ul></details>
         <details class="guest-guide"><summary>\ud83d\udcc8 Progres dan hasil belajar</summary>
-          <ol><li>Setiap selesai CBT atau Soal Isian, nilaimu tersimpan otomatis di akunmu (NIM), jadi bisa dilihat dari HP atau laptop mana pun.</li><li>Buka <strong>Latihan, Progres Saya</strong> untuk melihat grafik nilai, rata-rata, nilai terbaik, dan apakah kamu meningkat dibanding pengerjaan sebelumnya.</li><li>Bagian <em>Topik yang perlu diperkuat</em> menunjukkan topik yang paling sering salah, sebagai panduan belajar.</li></ol></details>
+          <ol><li>Setiap selesai CBT atau Soal Latihan, nilaimu tersimpan otomatis di akunmu (NIM), jadi bisa dilihat dari HP atau laptop mana pun.</li><li>Buka <strong>Latihan, Progres Saya</strong> untuk melihat grafik nilai, rata-rata, nilai terbaik, dan apakah kamu meningkat dibanding pengerjaan sebelumnya.</li><li>Bagian <em>Topik yang perlu diperkuat</em> menunjukkan topik yang paling sering salah, sebagai panduan belajar.</li></ol></details>
         <details class="guest-guide"><summary>7. Melapor masalah dan melihat perkembangannya</summary>
           <ol><li>Buka <strong>Bantuan, Lapor Masalah</strong>, isi jenis, bagian, dan penjelasan, lalu klik <strong>Kirim Laporan</strong>.</li><li>Di halaman yang sama, bagian <strong>Laporan Saya</strong> menunjukkan perkembangannya: Terkirim, Sedang diproses, lalu Selesai.</li><li>Kalau admin mengubah status atau menulis catatan, kamu mendapat notifikasi dan kartu <strong>\ud83d\udd14 Update laporanmu</strong> di Beranda. Klik <em>Tandai sudah dibaca</em> kalau sudah dilihat.</li></ol></details>
         <details class="admin-guide" style="display:none;"><summary>\ud83d\udee0\ufe0f Panduan Admin</summary>
@@ -1171,7 +1171,7 @@ body { font-size: 16px; }
         { id: 'home', ico: '\ud83c\udfe0', label: 'Beranda', tabs: [['home', 'Beranda']] },
         { id: 'kuliah', ico: '\ud83d\udcc5', label: 'Kuliah', tabs: [['jadwal', 'Jadwal'], ['tugas', 'Tugas'], ['materi', 'Materi'], ['alat', 'Alat Belajar']] },
         { id: 'praktikum', ico: '\ud83d\udd2c', label: 'Praktikum', tabs: [['lab', 'Lab'], ['skills', 'Skills Lab'], ['checklist', 'Checklist'], ['tutorial', 'Tutorial']] },
-        { id: 'latihan', ico: '\u270d\ufe0f', label: 'Latihan', tabs: () => [['soal', 'Soal Isian'], ['cbt', 'Simulasi CBT'], isAdmin() ? ['progres-admin', 'Progres Mahasiswa'] : ['progres', 'Progres Saya'], ['game', 'Game Santai']] },
+        { id: 'latihan', ico: '\u270d\ufe0f', label: 'Latihan', tabs: () => [['soal', 'Soal Latihan'], ['cbt', 'Simulasi CBT'], isAdmin() ? ['progres-admin', 'Progres Mahasiswa'] : ['progres', 'Progres Saya'], ['game', 'Game Santai']] },
         { id: 'bantuan', ico: '\ud83d\udcac', label: 'Bantuan', tabs: () => [['panduan', 'Panduan'], isAdmin() ? ['laporan-admin', 'Laporan Masuk'] : ['lapor', 'Lapor Masalah']] }
     ];
     const tabsOf = g => typeof g.tabs === 'function' ? g.tabs() : g.tabs;
@@ -1350,7 +1350,7 @@ body { font-size: 16px; }
     const esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const isGuest = () => typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'guest';
     const L = ['A', 'B', 'C', 'D', 'E'];
-    const JENIS = { 'cbt-ujian': 'CBT (Ujian)', 'cbt-latihan': 'CBT (Latihan)', 'isian': 'Soal Isian' };
+    const JENIS = { 'cbt-ujian': 'CBT (Ujian)', 'cbt-latihan': 'CBT (Latihan)', 'isian': 'Soal Latihan' };
     const fmtTgl = t => new Date(t).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
 
     const st = document.createElement('style');
@@ -1683,7 +1683,7 @@ body { font-size: 16px; }
     <div id="tab-progres" class="tab-content" style="display:none;">
       <div class="card">
         <div class="card-header flex-between"><h3 class="card-title">\ud83d\udcc8 Progres Belajar Saya</h3>
-          <select id="prog-filter" class="modern-input" style="width:auto;margin:0;"><option value="all">Semua pengerjaan</option><option value="cbt-ujian">CBT (Ujian)</option><option value="cbt-latihan">CBT (Latihan)</option><option value="isian">Soal Isian</option></select></div>
+          <select id="prog-filter" class="modern-input" style="width:auto;margin:0;"><option value="all">Semua pengerjaan</option><option value="cbt-ujian">CBT (Ujian)</option><option value="cbt-latihan">CBT (Latihan)</option><option value="isian">Soal Latihan</option></select></div>
         <div id="progres-body"></div>
       </div>
     </div>`);
@@ -1703,7 +1703,7 @@ body { font-size: 16px; }
         if (!isGuest()) { el.innerHTML = '<p style="color:var(--text-muted);">Halaman ini menampilkan progres belajar mahasiswa setelah mengerjakan soal.</p>'; return; }
         const f = $('prog-filter').value;
         const arr = myResults.filter(r => f === 'all' || r.jenis === f).sort((a, b) => a.t - b.t);
-        if (!arr.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">\ud83c\udf31</div><h3>Belum ada hasil</h3><p>Kerjakan CBT atau Soal Isian. Nilaimu otomatis tersimpan di sini supaya kamu bisa melihat peningkatannya.</p></div>'; return; }
+        if (!arr.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">\ud83c\udf31</div><h3>Belum ada hasil</h3><p>Kerjakan CBT atau Soal Latihan. Nilaimu otomatis tersimpan di sini supaya kamu bisa melihat peningkatannya.</p></div>'; return; }
         const avg = a => a.length ? Math.round(a.reduce((s, r) => s + r.skor, 0) / a.length) : 0;
         const last = arr[arr.length - 1], best = Math.max(...arr.map(r => r.skor));
         let trend = 'Kerjakan satu sesi lagi untuk melihat perbandingannya.';
@@ -1787,7 +1787,7 @@ body { font-size: 16px; }
     const esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const isAdmin = () => typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin';
     const fmtTgl = t => new Date(t).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
-    const JENIS = { 'cbt-ujian': 'CBT (Ujian)', 'cbt-latihan': 'CBT (Latihan)', 'isian': 'Soal Isian' };
+    const JENIS = { 'cbt-ujian': 'CBT (Ujian)', 'cbt-latihan': 'CBT (Latihan)', 'isian': 'Soal Latihan' };
 
     const st = document.createElement('style');
     st.textContent = `
@@ -1918,7 +1918,7 @@ body { font-size: 16px; }
       <div class="card">
         <div class="card-header flex-between"><h3 class="card-title">\ud83d\udcca Progres Mahasiswa</h3><button class="btn btn-outline btn-sm" id="pa-refresh">\ud83d\udd04 Muat ulang</button></div>
         <div class="fv-bar"><input type="search" id="pa-search" class="modern-input" placeholder="\ud83d\udd0e Cari nama atau NIM...">
-          <select id="pa-jenis" class="modern-input"><option value="all">Semua jenis</option><option value="cbt-ujian">CBT (Ujian)</option><option value="cbt-latihan">CBT (Latihan)</option><option value="isian">Soal Isian</option></select></div>
+          <select id="pa-jenis" class="modern-input"><option value="all">Semua jenis</option><option value="cbt-ujian">CBT (Ujian)</option><option value="cbt-latihan">CBT (Latihan)</option><option value="isian">Soal Latihan</option></select></div>
         <div id="pa-body"></div>
         <div id="pa-detail"></div>
       </div>
@@ -7112,7 +7112,7 @@ body.cbt-locked #jb-ticker { display: none !important; }
         { id: 'lab', ico: '\ud83d\udd2c', label: 'Laboratorium', more: 1, tabs: () => [['lab', 'Lab']] },
         { id: 'skills', ico: '\ud83d\udc89', label: 'Skills', more: 1, tabs: () => [['checklist', 'Checklist'], ['skills', 'Skills Lab']] },
         { id: 'tutorial', ico: '\ud83d\udc65', label: 'Tutorial', more: 1, tabs: () => [['tutorial', 'Tutorial']] },
-        { id: 'latihan', ico: '\u270d\ufe0f', label: 'Latihan', tabs: () => [['soal', 'Soal Isian'], ['cbt', 'Simulasi CBT'], isAdmin() ? ['progres-admin', 'Progres Mahasiswa'] : ['progres', 'Progres Saya'], ['game', 'Game Santai']] },
+        { id: 'latihan', ico: '\u270d\ufe0f', label: 'Latihan', tabs: () => [['soal', 'Soal Latihan'], ['cbt', 'Simulasi CBT'], isAdmin() ? ['progres-admin', 'Progres Mahasiswa'] : ['progres', 'Progres Saya'], ['game', 'Game Santai']] },
         { id: 'bantuan', ico: '\ud83d\udcac', label: 'Bantuan', more: 1, tabs: () => [['panduan', 'Panduan'], isAdmin() ? ['laporan-admin', 'Laporan Masuk'] : ['lapor', 'Lapor Masalah']] }
     ];
     const main = $('sn-main'), sub = $('sn-sub');
@@ -7543,7 +7543,7 @@ body.cbt-locked #a9-notif, body.cbt-locked #a9-quick, body.cbt-locked #a9-crumb 
     const PATH = {
         home: [], jadwal: ['Kuliah', 'Jadwal'], tugas: ['Kuliah', 'Tugas'], materi: ['Kuliah', 'Materi'], alat: ['Kuliah', 'Alat Belajar'],
         lab: ['Laboratorium'], checklist: ['Skills', 'Checklist'], skills: ['Skills', 'Skills Lab'], tutorial: ['Tutorial'],
-        soal: ['Latihan', 'Soal Isian'], cbt: ['Latihan', 'Simulasi CBT'], progres: ['Latihan', 'Progres Saya'], 'progres-admin': ['Latihan', 'Progres Mahasiswa'], game: ['Latihan', 'Game Santai'],
+        soal: ['Latihan', 'Soal Latihan'], cbt: ['Latihan', 'Simulasi CBT'], progres: ['Latihan', 'Progres Saya'], 'progres-admin': ['Latihan', 'Progres Mahasiswa'], game: ['Latihan', 'Game Santai'],
         panduan: ['Bantuan', 'Panduan'], lapor: ['Bantuan', 'Lapor Masalah'], 'laporan-admin': ['Bantuan', 'Laporan Masuk'], osce: ['OSCE']
     };
     const cr = document.createElement('div');
@@ -7590,4 +7590,379 @@ body.cbt-locked #a9-notif, body.cbt-locked #a9-quick, body.cbt-locked #a9-crumb 
     window.switchTab = function () { const r = prevSwitch.apply(this, arguments); try { crSig = ''; paintCrumb(); } catch (e) { } return r; };
     setInterval(() => { try { paintCrumb(); } catch (e) { } }, 800);   // menjaga penunjuk lokasi bila tab berganti lewat jalur lain (mis. OSCE)
     window.renderAll();
+})();
+
+
+// ==========================================================================
+// BAGIAN 21 - SOAL LATIHAN (pengganti "Soal Isian")
+// Bank 200 soal Fisiologi Blok 1.3 Termoregulasi (20 dari Pretest 2023 + 180 dari PPT
+// Termoregulasi, Kelainan Termoregulasi, dan Praktikum Termoregulasi).
+// Mahasiswa memilih jumlah soal 10 / 20 / 30 (dan boleh memilih topik), soal diacak
+// dan diutamakan yang belum pernah dikerjakan. Hasil tersimpan sebagai jenis 'isian'
+// (label tampil: Soal Latihan) sehingga Progres Saya dan Progres Mahasiswa tetap jalan.
+// Format tiap soal: t = topik, s = sumber, q = soal, o = pilihan, a = indeks jawaban benar,
+// e = pembahasan, f = 1 bila urutan pilihan tidak boleh diacak (mis. "1 dan 3", "Semua benar").
+// ==========================================================================
+// Bank soal TIDAK lagi ditanam di script. Diambil dari tabel Supabase "bank_soal" (lihat loadBank di bawah).
+let LATIHAN_BANK = [];
+
+(function () {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const LET = ['A', 'B', 'C', 'D', 'E'];
+    const COUNTS = [10, 20, 30];
+    const ALL = '__all__';
+    const SRC = { pretest: 'Pretest Fisiologi 1.3 (2023)', termoregulasi: 'PPT Termoregulasi', kelainan: 'PPT Kelainan Termoregulasi', praktikum: 'PPT Praktikum Termoregulasi' };
+    const isGuest = () => !!currentUser && currentUser.role === 'guest';
+    const uid = () => (currentUser && (currentUser.nim || currentUser.role)) || 'tamu';
+    const ls = {
+        get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+        set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } }
+    };
+    const seenKey = () => 'a9_lat_seen_v1_' + uid();
+    let cfg = Object.assign({ n: 20, f: ALL }, ls.get('a9_lat_cfg_v1', {}));
+    let L = null;          // sesi latihan yang sedang berjalan
+    let host = null;
+
+    const shuffle = a => { const r = a.slice(); for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
+    const pool = f => LATIHAN_BANK.filter(q => f === ALL || (f.indexOf('s:') === 0 ? q.s === f.slice(2) : q.t === f.slice(2)));
+    const fmtDur = s => { s = Math.max(0, Math.round(s)); const m = Math.floor(s / 60); return m + ' menit ' + String(s % 60).padStart(2, '0') + ' detik'; };
+    const qHtml = t => esc(t).replace(/\n/g, '<br>');
+
+    const st = document.createElement('style');
+    st.textContent = `
+    .lat-pills { display: flex; gap: 10px; flex-wrap: wrap; }
+    .lat-pill { flex: 1 1 90px; padding: 14px 10px; border-radius: 14px; border: 2px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font: inherit; font-weight: 800; font-size: 20px; cursor: pointer; text-align: center; }
+    .lat-pill small { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+    .lat-pill.on { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+    .lat-box { margin: 16px 0; padding: 16px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--bg-base); }
+    .lat-box > label { display: block; font-weight: 700; margin-bottom: 8px; }
+    .lat-box select { width: 100%; margin: 0; }
+    .lat-info { margin-top: 8px; font-size: 13px; color: var(--text-muted); }
+    .lat-src { display: block; margin-top: 6px; font-size: 12px; color: var(--text-muted); }
+    `;
+    document.head.appendChild(st);
+
+    // ---------------- pemilihan soal ----------------
+    function draw(n, f) {
+        const p = pool(f);
+        n = Math.min(n, p.length);
+        const seen = new Set(ls.get(seenKey(), []));
+        const fresh = shuffle(p.filter(q => !seen.has(q.id)));
+        let chosen, next;
+        if (fresh.length >= n) {
+            chosen = fresh.slice(0, n);
+            next = new Set([...seen, ...chosen.map(q => q.id)]);
+        } else {
+            // soal baru habis: ambil semua yang belum, sisanya dari soal lama, lalu mulai putaran baru
+            const old = shuffle(p.filter(q => seen.has(q.id)));
+            chosen = fresh.concat(old.slice(0, n - fresh.length));
+            next = new Set([...seen].filter(id => !p.some(q => q.id === id)));
+            chosen.forEach(q => next.add(q.id));
+        }
+        ls.set(seenKey(), [...next]);
+        return shuffle(chosen);
+    }
+
+    function buildSession(n, f) {
+        const qs = draw(n, f).map(q => {
+            const idx = q.o.map((_, i) => i);
+            const order = q.f ? idx : shuffle(idx);
+            return { id: q.id, t: q.t, s: q.s, q: q.q, e: q.e, opts: order.map(i => ({ t: q.o[i], ok: i === q.a })) };
+        });
+        return { n: qs.length, f, qs, idx: 0, ans: {}, chk: {}, flag: {}, side: false, review: false, done: false, start: Date.now(), result: null };
+    }
+
+    // ---------------- layar pengaturan ----------------
+    function paintSetup() {
+        const seen = new Set(ls.get(seenKey(), []));
+        const topics = {}, sources = {};
+        LATIHAN_BANK.forEach(q => { topics[q.t] = (topics[q.t] || 0) + 1; sources[q.s] = (sources[q.s] || 0) + 1; });
+        if (cfg.f !== ALL && !pool(cfg.f).length) cfg.f = ALL;
+        const p = pool(cfg.f), fresh = p.filter(q => !seen.has(q.id)).length;
+        const eff = Math.min(cfg.n, p.length);
+        host.innerHTML = `
+        <div class="card">
+          <div class="card-header"><h3 class="card-title">\u270d\ufe0f Soal Latihan Fisiologi</h3></div>
+          <p style="color:var(--text-muted);margin-bottom:4px;">Bank <strong>${LATIHAN_BANK.length} soal</strong> Blok 1.3 Termoregulasi dari Pretest 2023 dan materi PPT. Setiap latihan, soal diambil acak dari bank dan diutamakan yang belum pernah kamu kerjakan.</p>
+          <div class="lat-box">
+            <label>Jumlah soal</label>
+            <div class="lat-pills">${COUNTS.map(c => `<button type="button" class="lat-pill${cfg.n === c ? ' on' : ''}" data-n="${c}">${c}<small>soal</small></button>`).join('')}</div>
+          </div>
+          <div class="lat-box">
+            <label for="lat-filter">\ud83d\udcda Pilih topik atau sumber</label>
+            <select id="lat-filter" class="modern-input">
+              <option value="${ALL}"${cfg.f === ALL ? ' selected' : ''}>Semua topik (${LATIHAN_BANK.length} soal)</option>
+              <optgroup label="Berdasarkan sumber">${Object.keys(SRC).filter(k => sources[k]).map(k => `<option value="s:${k}"${cfg.f === 's:' + k ? ' selected' : ''}>${esc(SRC[k])} (${sources[k]} soal)</option>`).join('')}</optgroup>
+              <optgroup label="Berdasarkan topik">${Object.keys(topics).sort((a, b) => a.localeCompare(b, 'id')).map(k => `<option value="t:${esc(k)}"${cfg.f === 't:' + k ? ' selected' : ''}>${esc(k)} (${topics[k]} soal)</option>`).join('')}</optgroup>
+            </select>
+            <div class="lat-info">${eff} soal akan dikerjakan${cfg.n > p.length ? ' (semua soal di pilihan ini, kurang dari ' + cfg.n + ')' : ''}. Soal yang belum pernah kamu kerjakan: ${fresh} dari ${p.length}.</div>
+          </div>
+          <button type="button" class="btn btn-primary" data-act="start">\u25b6 Mulai Latihan</button>
+          ${fresh < p.length ? '<button type="button" class="btn btn-outline" data-act="resetseen" style="margin-left:8px;">\ud83d\udd01 Anggap semua belum pernah dikerjakan</button>' : ''}
+        </div>`;
+    }
+
+    // ---------------- layar soal ----------------
+    function paintQ() {
+        const c = L, q = c.qs[c.idx], n = c.qs.length, ans = c.ans[c.idx], rv = c.review;
+        const reveal = rv || !!c.chk[c.idx];
+        const opts = q.opts.map((o, i) => {
+            let cls = 'option-label';
+            if (reveal) { if (o.ok) cls += ' correct-answer'; else if (i === ans) cls += ' wrong-answer'; }
+            else if (ans === i) cls += ' picked';
+            return `<li><button type="button" class="${cls}" data-opt="${i}"${reveal ? ' disabled' : ''}><span class="option-text"><strong>${LET[i]}.</strong> ${esc(o.t)}</span></button></li>`;
+        }).join('');
+        let fb = '';
+        if (reveal) {
+            const right = q.opts.findIndex(o => o.ok), ok = ans === right;
+            const head = ans === undefined ? '\u26aa <strong>Tidak dijawab.</strong>' : ok ? '\u2705 <strong>Benar!</strong>' : '\u274c <strong>Salah.</strong>';
+            fb = `<div class="cbt-feedback ${ok ? 'feedback-success' : 'feedback-danger'}" style="display:block;">${head}${ok ? '' : ` Jawaban benar: <strong>${LET[right]}. ${esc(q.opts[right].t)}</strong>`}<br><small>Topik: ${esc(q.t)}</small><br><br><em>Pembahasan:</em> ${esc(q.e || 'Belum ada pembahasan untuk soal ini.')}<span class="lat-src">Sumber: ${esc(SRC[q.s] || q.s)}</span></div>`;
+        }
+        const state = i => {
+            const a = c.ans[i], right = c.qs[i].opts.findIndex(o => o.ok);
+            if (rv) return a === undefined ? 'blank' : a === right ? 'ok' : 'bad';
+            if (c.chk[i]) return a === right ? 'ok' : 'bad';
+            return a !== undefined ? 'done' : '';
+        };
+        const grid = c.qs.map((x, i) => `<button type="button" class="cx-btn ${state(i)}${c.flag[i] ? ' flag' : ''}${i === c.idx ? ' cur' : ''}" data-go="${i}" aria-label="Soal ${i + 1}">${i + 1}</button>`).join('');
+        const sw = (bg, t) => `<span><i style="background:${bg}"></i>${t}</span>`;
+        const legend = rv ? sw('#10b981', 'Benar') + sw('#ef4444', 'Salah') + sw('var(--border-color)', 'Kosong')
+            : sw('var(--bg-card)', 'Belum') + sw('var(--primary)', 'Terjawab (belum diperiksa)') + sw('#10b981', 'Benar') + sw('#ef4444', 'Salah') + sw('var(--warning)', 'Ragu');
+        const answered = Object.keys(c.ans).length, flagged = Object.keys(c.flag).length;
+        const stats = rv ? `Review: ${c.qs.filter((x, i) => c.ans[i] !== undefined && x.opts[c.ans[i]].ok).length} benar dari ${n} soal`
+            : `Terjawab <strong>${answered}</strong> \u00b7 Ragu <strong>${flagged}</strong> \u00b7 Belum <strong>${n - answered}</strong>`;
+        const acts = rv ? '<button class="btn btn-primary" data-act="back">\u2190 Kembali ke laporan</button>'
+            : '<button class="btn btn-outline" data-act="blank">\u23ed Ke soal belum dijawab</button><button class="btn btn-primary" data-act="submit">\u2705 Selesai Latihan</button>';
+        host.innerHTML = `
+        <div class="card">
+        <div class="cbtx">
+          <div class="cbtx-main">
+            <div class="cbtx-head">
+              <span class="cbtx-title">${rv ? '\ud83d\udcd6 Review \u00b7 ' : ''}Soal ${c.idx + 1} dari ${n}</span>
+              <span style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn btn-outline btn-sm" data-act="exit">\ud83c\udfe0 Soal Latihan</button>
+                <button class="btn btn-outline btn-sm cx-toggle" data-act="side">\ud83d\udccb Daftar soal</button>
+                ${rv ? '' : `<button class="btn btn-outline btn-sm" data-act="flag">${c.flag[c.idx] ? '\ud83d\udea9 Ragu-ragu (klik untuk batal)' : '\ud83c\udff3\ufe0f Tandai ragu-ragu'}</button>`}
+              </span>
+            </div>
+            <div class="q-text">${qHtml(q.q)}</div>
+            <ul class="options">${opts}</ul>
+            ${fb}
+            <div class="cbtx-nav">
+              <button class="btn btn-outline" data-act="prev"${c.idx === 0 ? ' disabled' : ''}>\u25c0 Sebelumnya</button>
+              ${rv ? '' : `<button class="btn btn-primary" data-act="check"${ans === undefined || c.chk[c.idx] ? ' disabled' : ''}>\u2714 Periksa jawaban</button>`}
+              <button class="btn btn-primary" data-act="next"${c.idx === n - 1 ? ' disabled' : ''}>Berikutnya \u25b6</button>
+            </div>
+          </div>
+          <aside class="cbtx-side${c.side ? ' open' : ''}">
+            <div class="cx-sidehead"><h4>Daftar Soal</h4><button type="button" class="btn btn-outline btn-sm cx-close" data-act="side">\u2715 Tutup</button></div>
+            <div class="cx-legend">${legend}</div>
+            <div class="cx-grid">${grid}</div>
+            <div class="cx-stats">${stats}</div>
+            <div class="cx-side-acts">${acts}</div>
+          </aside>
+        </div>
+        </div>`;
+    }
+
+    function go(i) {
+        if (!L) return;
+        L.idx = Math.max(0, Math.min(L.qs.length - 1, i));
+        if (window.innerWidth <= 900) L.side = false;
+        paintQ();
+        host.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ---------------- hasil, simpan ke akun ----------------
+    async function readResults() {
+        const { data, error } = await supabaseClient.from('portal_db').select('value').eq('key', 'hasil_' + currentUser.nim).maybeSingle();
+        if (error) throw error;
+        let v = data && data.value;
+        if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { v = []; } }
+        return Array.isArray(v) ? v : [];
+    }
+    async function lastScore() {
+        if (!isGuest() || typeof supabaseClient === 'undefined' || !supabaseClient) return undefined;
+        try {
+            const a = (await readResults()).filter(r => r.jenis === 'isian' && r.bank === 'lat200');
+            return a.length ? a[a.length - 1].skor : null;
+        } catch (e) { return undefined; }
+    }
+    async function saveRes(rec) {
+        const note = $('lat-save-note');
+        if (!isGuest() || typeof supabaseClient === 'undefined' || !supabaseClient) return;
+        try {
+            const cur = await readResults();
+            const { error } = await supabaseClient.from('portal_db').upsert({ key: 'hasil_' + currentUser.nim, value: cur.concat([rec]).slice(-100) }, { onConflict: 'key' });
+            if (error) throw error;
+            if ($('lat-save-note')) $('lat-save-note').textContent = 'Hasil ini tersimpan otomatis di akunmu.';
+        } catch (e) {
+            console.error(e);
+            if ($('lat-save-note')) $('lat-save-note').textContent = 'Hasil belum tersimpan ke server. Cek koneksi internetmu.';
+        }
+    }
+    function apres(skor, prev) {
+        let ico = '\ud83c\udf31', t = 'Terus berlatih!', m = 'Setiap latihan membuatmu lebih siap. Baca pembahasan soal yang salah, lalu coba lagi.';
+        if (skor >= 85) { ico = '\ud83c\udfc6'; t = 'Luar biasa!'; m = 'Pemahamanmu sangat baik. Pertahankan, dan bantu temanmu yang masih belajar.'; }
+        else if (skor >= 70) { ico = '\ud83d\udc4f'; t = 'Bagus sekali!'; m = 'Kamu sudah menguasai sebagian besar materi. Sedikit lagi menuju sempurna.'; }
+        else if (skor >= 50) { ico = '\ud83d\udcaa'; t = 'Sudah di jalur yang benar!'; m = 'Fokus pada topik yang masih sering salah di rekomendasi belajar.'; }
+        let cmp = '';
+        if (prev === null) cmp = '\ud83c\udfaf Ini Soal Latihan pertamamu, jadikan patokan untuk berikutnya';
+        else if (prev !== undefined) { const d = skor - prev; cmp = d > 0 ? `\ud83d\udcc8 Naik ${d} poin dari Soal Latihan sebelumnya` : d < 0 ? `\ud83d\udcc9 Turun ${-d} poin dari Soal Latihan sebelumnya` : '\u2796 Sama dengan Soal Latihan sebelumnya'; }
+        return `<div class="apres"><div class="big">${ico}</div><h4>${t}</h4><p>${m}</p>${cmp ? `<span class="cmp">${cmp}</span>` : ''}</div>`;
+    }
+
+    async function finish() {
+        if (!L || L.done) return;
+        const c = L, n = c.qs.length;
+        let benar = 0, salah = 0, kosong = 0; const wrong = {};
+        c.qs.forEach((q, i) => {
+            const a = c.ans[i];
+            if (a === undefined) kosong++; else if (q.opts[a].ok) benar++; else salah++;
+            if (a === undefined || !q.opts[a].ok) wrong[q.t] = (wrong[q.t] || 0) + 1;
+        });
+        const skor = n ? Math.round(benar / n * 100) : 0;
+        const durasi = Math.round((Date.now() - c.start) / 1000);
+        c.done = true;
+        c.result = { benar, salah, kosong, skor, durasi, wrong, prev: await lastScore() };
+        if (L === c) paintReport(c);   // pengguna mungkin sudah pindah layar saat menunggu
+        saveRes({ t: Date.now(), jenis: 'isian', bank: 'lat200', skor, benar, total: n, kosong, durasi, wrong });
+    }
+
+    function paintReport(c) {
+        c = c || L;
+        const r = c && c.result; if (!r) return;
+        const topics = Object.entries(r.wrong).sort((a, b) => b[1] - a[1]);
+        host.innerHTML = `
+        <div class="card">
+          <div class="card-header"><h3 class="card-title">\ud83d\udcca Laporan Soal Latihan</h3></div>
+          ${apres(r.skor, r.prev)}
+          <div class="report-score"><h4>Nilai Akhir</h4><div class="score-number">${r.skor}</div><small style="color:var(--text-muted);">Skala 0 - 100 \u00b7 ${c.qs.length} soal</small></div>
+          <div class="report-row"><span>Jawaban Benar</span><span class="report-value report-correct">${r.benar} Soal</span></div>
+          <div class="report-row"><span>Jawaban Salah</span><span class="report-value report-wrong">${r.salah} Soal</span></div>
+          <div class="report-row"><span>Tidak Dijawab</span><span class="report-value">${r.kosong} Soal</span></div>
+          <div class="report-row"><span>Waktu Pengerjaan</span><span class="report-value">${fmtDur(r.durasi)}</span></div>
+          ${topics.length ? `<div class="report-recommendation"><h5>\ud83d\udcda Rekomendasi Belajar (Fokus Tingkatkan):</h5><ul>${topics.map(([t, k]) => `<li><strong>${esc(t)}</strong> (${k} soal)</li>`).join('')}</ul></div>`
+            : '<div class="report-recommendation" style="background:#ecfdf5;border-color:#10b981;"><h5 style="color:#065f46;">\ud83c\udf1f Luar Biasa!</h5><ul style="color:#065f46;"><li>Semua jawabanmu benar.</li></ul></div>'}
+          <div class="lap-acts" style="margin-top:18px;justify-content:center;flex-wrap:wrap;">
+            <button class="btn btn-primary" data-act="review">\ud83d\udcd6 Review &amp; Pembahasan</button>
+            <button class="btn btn-outline" data-act="again">\ud83d\udd01 Latihan lagi (${c.qs.length} soal baru)</button>
+            <button class="btn btn-outline" data-act="exit">\ud83c\udfe0 Ganti jumlah atau topik</button>
+            ${isGuest() ? '<button class="btn btn-outline" data-act="progres">\ud83d\udcc8 Lihat Progres</button>' : ''}
+          </div>
+          <p id="lat-save-note" style="font-size:12px;color:var(--text-muted);margin-top:12px;text-align:center;">${isGuest() ? 'Menyimpan hasil...' : ''}</p>
+        </div>`;
+        window.scrollTo({ top: 0 });
+    }
+
+    // ---------------- penggerak ----------------
+    function start() {
+        const p = pool(cfg.f);
+        if (!p.length) { alert('Belum ada soal pada pilihan ini.'); return; }
+        L = buildSession(cfg.n, cfg.f);
+        paintQ(); window.scrollTo({ top: 0 });
+    }
+    function toSetup() { L = null; paintSetup(); window.scrollTo({ top: 0 }); }
+    function nextBlank() {
+        const n = L.qs.length;
+        for (let k = 1; k <= n; k++) { const i = (L.idx + k) % n; if (L.ans[i] === undefined) { go(i); return; } }
+    }
+
+    function bind() {
+        host.addEventListener('click', e => {
+            const pill = e.target.closest('[data-n]');
+            if (pill && !L) { cfg.n = +pill.dataset.n; ls.set('a9_lat_cfg_v1', cfg); paintSetup(); return; }
+            const g = e.target.closest('[data-go]');
+            if (g && L) { go(+g.dataset.go); return; }
+            const o = e.target.closest('[data-opt]');
+            if (o && L && !L.review && !L.chk[L.idx]) { L.ans[L.idx] = +o.dataset.opt; paintQ(); return; }
+            const b = e.target.closest('[data-act]'); if (!b) return;
+            const act = b.dataset.act;
+            if (act === 'start') start();
+            else if (act === 'resetseen') { ls.set(seenKey(), []); paintSetup(); }
+            else if (!L) return;
+            else if (act === 'prev') go(L.idx - 1);
+            else if (act === 'next') go(L.idx + 1);
+            else if (act === 'check') { if (L.ans[L.idx] !== undefined) { L.chk[L.idx] = true; paintQ(); } }
+            else if (act === 'flag') { if (L.flag[L.idx]) delete L.flag[L.idx]; else L.flag[L.idx] = true; paintQ(); }
+            else if (act === 'side') { L.side = !L.side; paintQ(); }
+            else if (act === 'blank') nextBlank();
+            else if (act === 'submit') {
+                const n = L.qs.length, done = Object.keys(L.ans).length;
+                if (confirm(done < n ? `Kamu baru menjawab ${done} dari ${n} soal. Yakin ingin menyelesaikan latihan?` : 'Semua soal sudah dijawab. Yakin ingin menyelesaikan latihan?')) finish();
+            }
+            else if (act === 'exit') {
+                if (!L.done && !confirm('Kembali ke pilihan soal? Latihan ini tidak dinilai dan tidak tersimpan.')) return;
+                toSetup();
+            }
+            else if (act === 'review') { if (!L.result) return; L.review = true; L.idx = 0; paintQ(); window.scrollTo({ top: 0 }); }
+            else if (act === 'back') { L.review = false; paintReport(L); const nt = $('lat-save-note'); if (nt && isGuest()) nt.textContent = 'Hasil ini tersimpan otomatis di akunmu.'; }
+            else if (act === 'again') { L = buildSession(cfg.n, cfg.f); paintQ(); window.scrollTo({ top: 0 }); }
+            else if (act === 'progres') window.switchTab('progres', null);
+        });
+        host.addEventListener('change', e => {
+            if (e.target.id === 'lat-filter' && !L) { cfg.f = e.target.value; ls.set('a9_lat_cfg_v1', cfg); paintSetup(); }
+        });
+        document.addEventListener('keydown', e => {
+            if (!L || (L.done && !L.review) || host.style.display === 'none' || !host.offsetParent) return;
+            if (/^(input|textarea|select)$/i.test((e.target.tagName || '')) || e.ctrlKey || e.metaKey || e.altKey) return;
+            const k = e.key.toLowerCase();
+            if (k === 'arrowright') { go(L.idx + 1); e.preventDefault(); }
+            else if (k === 'arrowleft') { go(L.idx - 1); e.preventDefault(); }
+            else if (k === 'f' && !L.review) { if (L.flag[L.idx]) delete L.flag[L.idx]; else L.flag[L.idx] = true; paintQ(); }
+            else if (!L.review && !L.chk[L.idx]) {
+                const i = 'abcde'.indexOf(k) >= 0 && k.length === 1 ? 'abcde'.indexOf(k) : (/^[1-5]$/.test(k) ? +k - 1 : -1);
+                if (i >= 0 && i < L.qs[L.idx].opts.length) { L.ans[L.idx] = i; paintQ(); }
+            }
+        });
+    }
+
+
+    // ---------------- muat bank soal dari Supabase (tabel bank_soal) ----------------
+    const BANK_CACHE = 'a9_lat_bank_v1';
+    function rowToQ(r) {
+        const key = Object.keys(SRC).find(k => SRC[k] === r.sumber) || r.sumber || 'lainnya';
+        if (!SRC[key]) SRC[key] = key;   // sumber baru otomatis muncul di pilihan filter
+        const o = [r.opsi_a, r.opsi_b, r.opsi_c, r.opsi_d, r.opsi_e].filter(x => x != null && String(x).trim() !== '');
+        return { id: r.id, t: r.topik || 'Umum', s: key, q: r.pertanyaan, o: o, a: 'ABCDE'.indexOf(String(r.jawaban_benar || '').toUpperCase()), e: r.pembahasan || '', f: r.urutan_tetap ? 1 : 0 };
+    }
+    function applyBank(rows) {
+        const list = (rows || []).map(rowToQ).filter(q => q.q && q.o.length >= 2 && q.a >= 0 && q.a < q.o.length);
+        if (list.length) LATIHAN_BANK = list;
+        return list.length;
+    }
+    async function loadBank() {
+        if (!supabaseClient) return false;
+        try {
+            const { data, error } = await supabaseClient.from('bank_soal').select('*').order('id', { ascending: true }).limit(5000);
+            if (error || !Array.isArray(data) || !data.length) return false;
+            applyBank(data);
+            ls.set(BANK_CACHE, data);
+            return true;
+        } catch (e) { console.error('bank_soal:', e); return false; }
+    }
+
+    function init() {
+        host = $('tab-soal');
+        if (!host) return;
+        host.innerHTML = '';
+        bind();
+        applyBank(ls.get(BANK_CACHE, []));   // tampilkan dari cache dulu supaya cepat
+        if (LATIHAN_BANK.length) paintSetup();
+        else host.innerHTML = '<div class="card"><p style="color:var(--text-muted);">\u23f3 Memuat soal latihan...</p></div>';
+        loadBank().then(ok => {
+            if (L) return;   // jangan ganggu latihan yang sedang berjalan
+            if (LATIHAN_BANK.length) paintSetup();
+            else host.innerHTML = '<div class="card"><p style="color:var(--text-muted);">Soal latihan belum tersedia. Pastikan tabel bank_soal sudah terisi dan punya policy baca (select).</p></div>';
+        });
+        const prev = window.switchTab;
+        window.switchTab = function (t) {
+            const r = prev.apply(this, arguments);
+            try { if (t === 'soal' && !L) paintSetup(); } catch (e) { }
+            return r;
+        };
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
