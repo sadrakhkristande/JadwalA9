@@ -5823,7 +5823,7 @@ html body.a9soft #login-page h1::after, html body.a9soft #login-page h2::after, 
     function openPicker(btn) {
         if (panel) { closePicker(); return; }
         const cur = stored();
-        const row = (id, nama, ket, sw) => `<button type="button" data-th="${id}" class="${cur === id ? 'on' : ''}"><span class="sw" style="background:${sw[0]}"><i style="background:${sw[1]}"></i></span><span><b>${nama}</b><small>${ket}</small></span>${cur === id ? '<span class="ck">ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ</span>' : ''}</button>`;
+        const row = (id, nama, ket, sw) => `<button type="button" data-th="${id}" class="${cur === id ? 'on' : ''}"><span class="sw" style="background:${sw[0]}"><i style="background:${sw[1]}"></i></span><span><b>${nama}</b><small>${ket}</small></span>${cur === id ? '<span class="ck">ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“</span>' : ''}</button>`;
         panel = document.createElement('div'); panel.className = 'a9-thm'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Pilih tema');
         panel.innerHTML = '<h4>Pilih tema tampilan</h4>' + THEMES.map(t => row(t.id, t.nama, t.ket, t.sw)).join('') +
             row('auto', 'Otomatis', 'Ikut mode terang / gelap perangkat', ['#f4f6f4', '#2f3a40']);
@@ -6930,10 +6930,18 @@ body.cbt-locked #jb-ticker { display: none !important; }
         }
         return `<span class="jb-it${cls}">${pre}${s.jam ? '<b>' + esc(s.jam) + '</b> ' : ''}${esc(s.kegiatan)}${s.pindahDari ? ' <em>(jadwal berubah)</em>' : ''}</span>`;
     }
+    // Kegiatan hari ini yang jamnya sudah lewat DISEMBUNYIKAN (bukan dicoret) supaya Beranda tidak penuh.
+    const endMin = s => { const m = String(s.jam || '').match(/(\d{1,2})[.:](\d{2})\s*[-\u2013]\s*(\d{1,2})[.:](\d{2})/); return m ? +m[3] * 60 + +m[4] : null; };
     function segHtml(label, d, items, isToday, nowMin) {
+        let done = 0, allDone = false;
+        if (isToday && items && items.length) {
+            const live = items.filter(s => { const e = endMin(s); return e === null || nowMin < e; });
+            done = items.length - live.length; allDone = !live.length; items = live;
+        }
         const body = items === null ? '<div class="jb-it none">jadwal belum diisi</div>'
-            : !items.length ? '<div class="jb-it none">tidak ada kegiatan</div>'
-                : '<ul class="jb-list">' + items.map(s => '<li>' + itemHtml(s, isToday, nowMin) + '</li>').join('') + '</ul>';
+            : allDone ? '<div class="jb-it none">\u2714 Semua kegiatan hari ini sudah selesai</div>'
+                : !items.length ? '<div class="jb-it none">tidak ada kegiatan</div>'
+                    : '<ul class="jb-list">' + items.map(s => '<li>' + itemHtml(s, isToday, nowMin) + '</li>').join('') + '</ul>' + (done ? '<div class="jb-it none">\u2714 ' + done + ' kegiatan sudah selesai</div>' : '');
         return `<div class="jb-day"><span class="jb-tag${isToday ? '' : ' b'}">${label} \u00b7 ${esc(dayLabel(d))}</span>${body}</div>`;
     }
     // ---- Gabungan: Pengingat (deadline tugas + kegiatan penting) ikut tampil di kartu ini ----
@@ -6949,7 +6957,7 @@ body.cbt-locked #jb-ticker { display: none !important; }
         const list = (dbData.tugas || []).map(t => {
             const m = String(t.deadline || '').match(/^\d{4}-\d{2}-\d{2}/); if (!m) return null;
             return { nama: t.nama, days: Math.round((new Date(m[0] + 'T00:00:00') - today) / 86400000) };
-        }).filter(t => t && t.days <= 3).sort((a, b) => a.days - b.days);
+        }).filter(t => t && t.days >= -1 && t.days <= 3).sort((a, b) => a.days - b.days).slice(0, 5);   // terlewat > 1 hari tidak ditampilkan lagi
         const body = list.length
             ? '<ul class="jb-list">' + list.map(t => { const [lb, cl] = pillDays(t.days); return `<li class="jb-row"><span>${esc(t.nama)}</span><span class="jb-pill ${cl}">${lb}</span></li>`; }).join('') + '</ul>'
             : '<div class="jb-it none">Tidak ada tugas yang mepet \ud83c\udf89</div>';
@@ -7304,4 +7312,282 @@ body.cbt-locked #jb-ticker { display: none !important; }
     const prevRender = window.renderAll;
     window.renderAll = function () { const r = prevRender.apply(this, arguments); try { paint(); } catch (e) { console.error(e); } return r; };
     paint();
+})();
+
+// ==========================================================================
+// BAGIAN 21 - NOTIFIKASI JADWAL HARIAN (tanpa membuka web) + HP LEBIH RINGKAS + ALUR LEBIH JELAS
+//   TEMPEL DI PALING BAWAH script.js, tanpa menghapus apa pun.
+//   1) Notifikasi harian (Web Push): tombol "Aktifkan" di Beranda. Pengiriman otomatis oleh Supabase
+//      (06.00 WIB jadwal hari ini, 19.00 WIB jadwal besok) walau portal tertutup. Butuh file sw.js,
+//      manifest.webmanifest, ikon, SQL, dan Edge Function kirim-jadwal (lihat PANDUAN-NOTIFIKASI.md).
+//   2) Beranda: jalan pintas (Jadwal, Tugas, Materi, Latihan) + penunjuk lokasi "Kuliah > Jadwal" dengan tombol Beranda.
+//   3) Tampilan HP: kartu, tombol, huruf, dan menu bawah dikecilkan supaya tidak terasa besar.
+// ==========================================================================
+(function () {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const VAPID_PUBLIC_KEY = 'BCa2lgGfSLvqWQMK-I1YO_0txdZU9auiOGytvaVPiTa251jBBIRNZZrC-lKP4CWsWV06Iz31SYXZmgDTXyB8Gz0';   // kunci PUBLIK (aman ada di sini). Kunci rahasianya hanya di Supabase.
+
+    // ---------- kecil: pesan singkat ----------
+    function say(msg) {
+        const wrap = $('toast-wrap') || document.body;
+        const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; wrap.appendChild(t);
+        setTimeout(() => t.remove(), 4200);
+    }
+
+    // ======================================================================
+    // CSS
+    // ======================================================================
+    const css = document.createElement('style');
+    css.id = 'a9-b21';
+    css.textContent = `
+/* ---------- Kartu notifikasi ---------- */
+#a9-notif { display: none; align-items: center; gap: 10px; margin: 0 0 12px; padding: 10px 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; }
+#a9-notif.on { display: flex; }
+#a9-notif .nf-ico { flex: none; font-size: 22px; line-height: 1; }
+#a9-notif .nf-tx { flex: 1 1 auto; min-width: 0; }
+#a9-notif .nf-tx b { display: block; font-size: 14px; }
+#a9-notif .nf-tx small { display: block; color: var(--text-muted); font-size: 12.5px; line-height: 1.4; }
+#a9-notif .nf-act { flex: none; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+#a9-notif.ok { border-color: var(--primary); background: var(--primary-light); }
+body.cbt-locked #a9-notif, body.cbt-locked #a9-quick, body.cbt-locked #a9-crumb { display: none !important; }
+
+/* ---------- Jalan pintas Beranda ---------- */
+#a9-quick { margin: 0 0 14px; }
+#a9-quick h4 { font-size: 13px; color: var(--text-muted); font-weight: 700; margin: 0 0 8px; }
+#a9-quick .qk-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+#a9-quick .qk { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; min-height: 0; padding: 10px 12px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 14px; font: inherit; cursor: pointer; }
+#a9-quick .qk:active { transform: scale(.98); }
+#a9-quick .qk .qi { font-size: 20px; line-height: 1.1; }
+#a9-quick .qk b { font-size: 14px; }
+#a9-quick .qk small { font-size: 12px; color: var(--text-muted); line-height: 1.3; }
+
+/* ---------- Penunjuk lokasi ---------- */
+#a9-crumb { display: none; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 13px; }
+#a9-crumb.on { display: flex; }
+#a9-crumb .cr-back { flex: none; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; min-height: 0; }
+#a9-crumb .cr-path { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); font-weight: 600; }
+#a9-crumb .cr-path b { color: var(--text-main); }
+
+@media (max-width: 768px) {
+  #a9-quick .qk-grid { grid-template-columns: repeat(2, 1fr); }
+  #a9-notif { flex-wrap: wrap; }
+  #a9-notif .nf-act { width: 100%; justify-content: flex-start; }
+
+  /* ===== HP: semuanya dikecilkan ===== */
+  body { font-size: 14px !important; line-height: 1.45 !important; padding-bottom: calc(64px + env(safe-area-inset-bottom)) !important; }
+  .main-content { padding-inline: 10px !important; margin: 8px auto !important; }
+  .card { padding: 12px !important; margin-bottom: 10px !important; border-radius: 14px !important; }
+  .card-header { padding-bottom: 8px !important; margin-bottom: 10px !important; }
+  .card-title { font-size: 16px !important; }
+  h2 { font-size: 18px !important; } h3 { font-size: 16px !important; } h4 { font-size: 14.5px !important; }
+  .greeting { padding: 12px 14px !important; margin-bottom: 10px !important; border-radius: 14px !important; }
+  .greeting h3 { font-size: 17px !important; }
+  .greeting p { font-size: 12.5px !important; margin-top: 2px !important; }
+  .greeting .sub { display: none !important; }
+  .btn { min-height: 38px !important; padding: 7px 14px !important; font-size: 13px !important; border-radius: 10px !important; }
+  .btn-sm { min-height: 32px !important; padding: 5px 11px !important; font-size: 12.5px !important; }
+  .btn-lg { min-height: 44px !important; padding: 9px 16px !important; font-size: 14px !important; }
+  .modern-input { min-height: 40px !important; padding: 8px 12px !important; margin-bottom: 8px !important; font-size: 16px !important; }
+  .form-group label { font-size: 12.5px !important; margin-bottom: 4px !important; }
+  .admin-form-box { padding: 10px 12px !important; }
+  .modern-table th { padding: 8px 10px !important; font-size: 12px !important; }
+  .modern-table td { padding: 8px 10px !important; font-size: 13px !important; }
+  .option-label { min-height: 44px !important; padding: 9px 12px !important; }
+  .q-text { font-size: 15.5px !important; }
+  .empty-state { padding: 22px 12px !important; }
+  .empty-icon { font-size: 32px !important; }
+  .hint { font-size: 12.5px !important; }
+  /* kartu jadwal & pengingat */
+  .jb-head { padding: 8px 12px !important; font-size: 14px !important; }
+  .jb-body { padding: 2px 12px 8px !important; }
+  .jb-day { padding: 8px 0 !important; }
+  .jb-tag { font-size: 12px !important; padding: 2px 9px !important; }
+  /* menu bawah & submenu */
+  #sn-main .nav-pill { min-height: 50px !important; padding: 4px 2px !important; gap: 1px !important; }
+  #sn-main .mx-i { font-size: 19px !important; }
+  #sn-main .mx-l { font-size: 10.5px !important; }
+  #sn-sub { padding: 5px 8px !important; gap: 6px !important; }
+  #sn-sub .sn-chip { font-size: 13px !important; padding: 6px 13px !important; min-height: 34px !important; }
+  .cbtx-nav { bottom: calc(60px + env(safe-area-inset-bottom)) !important; }
+  #mx-sheet .mx-b { min-height: 42px !important; font-size: 14px !important; }
+}
+`;
+    document.head.appendChild(css);
+
+    // ======================================================================
+    // 1) NOTIFIKASI HARIAN (Web Push)
+    // ======================================================================
+    (function head() {
+        const add = (sel, tag, attrs) => {
+            if (document.head.querySelector(sel)) return;
+            const e = document.createElement(tag); Object.keys(attrs).forEach(k => e.setAttribute(k, attrs[k])); document.head.appendChild(e);
+        };
+        add('link[rel="manifest"]', 'link', { rel: 'manifest', href: 'manifest.webmanifest' });
+        add('link[rel="apple-touch-icon"]', 'link', { rel: 'apple-touch-icon', href: 'apple-touch-icon.png' });
+        add('meta[name="apple-mobile-web-app-capable"]', 'meta', { name: 'apple-mobile-web-app-capable', content: 'yes' });
+        add('meta[name="mobile-web-app-capable"]', 'meta', { name: 'mobile-web-app-capable', content: 'yes' });
+        add('meta[name="apple-mobile-web-app-title"]', 'meta', { name: 'apple-mobile-web-app-title', content: 'Portal A9' });
+    })();
+
+    const pushOK = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+    const standalone = () => window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    const onIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const u8 = s => { const p = '='.repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+
+    let regP = null, current = null, working = false, syncedFor = null;
+    function getReg() {
+        if (!('serviceWorker' in navigator)) return Promise.resolve(null);
+        if (!regP) regP = navigator.serviceWorker.register('sw.js').then(() => navigator.serviceWorker.ready).catch(e => { console.warn('Service worker gagal:', e); return null; });
+        return regP;
+    }
+    getReg();
+
+    async function saveSub(sub) {
+        if (!supabaseClient) return false;
+        const j = sub.toJSON(), k = j.keys || {};
+        const { error } = await supabaseClient.rpc('simpan_push', { p_endpoint: j.endpoint, p_p256dh: k.p256dh, p_auth: k.auth, p_nim: (currentUser && currentUser.nim) || null, p_nama: (currentUser && currentUser.name) || null });
+        if (error) { console.error('simpan_push gagal:', error); return false; }
+        return true;
+    }
+    const want = v => { try { if (v === undefined) return localStorage.getItem('a9_push_want') === '1'; v ? localStorage.setItem('a9_push_want', '1') : localStorage.removeItem('a9_push_want'); } catch (e) { return false; } };
+
+    async function refreshSub() {
+        const reg = await getReg(); let sub = null;
+        try {
+            if (reg && reg.pushManager) {
+                sub = await reg.pushManager.getSubscription();
+                // izin masih ada tapi langganan hilang (mis. kedaluwarsa): pasang lagi diam-diam
+                if (!sub && want() && Notification.permission === 'granted') sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: u8(VAPID_PUBLIC_KEY) });
+                if (sub && currentUser) await saveSub(sub);
+            }
+        } catch (e) { console.warn(e); }
+        current = sub; paintNotif();
+    }
+    async function enableNotif() {
+        if (working) return; working = true; paintNotif();
+        try {
+            const perm = await Notification.requestPermission();   // harus langsung dari ketukan pengguna (wajib di iPhone)
+            if (perm !== 'granted') { say('Izin notifikasi tidak diberikan.'); }
+            else {
+                const reg = await getReg(); if (!reg) throw new Error('Service worker tidak aktif (butuh https dan file sw.js).');
+                let sub = await reg.pushManager.getSubscription();
+                if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: u8(VAPID_PUBLIC_KEY) });
+                if (await saveSub(sub)) { current = sub; want(true); say('Notifikasi jadwal aktif \u2713'); }
+                else { await sub.unsubscribe().catch(() => { }); current = null; say('Gagal menyimpan ke server. Pastikan SQL notifikasi sudah dijalankan di Supabase.'); }
+            }
+        } catch (e) { console.error(e); say('Tidak bisa mengaktifkan: ' + (e && e.message || e)); }
+        working = false; paintNotif();
+    }
+    async function disableNotif() {
+        if (working) return; working = true; paintNotif();
+        try {
+            if (current) {
+                const ep = current.endpoint;
+                await current.unsubscribe().catch(() => { });
+                if (supabaseClient) await supabaseClient.rpc('hapus_push', { p_endpoint: ep });
+            }
+            current = null; want(false); say('Notifikasi dimatikan.');
+        } catch (e) { console.error(e); }
+        working = false; paintNotif();
+    }
+    async function testNotif() {
+        const reg = await getReg();
+        if (!reg) { say('Service worker belum aktif.'); return; }
+        reg.showNotification('\ud83d\udcc5 Begini tampilan notifikasinya', { body: '07.50-09.30  Contoh kegiatan kuliah\nJadwal asli dikirim otomatis tiap pagi dan malam.', icon: 'icon-192.png', badge: 'icon-192.png', tag: 'a9-test' });
+    }
+
+    const nf = document.createElement('div');
+    nf.id = 'a9-notif'; nf.setAttribute('role', 'region'); nf.setAttribute('aria-label', 'Notifikasi jadwal');
+    function paintNotif() {
+        const show = !!currentUser && !!VAPID_PUBLIC_KEY;
+        nf.classList.toggle('on', show);
+        if (!show) return;
+        let sub, act = '', ok = false;
+        if (onIOS() && !standalone()) {
+            sub = 'Di iPhone: ketuk tombol Bagikan \u2B06\uFE0F lalu <b>Tambah ke Layar Utama</b>. Buka portal dari ikon A9 itu, lalu aktifkan di sini.';
+        } else if (!pushOK()) {
+            sub = 'Browser ini belum mendukung notifikasi. Coba Chrome (Android) atau Safari terbaru.';
+        } else if (Notification.permission === 'denied') {
+            sub = 'Notifikasi diblokir. Izinkan lewat pengaturan browser / aplikasi, lalu muat ulang halaman ini.';
+        } else if (current) {
+            ok = true;
+            sub = 'Aktif \u2713 Jadwal masuk otomatis pukul 06.00 (hari ini) dan 19.00 (besok), walau portal tertutup.';
+            act = '<button type="button" class="btn btn-outline btn-sm" data-nf="test">Coba</button><button type="button" class="btn btn-outline btn-sm" data-nf="off"' + (working ? ' disabled' : '') + '>Matikan</button>';
+        } else {
+            sub = 'Terima jadwal kuliah tiap pagi dan malam tanpa perlu membuka portal.';
+            act = '<button type="button" class="btn btn-primary btn-sm" data-nf="on"' + (working ? ' disabled' : '') + '>' + (working ? 'Memproses\u2026' : 'Aktifkan') + '</button>';
+        }
+        nf.classList.toggle('ok', ok);
+        nf.innerHTML = '<div class="nf-ico">\ud83d\udd14</div><div class="nf-tx"><b>Notifikasi jadwal harian</b><small>' + sub + '</small></div>' + (act ? '<div class="nf-act">' + act + '</div>' : '');
+    }
+    nf.addEventListener('click', e => {
+        const b = e.target.closest('[data-nf]'); if (!b) return;
+        if (b.dataset.nf === 'on') enableNotif(); else if (b.dataset.nf === 'off') disableNotif(); else if (b.dataset.nf === 'test') testNotif();
+    });
+
+    // ======================================================================
+    // 2) JALAN PINTAS BERANDA + PENUNJUK LOKASI
+    // ======================================================================
+    const qk = document.createElement('div');
+    qk.id = 'a9-quick';
+    qk.innerHTML = '<h4>Mau buka apa?</h4><div class="qk-grid">' + [
+        ['jadwal', '\ud83d\udcc5', 'Jadwal', 'Kegiatan kuliah'],
+        ['tugas', '\u23f0', 'Tugas', 'Deadline & berkas'],
+        ['materi', '\ud83d\udcda', 'Materi', 'Slide & berkas kuliah'],
+        ['soal', '\u270d\ufe0f', 'Latihan', 'Soal & simulasi CBT']
+    ].map(x => '<button type="button" class="qk" data-go="' + x[0] + '"><span class="qi">' + x[1] + '</span><b>' + x[2] + '</b><small>' + x[3] + '</small></button>').join('') + '</div>';
+    qk.addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b && typeof window.switchTab === 'function') { window.switchTab(b.dataset.go, null); window.scrollTo({ top: 0 }); } });
+
+    const PATH = {
+        home: [], jadwal: ['Kuliah', 'Jadwal'], tugas: ['Kuliah', 'Tugas'], materi: ['Kuliah', 'Materi'], alat: ['Kuliah', 'Alat Belajar'],
+        lab: ['Laboratorium'], checklist: ['Skills', 'Checklist'], skills: ['Skills', 'Skills Lab'], tutorial: ['Tutorial'],
+        soal: ['Latihan', 'Soal Isian'], cbt: ['Latihan', 'Simulasi CBT'], progres: ['Latihan', 'Progres Saya'], 'progres-admin': ['Latihan', 'Progres Mahasiswa'], game: ['Latihan', 'Game Santai'],
+        panduan: ['Bantuan', 'Panduan'], lapor: ['Bantuan', 'Lapor Masalah'], 'laporan-admin': ['Bantuan', 'Laporan Masuk'], osce: ['OSCE']
+    };
+    const cr = document.createElement('div');
+    cr.id = 'a9-crumb';
+    cr.innerHTML = '<button type="button" class="cr-back" data-cr="home" aria-label="Kembali ke Beranda">\u2190 Beranda</button><span class="cr-path"></span>';
+    cr.addEventListener('click', e => { if (e.target.closest('[data-cr]') && typeof window.switchTab === 'function') { window.switchTab('home', null); window.scrollTo({ top: 0 }); } });
+    let crSig = '';
+    function curTab() {
+        const el = Array.from(document.querySelectorAll('.tab-content')).find(x => getComputedStyle(x).display !== 'none');
+        return el && el.id ? el.id.replace(/^tab-/, '') : 'home';
+    }
+    function paintCrumb() {
+        const t = curTab(), p = PATH[t], on = !!currentUser && t !== 'home' && !!p;
+        const sig = (on ? t : '') + '|' + (currentUser ? 1 : 0);
+        if (sig === crSig) return; crSig = sig;
+        cr.classList.toggle('on', on);
+        if (on) cr.querySelector('.cr-path').innerHTML = p.map((x, i) => i === p.length - 1 ? '<b>' + esc(x) + '</b>' : esc(x)).join(' \u203a ');
+    }
+
+    // ======================================================================
+    // Pemasangan
+    // ======================================================================
+    function place() {
+        const home = $('tab-home'); if (!home) return;
+        const host = home.parentElement;
+        if (host && host.firstElementChild !== cr) host.prepend(cr);
+        const tk = $('jb-ticker'), g = $('greeting'), anchor = tk || g;
+        if (anchor) { if (anchor.nextElementSibling !== nf) anchor.after(nf); }
+        else if (nf.parentElement !== home) home.prepend(nf);
+        if (nf.nextElementSibling !== qk) nf.after(qk);
+    }
+    const prevRender = window.renderAll;
+    window.renderAll = function () {
+        const r = prevRender.apply(this, arguments);
+        try {
+            place(); paintNotif(); paintCrumb();
+            const key = currentUser ? (currentUser.nim || 'admin') : null;
+            if (key && key !== syncedFor) { syncedFor = key; refreshSub(); }
+            if (!key) syncedFor = null;
+        } catch (e) { console.error(e); }
+        return r;
+    };
+    const prevSwitch = window.switchTab;
+    window.switchTab = function () { const r = prevSwitch.apply(this, arguments); try { crSig = ''; paintCrumb(); } catch (e) { } return r; };
+    setInterval(() => { try { paintCrumb(); } catch (e) { } }, 800);   // menjaga penunjuk lokasi bila tab berganti lewat jalur lain (mis. OSCE)
+    window.renderAll();
 })();
