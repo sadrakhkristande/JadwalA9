@@ -7677,9 +7677,10 @@ let LATIHAN_BANK = [];
     // ---------------- layar pengaturan ----------------
     function paintSetup() {
         syncBank();
-        if (!LATIHAN_BANK.length) { curP = null; paintHome(); return; }
-        const pkNama = curP === ALLP ? 'Campuran semua paket' : curPaket().nama;
-        const pkDesk = curP === ALLP ? 'Soal diacak dari seluruh paket.' : (curPaket().desk || '');
+        if (!LATIHAN_BANK.length) { paintHome(); return; }
+        const pkNama = curP === ALLP ? 'Campuran ' + curMK : curPaket().nama;
+        const pkDesk = curP === ALLP ? 'Soal diacak dari semua paket ' + curMK + '.' : (curPaket().desk || '');
+        const nav = (inMK().length > 1 ? navBtn('paket', 'Ganti paket') : '') + (mkNames().length > 1 ? navBtn('mk', 'Ganti mata kuliah') : '');
         const seen = new Set(ls.get(seenKey(), []));
         const topics = {}, sources = {};
         LATIHAN_BANK.forEach(q => { topics[q.t] = (topics[q.t] || 0) + 1; sources[q.s] = (sources[q.s] || 0) + 1; });
@@ -7688,7 +7689,7 @@ let LATIHAN_BANK = [];
         const eff = Math.min(cfg.n, p.length);
         host.innerHTML = `
         <div class="card">
-          <div class="card-header"><h3 class="card-title">\u270d\ufe0f ${esc(pkNama)}</h3></div>${PAKET.length > 1 ? '<button type="button" class="btn btn-outline btn-sm" data-act="paket" style="margin-bottom:10px;">\u2190 Ganti paket</button>' : ''}
+          <div class="card-header"><h3 class="card-title">\u270d\ufe0f ${esc(pkNama)}</h3></div>${nav ? '<div class="lat-nav">' + nav + '</div>' : ''}
           <p style="color:var(--text-muted);margin-bottom:4px;">${pkDesk ? esc(pkDesk) + ' ' : ''}Paket ini berisi <strong>${LATIHAN_BANK.length} soal</strong>. Setiap latihan, soal diambil acak dan diutamakan yang belum pernah kamu kerjakan.</p>
           <div class="lat-box">
             <label>Jumlah soal</label>
@@ -7832,7 +7833,7 @@ let LATIHAN_BANK = [];
         c.done = true;
         c.result = { benar, salah, kosong, skor, durasi, wrong, prev: await lastScore() };
         if (L === c) paintReport(c);   // pengguna mungkin sudah pindah layar saat menunggu
-        saveRes({ t: Date.now(), jenis: 'isian', bank: 'lat200', paket: curP, skor, benar, total: n, kosong, durasi, wrong });
+        saveRes({ t: Date.now(), jenis: 'isian', bank: 'lat200', paket: curP, mk: curMK, skor, benar, total: n, kosong, durasi, wrong });
     }
 
     function paintReport(c) {
@@ -7876,6 +7877,8 @@ let LATIHAN_BANK = [];
 
     function bind() {
         host.addEventListener('click', e => {
+            const mkb = e.target.closest('[data-mk]');
+            if (mkb && !L) { curMK = mkb.dataset.mk; curP = null; cfg.f = ALL; ls.set('a9_lat_cfg_v1', cfg); const ps = inMK(); if (ps.length === 1) { curP = ps[0].key; paintSetup(); } else paintPaket(); window.scrollTo({ top: 0 }); return; }
             const pkb = e.target.closest('[data-pk]');
             if (pkb && !L) { curP = pkb.dataset.pk; cfg.f = ALL; ls.set('a9_lat_cfg_v1', cfg); paintSetup(); window.scrollTo({ top: 0 }); return; }
             const pill = e.target.closest('[data-n]');
@@ -7888,6 +7891,7 @@ let LATIHAN_BANK = [];
             const act = b.dataset.act;
             if (act === 'start') start();
             else if (act === 'paket') { if (!L) { curP = null; paintPaket(); window.scrollTo({ top: 0 }); } }
+            else if (act === 'mk') { if (!L) { curP = null; curMK = null; paintMK(); window.scrollTo({ top: 0 }); } }
             else if (act === 'resetseen') { ls.set(seenKey(), []); paintSetup(); }
             else if (!L) return;
             else if (act === 'prev') go(L.idx - 1);
@@ -7928,9 +7932,10 @@ let LATIHAN_BANK = [];
 
 
     // ---------------- PAKET SOAL: tiap paket = 1 baris di portal_db (key "paket:<nama>") ----------------
-    // value: { nama, deskripsi, urutan, aktif, soal: [ { id, topic, question, options[], answer, explanation, fixed_order } ] }
+    // value: { mk, nama, deskripsi, urutan, aktif, soal: [ { id, topic, question, options[], answer, explanation, fixed_order } ] }
+    // Alur layar: Mata kuliah (mk) -> Paket -> Pengaturan -> Soal. Layar yang pilihannya cuma satu otomatis dilewati.
     const PK_CACHE = 'a9_paket_v1', ALLP = '__semua__';
-    let bankReady = false, curP = null, PAKET = [];
+    let bankReady = false, curP = null, curMK = null, PAKET = [];
     let paketRows = ls.get(PK_CACHE, []);
 
     const st2 = document.createElement('style');
@@ -7940,7 +7945,8 @@ let LATIHAN_BANK = [];
     .lat-pk:hover { border-color: var(--primary); background: var(--primary-light); }
     .lat-pk strong { font-size: 16px; }
     .lat-pk-d { font-size: 13px; color: var(--text-muted); }
-    .lat-pk-m { font-size: 12px; color: var(--text-muted); margin-top: auto; padding-top: 6px; }`;
+    .lat-pk-m { font-size: 12px; color: var(--text-muted); margin-top: auto; padding-top: 6px; }
+    .lat-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }`;
     document.head.appendChild(st2);
 
     function parseVal(v) { if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { return null; } } return v; }
@@ -7956,8 +7962,8 @@ let LATIHAN_BANK = [];
         if (a < 0 || a >= o.length) return null;
         return { id: pk.key + '#' + (x.id != null ? x.id : i), t: x.topic || x.category || 'Umum', s: pk.key, q: String(x.question), o: o, a: a, e: String(x.explanation || ''), f: x.fixed_order ? 1 : 0 };
     }
-    function makePaket(key, nama, desk, urut, list) {
-        const pk = { key: key, nama: nama, desk: desk, urut: urut, soal: [] };
+    function makePaket(key, nama, desk, urut, list, mk) {
+        const pk = { key: key, nama: nama, desk: desk, urut: urut, mk: String(mk || '').trim() || 'Umum', soal: [] };
         SRC[key] = nama;   // supaya nama paket muncul di filter "Berdasarkan sumber" saat memilih Campuran
         pk.soal = (list || []).map((x, i) => toQ(x, pk, i)).filter(Boolean);
         return pk;
@@ -7969,21 +7975,23 @@ let LATIHAN_BANK = [];
             const key = String(r.key || '').replace(/^paket:/, ''); if (!key) return;
             const isArr = Array.isArray(v);
             if (!isArr && v.aktif === false) return;   // aktif:false = disembunyikan dari mahasiswa
-            const pk = makePaket(key, (!isArr && v.nama) || key, (!isArr && v.deskripsi) || '', (!isArr && +v.urutan) || 999, isArr ? v : v.soal);
+            const pk = makePaket(key, (!isArr && v.nama) || key, (!isArr && v.deskripsi) || '', (!isArr && +v.urutan) || 999, isArr ? v : v.soal, !isArr && (v.mk || v.mata_kuliah));
             if (pk.soal.length) out.push(pk);
         });
         if (!out.length && Array.isArray(dbData.soal)) {   // cadangan: data "soal" lama dikelompokkan per sumber / paket
             const g = {};
             dbData.soal.forEach(x => { const n = String((x && (x.source || x.paket)) || 'Umum'); (g[n] = g[n] || []).push(x); });
-            Object.keys(g).forEach((n, i) => { const pk = makePaket('lama-' + i, n, '', 900 + i, g[n]); if (pk.soal.length) out.push(pk); });
+            Object.keys(g).forEach((n, i) => { const pk = makePaket('lama-' + i, n, '', 900 + i, g[n], 'Umum'); if (pk.soal.length) out.push(pk); });
         }
         out.sort((a, b) => a.urut - b.urut || a.nama.localeCompare(b.nama, 'id'));
         PAKET = out;
     }
     const curPaket = () => PAKET.find(p => p.key === curP) || null;
+    const mkNames = () => PAKET.map(p => p.mk).filter((m, i, a) => a.indexOf(m) === i);   // urutan mengikuti paket pertama tiap mata kuliah
+    const inMK = () => PAKET.filter(p => p.mk === curMK);
     function syncBank() {
         syncPaket();
-        if (curP === ALLP) LATIHAN_BANK = [].concat.apply([], PAKET.map(p => p.soal));
+        if (curP === ALLP) LATIHAN_BANK = [].concat.apply([], PAKET.filter(p => !curMK || p.mk === curMK).map(p => p.soal));
         else { const p = curPaket(); LATIHAN_BANK = p ? p.soal : []; }
     }
     async function loadPaket() {
@@ -7996,25 +8004,51 @@ let LATIHAN_BANK = [];
         } catch (e) { console.error('paket soal:', e); return false; }
     }
     function paintMsg(t) { host.innerHTML = '<div class="card"><p style="color:var(--text-muted);">' + t + '</p></div>'; }
+    const pkCard = (attr, key, nama, desk, meta) => '<button type="button" class="lat-pk" ' + attr + '="' + esc(key) + '"><strong>' + esc(nama) + '</strong>'
+        + (desk ? '<span class="lat-pk-d">' + esc(desk) + '</span>' : '') + '<span class="lat-pk-m">' + meta + '</span></button>';
+    const navBtn = (act, label) => '<button type="button" class="btn btn-outline btn-sm" data-act="' + act + '">\u2190 ' + label + '</button>';
+
+    // titik masuk: tentukan layar paling awal yang masih perlu dipilih mahasiswa
     function paintHome() {
+        syncPaket(); curP = null;
+        if (!PAKET.length) { curMK = null; paintMsg(bankReady ? 'Belum ada paket soal. Admin perlu mengisi paket soal di database (portal_db, key: paket:...).' : '\u23f3 Memuat paket soal...'); return; }
+        const names = mkNames();
+        if (names.length === 1) {   // hanya satu mata kuliah: lewati layar mata kuliah
+            curMK = names[0];
+            const ps = inMK();
+            if (ps.length === 1) { curP = ps[0].key; paintSetup(); } else paintPaket();
+            return;
+        }
+        curMK = null; paintMK();
+    }
+    // setelah data diperbarui / pindah tab: pertahankan pilihan yang masih valid
+    function paintNav() {
         syncPaket();
-        if (!PAKET.length) { paintMsg(bankReady ? 'Belum ada paket soal. Admin perlu mengisi paket soal di database (portal_db, key: paket:...).' : '\u23f3 Memuat paket soal...'); return; }
-        if (PAKET.length === 1) { curP = PAKET[0].key; paintSetup(); return; }   // hanya satu paket: langsung ke pengaturan
-        paintPaket();
+        const okMK = curMK && PAKET.some(p => p.mk === curMK);
+        if (curP && okMK && (curP === ALLP || curPaket())) paintSetup();
+        else if (okMK) { curP = null; paintPaket(); }
+        else paintHome();
+    }
+    function paintMK() {
+        const seen = new Set(ls.get(seenKey(), []));
+        host.innerHTML = '<div class="card"><div class="card-header"><h3 class="card-title">\u270d\ufe0f Soal Latihan</h3></div>'
+            + '<p style="color:var(--text-muted);margin-bottom:4px;">Pilih mata kuliah dulu, lalu pilih paket soalnya.</p>'
+            + '<div class="lat-pkgrid">' + mkNames().map(m => {
+                const ps = PAKET.filter(p => p.mk === m), all = [].concat.apply([], ps.map(p => p.soal));
+                return pkCard('data-mk', m, m, '', ps.length + ' paket \u00b7 ' + all.length + ' soal \u00b7 ' + all.filter(q => !seen.has(q.id)).length + ' belum dikerjakan');
+            }).join('') + '</div></div>';
     }
     function paintPaket() {
+        const list = inMK();
+        if (!list.length) { paintHome(); return; }
         const seen = new Set(ls.get(seenKey(), []));
-        const card = (key, nama, desk, list) => {
-            const topik = new Set(list.map(q => q.t)).size, fresh = list.filter(q => !seen.has(q.id)).length;
-            return '<button type="button" class="lat-pk" data-pk="' + esc(key) + '"><strong>' + esc(nama) + '</strong>'
-                + (desk ? '<span class="lat-pk-d">' + esc(desk) + '</span>' : '')
-                + '<span class="lat-pk-m">' + list.length + ' soal \u00b7 ' + topik + ' topik \u00b7 ' + fresh + ' belum dikerjakan</span></button>';
-        };
-        const all = [].concat.apply([], PAKET.map(p => p.soal));
-        host.innerHTML = '<div class="card"><div class="card-header"><h3 class="card-title">\u270d\ufe0f Soal Latihan</h3></div>'
+        const meta = l => l.length + ' soal \u00b7 ' + new Set(l.map(q => q.t)).size + ' topik \u00b7 ' + l.filter(q => !seen.has(q.id)).length + ' belum dikerjakan';
+        const all = [].concat.apply([], list.map(p => p.soal));
+        host.innerHTML = '<div class="card"><div class="card-header"><h3 class="card-title">\u270d\ufe0f ' + esc(curMK) + '</h3></div>'
+            + (mkNames().length > 1 ? '<div class="lat-nav">' + navBtn('mk', 'Ganti mata kuliah') + '</div>' : '')
             + '<p style="color:var(--text-muted);margin-bottom:4px;">Pilih paket soal yang mau kamu kerjakan. Setelah itu kamu bisa mengatur jumlah soal dan topiknya.</p>'
-            + '<div class="lat-pkgrid">' + PAKET.map(p => card(p.key, p.nama, p.desk, p.soal)).join('')
-            + card(ALLP, 'Campuran semua paket', 'Soal diacak dari seluruh paket.', all) + '</div></div>';
+            + '<div class="lat-pkgrid">' + list.map(p => pkCard('data-pk', p.key, p.nama, p.desk, meta(p.soal))).join('')
+            + (list.length > 1 ? pkCard('data-pk', ALLP, 'Campuran semua paket', 'Soal diacak dari seluruh paket ' + curMK + '.', meta(all)) : '') + '</div></div>';
     }
 
     function init() {
@@ -8023,11 +8057,11 @@ let LATIHAN_BANK = [];
         host.innerHTML = '';
         bind();
         paintHome();   // tampil dari cache dulu, lalu diperbarui setelah data dari server masuk
-        Promise.all([Promise.resolve(dbReady), loadPaket()]).then(() => { bankReady = true; if (!L) { if (curP) paintSetup(); else paintHome(); } });
+        Promise.all([Promise.resolve(dbReady), loadPaket()]).then(() => { bankReady = true; if (!L) paintNav(); });
         const prev = window.switchTab;
         window.switchTab = function (t) {
             const r = prev.apply(this, arguments);
-            try { if (t === 'soal' && !L) { if (curP) paintSetup(); else paintHome(); } } catch (e) { }
+            try { if (t === 'soal' && !L) paintNav(); } catch (e) { }
             return r;
         };
     }
