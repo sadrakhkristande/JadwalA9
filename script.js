@@ -7669,7 +7669,7 @@ let LATIHAN_BANK = [];
         const qs = draw(n, f).map(q => {
             const idx = q.o.map((_, i) => i);
             const order = q.f ? idx : shuffle(idx);
-            return { id: q.id, t: q.t, s: q.s, q: q.q, e: q.e, opts: order.map(i => ({ t: q.o[i], ok: i === q.a })) };
+            return { id: q.id, t: q.t, s: q.s, q: q.q, e: q.e, img: q.img, opts: order.map(i => ({ t: q.o[i], ok: i === q.a })) };
         });
         return { n: qs.length, f, qs, idx: 0, ans: {}, chk: {}, flag: {}, side: false, review: false, done: false, start: Date.now(), result: null };
     }
@@ -7723,7 +7723,7 @@ let LATIHAN_BANK = [];
         if (reveal) {
             const right = q.opts.findIndex(o => o.ok), ok = ans === right;
             const head = ans === undefined ? '\u26aa <strong>Tidak dijawab.</strong>' : ok ? '\u2705 <strong>Benar!</strong>' : '\u274c <strong>Salah.</strong>';
-            fb = `<div class="cbt-feedback ${ok ? 'feedback-success' : 'feedback-danger'}" style="display:block;">${head}${ok ? '' : ` Jawaban benar: <strong>${LET[right]}. ${esc(q.opts[right].t)}</strong>`}<br><small>Topik: ${esc(q.t)}</small><br><br><em>Pembahasan:</em> ${esc(q.e || 'Belum ada pembahasan untuk soal ini.')}<span class="lat-src">Sumber: ${esc(SRC[q.s] || q.s)}</span></div>`;
+            fb = `<div class="cbt-feedback ${ok ? 'feedback-success' : 'feedback-danger'}" style="display:block;">${head}${ok ? '' : ` Jawaban benar: <strong>${LET[right]}. ${esc(q.opts[right].t)}</strong>`}<br><small>Topik: ${esc(q.t)}</small><br><br><em>Pembahasan:</em> ${esc(q.e || 'Belum ada pembahasan untuk soal ini.')}${q.img ? `<div class="lat-img"><em>\ud83d\uddbc\ufe0f Slide materi:</em><a href="${esc(q.img)}" target="_blank" rel="noopener"><img src="${esc(q.img)}" alt="Slide materi" loading="lazy"></a></div>` : ''}<span class="lat-src">Sumber: ${esc(SRC[q.s] || q.s)}</span></div>`;
         }
         const state = i => {
             const a = c.ans[i], right = c.qs[i].opts.findIndex(o => o.ok);
@@ -7946,7 +7946,10 @@ let LATIHAN_BANK = [];
     .lat-pk strong { font-size: 16px; }
     .lat-pk-d { font-size: 13px; color: var(--text-muted); }
     .lat-pk-m { font-size: 12px; color: var(--text-muted); margin-top: auto; padding-top: 6px; }
-    .lat-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }`;
+    .lat-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .lat-img { margin-top: 12px; }
+    .lat-img em { display: block; font-size: 12px; margin-bottom: 6px; opacity: .8; }
+    .lat-img img { display: block; max-width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--border-color); background: #fff; }`;
     document.head.appendChild(st2);
 
     function parseVal(v) { if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { return null; } } return v; }
@@ -7960,7 +7963,7 @@ let LATIHAN_BANK = [];
             if (a < 0 && /^[A-Ea-e]$/.test(String(x.answer).trim())) a = 'ABCDE'.indexOf(String(x.answer).trim().toUpperCase());
         }
         if (a < 0 || a >= o.length) return null;
-        return { id: pk.key + '#' + (x.id != null ? x.id : i), t: x.topic || x.category || 'Umum', s: pk.key, q: String(x.question), o: o, a: a, e: String(x.explanation || ''), f: x.fixed_order ? 1 : 0 };
+        return { id: pk.key + '#' + (x.id != null ? x.id : i), t: x.topic || x.category || 'Umum', s: pk.key, q: String(x.question), o: o, a: a, e: String(x.explanation || ''), f: x.fixed_order ? 1 : 0, img: String(x.image || x.image_path || '').trim() };
     }
     function makePaket(key, nama, desk, urut, list, mk) {
         const pk = { key: key, nama: nama, desk: desk, urut: urut, mk: String(mk || '').trim() || 'Umum', soal: [] };
