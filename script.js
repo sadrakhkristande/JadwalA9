@@ -8090,10 +8090,10 @@ let LATIHAN_BANK = [];
 //   Pengaturan (tombol di samping nama): profil, password, email pemulihan, notifikasi, versi web.
 //   Admin: panel "password mahasiswa" yang meminta kode khusus.
 // ==========================================================================
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '2.2.0';
 const APP_BUILD = '2026-11-05';   // ubah dua baris ini setiap kali web diperbarui
 // URL Web App Apps Script "email-reset.gs" (lihat PANDUAN-LOGIN.md langkah 2). Kosong = lupa password nonaktif.
-const RESET_MAIL_URL = 'https://script.google.com/macros/s/AKfycbzukaSfkNY0SjT5oShnQwqjKIsOet1glqISThsnnqhPFe2vsHzc-OEEOv-mAkO0VZLAFQ/exec';
+const RESET_MAIL_URL = '';
 window.A9_VERSION = APP_VERSION;
 
 (function () {
@@ -8648,3 +8648,590 @@ body.cbt-locked #a9-set-btn { display: none !important; }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
     setTimeout(init, 450);   // sesudah "hardenLogin" (Bagian 17) selesai, supaya inputmode & tampilan tidak ditimpa
 })();
+
+// ==========================================================================
+// BAGIAN 23 - PENGUMUMAN SEBAGAI PUSAT INFO + TEMPLATE PERUBAHAN SPESIFIK + BERANDA HP LEBIH LEGA + PENGATURAN BARU
+//   TEMPEL DI PALING BAWAH script.js, tanpa menghapus apa pun.
+//   1) Pengumuman: kartu baru yang rapi (jenis berwarna, label BARU, ringkas + "Selengkapnya", filter jenis).
+//      Baris perubahan tampil spesifik: "Jam: 07.50 -> 09.40" (lama dicoret, baru ditebalkan), BARU, atau DIHAPUS.
+//   2) Pengingat & Info (daftar lama + form lama) dihilangkan, karena sudah masuk ke Pengumuman.
+//      Kartu "Jadwal" di Beranda hanya berisi Hari ini & Besok (deadline tugas sudah ada di Pengumuman).
+//   3) Admin: "Template perubahan / update" - pilih apa yang diubah, isi bagian + sebelum + sesudah.
+//      Edit jadwal lewat editor otomatis menulis pengumuman yang menyebut persis apa yang berubah.
+//   4) Beranda HP: jadwal bisa dilipat, pengumuman naik ke atas, jalan pintas satu baris.
+//   5) Pengaturan: tampilan bottom-sheet, bagian bisa dibuka-tutup, ada pilihan tema.
+// ==========================================================================
+(function () {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const isAdmin = () => !!currentUser && currentUser.role === 'admin';
+    const clone = o => JSON.parse(JSON.stringify(o));
+    const sod = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const isMobile = () => window.innerWidth <= 768;
+    const stripEmoji = s => String(s || '').replace(/^[\s\u200d\ufe0f\u2190-\u2bff\u{1F000}-\u{1FAFF}]+/u, '');
+    const MK = { chg: '\u2022', add: '\uff0b', del: '\u2715' };   // penanda baris: berubah / ditambah / dihapus
+    const ARROW = ' \u2192 ';
+
+    // Popup "pengingat" saat login tidak dipakai lagi (isinya sudah ada di Pengumuman)
+    try { sessionStorage.setItem('a9_rem_shown', '1'); } catch (e) { }
+
+    // ======================================================================
+    // CSS
+    // ======================================================================
+    const css = document.createElement('style');
+    css.id = 'a9-b23';
+    css.textContent = `
+/* ---------- Pengingat & Info lama disembunyikan (sudah jadi satu dengan Pengumuman) ---------- */
+#reminder-list, #jadwal-update-list, #smart-rem { display: none !important; }
+[onclick*="addReminder"], [onclick*="addJadwalUpdateWithFile"] { display: none !important; }
+.grid-2-1:has(#pengumuman-list) { grid-template-columns: minmax(0, 1fr) !important; }
+
+/* ---------- Pengumuman ---------- */
+.an-bar { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.an-bar::-webkit-scrollbar { display: none; }
+.an-chip { flex: none; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; min-height: 0; white-space: nowrap; }
+.an-chip i { font-style: normal; opacity: .7; margin-left: 4px; font-weight: 700; }
+.an-chip.on { background: var(--primary); border-color: var(--primary); color: var(--on-primary, #fff); }
+.an-card { --ac: var(--primary); position: relative; background: var(--bg-card); border: 1px solid var(--border-color); border-left: 4px solid var(--ac); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+.an-card.k-jadwal { --ac: #3b82f6; } .an-card.k-tugas { --ac: #f59e0b; } .an-card.k-ujian { --ac: #ef4444; }
+.an-card.k-materi, .an-card.k-file { --ac: #10b981; } .an-card.k-penting { --ac: #dc2626; background: rgba(220, 38, 38, .06); }
+.an-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+.an-kind { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: var(--ac); background: color-mix(in srgb, var(--ac) 14%, transparent); border-radius: 999px; padding: 2px 9px; }
+.an-new { background: #ef4444; color: #fff; border-radius: 999px; padding: 1px 8px; font-size: 11px; font-weight: 800; }
+.an-t { margin: 0 0 6px; font-size: 15.5px; line-height: 1.35; color: var(--text-main); overflow-wrap: anywhere; font-weight: 700; }
+.an-lead, .an-tail { margin: 0 0 8px; font-size: 13.5px; color: var(--text-muted); white-space: pre-line; overflow-wrap: anywhere; line-height: 1.5; }
+.an-card.fold .an-lead { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.an-rows { display: grid; gap: 6px; margin: 0 0 8px; }
+.an-r { display: grid; grid-template-columns: minmax(84px, 32%) minmax(0, 1fr); gap: 4px 10px; font-size: 13.5px; padding: 7px 10px; border-radius: 10px; background: var(--bg-base); align-items: start; }
+.an-r.nolab { grid-template-columns: minmax(0, 1fr); }
+.an-r .l { color: var(--text-muted); font-weight: 600; overflow-wrap: anywhere; }
+.an-r .v { overflow-wrap: anywhere; min-width: 0; }
+.an-r.chg .v s { color: var(--text-muted); text-decoration-color: #ef4444; }
+.an-r.chg .v .ar { color: var(--text-muted); margin: 0 5px; }
+.an-r.chg .v b { background: rgba(16, 185, 129, .18); border-radius: 6px; padding: 0 5px; }
+.an-r.add { background: rgba(16, 185, 129, .1); } .an-r.del { background: rgba(239, 68, 68, .09); }
+.an-r .tg { display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: .3px; border-radius: 6px; padding: 1px 6px; margin-right: 6px; vertical-align: middle; color: #fff; }
+.an-r.add .tg { background: #10b981; } .an-r.del .tg { background: #ef4444; }
+.an-r.del .dt { text-decoration: line-through; text-decoration-color: #ef4444; color: var(--text-muted); }
+.an-rest { font-size: 12.5px; color: var(--text-muted); margin: -2px 0 8px; }
+.an-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.an-dl { font-size: 12.5px; color: var(--text-muted); font-weight: 600; } .an-dl.hot { color: #ef4444; }
+.an-acts { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+.an-btn { border: 1px solid var(--border-color); background: var(--bg-base); color: var(--text-main); border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; min-height: 0; text-decoration: none; display: inline-flex; align-items: center; }
+.an-btn.danger { color: #dc2626; }
+.an-empty { text-align: center; padding: 22px 10px; color: var(--text-muted); }
+.an-more { width: 100%; border: 1px dashed var(--border-color); background: transparent; color: var(--text-main); border-radius: 12px; padding: 10px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; min-height: 0; }
+
+/* ---------- Template perubahan (admin) ---------- */
+.ut-tabs { display: flex; gap: 6px; margin: 0 0 10px; }
+.ut-tab { flex: 1; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); border-radius: 12px; padding: 9px 8px; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; min-height: 0; }
+.ut-tab.on { background: var(--primary); border-color: var(--primary); color: var(--on-primary, #fff); }
+.ut-box { border: 1.5px dashed var(--primary); border-radius: 16px; padding: 14px; margin-bottom: 16px; background: var(--primary-light); }
+.ut-h { display: block; font-weight: 800; margin-bottom: 10px; }
+.ut-l { display: block; font-size: 12.5px; font-weight: 700; color: var(--text-muted); margin: 6px 0 4px; }
+.ut-l small { font-weight: 500; }
+.ut-g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ut-box .modern-input { margin-bottom: 8px; width: 100%; box-sizing: border-box; }
+.ut-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.ut-chips button { border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); border-radius: 999px; padding: 4px 11px; font: inherit; font-size: 12.5px; cursor: pointer; min-height: 0; }
+.ut-row { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 8px; margin-bottom: 8px; }
+.ut-r1 { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; gap: 6px; align-items: center; }
+.ut-r2 { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 6px; align-items: center; margin-top: 6px; }
+.ut-r2.one { grid-template-columns: minmax(0, 1fr); }
+.ut-row .modern-input { margin: 0; min-width: 0; }
+.ut-row .ar { color: var(--text-muted); font-weight: 700; }
+.ut-rm { border: 0; background: transparent; color: #dc2626; font-size: 16px; cursor: pointer; padding: 4px 8px; min-height: 0; }
+.ut-prev { background: var(--bg-base); border: 1px solid var(--border-color); border-radius: 14px; padding: 10px; margin-bottom: 10px; }
+.ut-prev .an-card { margin-bottom: 0; }
+.ut-prev .hint { margin: 0; color: var(--text-muted); font-size: 13px; }
+.ut-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 560px) { .ut-g2 { grid-template-columns: 1fr; } .ut-r1 { grid-template-columns: 96px minmax(0, 1fr) auto; } .ut-r2 { grid-template-columns: minmax(0, 1fr); } .ut-r2 .ar { display: none; } }
+
+/* ---------- Kartu jadwal di Beranda: bisa dilipat ---------- */
+#jb-ticker .jb-head > span:first-child { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+#jb-sum { display: none; font-weight: 500; font-size: 12px; opacity: .92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#jb-ticker.jb-fold #jb-sum { display: block; }
+#jb-ticker.jb-fold #jb-track { display: none; }
+#jb-fold { transition: transform .2s; }
+#jb-ticker.jb-fold #jb-fold { transform: rotate(-90deg); }
+
+/* ---------- HP: Beranda lebih lega ---------- */
+@media (max-width: 768px) {
+  #a9-quick { margin-bottom: 10px; }
+  #a9-quick h4 { display: none; }
+  #a9-quick .qk-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  #a9-quick .qk { align-items: center; text-align: center; padding: 8px 2px; border-radius: 12px; }
+  #a9-quick .qk small { display: none; }
+  #a9-quick .qk b { font-size: 12px; }
+  #a9-quick .qk .qi { font-size: 20px; }
+  #a9-notif.ok { display: none !important; }
+  #a9-notif { padding: 8px 10px; margin-bottom: 8px; }
+  #a9-notif .nf-ico { font-size: 18px; }
+  #a9-notif .nf-tx small { font-size: 12px; }
+  #jb-ticker { margin-bottom: 10px; }
+  #jb-view { display: none; }
+  .an-card { padding: 11px 12px; }
+  .an-t { font-size: 15px; }
+}
+
+/* ---------- Pengaturan akun ---------- */
+#a9-set .a9s-top { position: sticky; top: 0; z-index: 3; background: var(--bg-base); padding: 12px 0 8px; margin: 0 0 6px; }
+#a9-set .a9s-hero { display: flex; align-items: center; gap: 14px; padding: 14px; margin-bottom: 4px; border-radius: 16px; background: var(--primary-light); border: 1px solid var(--border-color); }
+#a9-set .a9s-hero-av { flex: none; width: 54px; height: 54px; border-radius: 50%; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; background: var(--primary); color: var(--on-primary, #fff); font-size: 22px; font-weight: 800; }
+#a9-set .a9s-hero-av img { width: 100%; height: 100%; object-fit: cover; }
+#a9-set .a9s-hero b { display: block; font-size: 16px; overflow-wrap: anywhere; }
+#a9-set .a9s-hero small { display: block; color: var(--text-muted); font-size: 12.5px; margin-top: 2px; }
+#a9-set .a9s-grp { font-size: 11.5px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--text-muted); margin: 14px 4px 6px; }
+#a9-set .a9s-card { padding: 0 !important; overflow: hidden; margin-bottom: 8px !important; }
+#a9-set .a9s-hd { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border: 0; background: transparent; color: var(--text-main); font: inherit; text-align: left; cursor: pointer; min-height: 0; }
+#a9-set .a9s-hd .ic { flex: none; width: 34px; height: 34px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--primary-light); font-size: 17px; }
+#a9-set .a9s-hd .tx { flex: 1; min-width: 0; }
+#a9-set .a9s-hd .tx b { display: block; font-size: 14.5px; }
+#a9-set .a9s-hd .tx small { display: block; color: var(--text-muted); font-size: 12.5px; }
+#a9-set .a9s-hd .chev { flex: none; color: var(--text-muted); transition: transform .2s; }
+#a9-set .a9s-card.open .a9s-hd .chev { transform: rotate(90deg); }
+#a9-set .a9s-bd { display: none; padding: 12px 14px 14px; border-top: 1px solid var(--border-color); }
+#a9-set .a9s-card.open .a9s-bd { display: block; }
+#a9-set .a9s-th { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+#a9-set .a9s-th button { border: 2px solid var(--border-color); background: var(--bg-base); color: var(--text-main); border-radius: 12px; padding: 8px 4px; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+#a9-set .a9s-th button.on { border-color: var(--primary); background: var(--primary-light); }
+#a9-set .a9s-th .sw { width: 34px; height: 22px; border-radius: 7px; border: 1px solid rgba(0, 0, 0, .15); }
+@media (max-width: 768px) {
+  #a9-set { align-items: flex-end !important; padding: 0 !important; }
+  #a9-set .a9s-sheet { max-width: none !important; border-radius: 20px 20px 0 0 !important; max-height: 92vh; overflow-y: auto; padding: 0 12px calc(16px + env(safe-area-inset-bottom)) !important; animation: a9up .22s ease; }
+}
+@keyframes a9up { from { transform: translateY(26px); opacity: .5; } to { transform: none; opacity: 1; } }
+#admin-settings-modal > div { max-height: 90vh; overflow-y: auto; }
+`;
+    document.head.appendChild(css);
+
+    // ======================================================================
+    // 1) PENGUMUMAN: kartu baru
+    // ======================================================================
+    const KM = {
+        info: ['\ud83d\udce2', 'Pengumuman'], tugas: ['\ud83d\udcdd', 'Tugas'], materi: ['\ud83d\udcda', 'Materi'], file: ['\ud83d\udcda', 'Berkas baru'],
+        jadwal: ['\ud83d\uddd3\ufe0f', 'Jadwal'], ujian: ['\ud83d\udccc', 'Ujian / Kegiatan'], penting: ['\u26a0\ufe0f', 'Penting']
+    };
+    const FG = [['all', 'Semua'], ['jadwal', 'Jadwal'], ['tugas', 'Tugas'], ['ujian', 'Ujian'], ['materi', 'Materi'], ['penting', 'Penting'], ['info', 'Info']];
+    const grpOf = k => k === 'file' ? 'materi' : (KM[k] ? k : 'info');
+    const S = { filter: 'all', limit: 0, open: {} };
+    const tsOf = p => Date.parse(p.tgl) || p.ts || p.id || 0;
+    const pageSize = () => isMobile() ? 3 : 5;
+
+    function rel(ts) {
+        const s = Math.max(0, (Date.now() - ts) / 1000);
+        if (s < 60) return 'baru saja';
+        if (s < 3600) return Math.floor(s / 60) + ' mnt lalu';
+        if (s < 86400) return Math.floor(s / 3600) + ' jam lalu';
+        if (s < 7 * 86400) return Math.floor(s / 86400) + ' hari lalu';
+        return new Date(ts).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    }
+
+    // Pecah isi pengumuman: kalimat pembuka, baris rincian (diawali \u2022 / \uff0b / \u2715), kalimat penutup
+    function parseIsi(t) {
+        const lead = [], rows = [], tail = [];
+        String(t || '').split(/\r?\n/).forEach(raw => {
+            const line = raw.trim(); if (!line) return;
+            const m = line.match(/^([\u2022\uff0b\u2715])\s*(.*)$/);
+            if (m) {
+                let lab = '', val = m[2]; const ix = val.indexOf(': ');
+                if (ix > 0 && ix < 48) { lab = val.slice(0, ix); val = val.slice(ix + 2); }
+                let type = m[1] === MK.add ? 'add' : m[1] === MK.del ? 'del' : 'plain', a = '', b = '';
+                if (type === 'plain') { const ar = val.split(ARROW); if (ar.length === 2) { type = 'chg'; a = ar[0]; b = ar[1]; } }
+                rows.push({ type, lab, val, a, b });
+            } else (rows.length ? tail : lead).push(line);
+        });
+        return { lead: lead.join('\n'), rows, tail: tail.join('\n') };
+    }
+    function rowHtml(r) {
+        let v;
+        if (r.type === 'chg') v = '<s>' + esc(r.a) + '</s><span class="ar">\u2192</span><b>' + esc(r.b) + '</b>';
+        else if (r.type === 'add') v = '<span class="tg">BARU</span>' + esc(r.val);
+        else if (r.type === 'del') v = '<span class="tg">DIHAPUS</span><span class="dt">' + esc(r.val) + '</span>';
+        else v = esc(r.val);
+        return '<div class="an-r ' + r.type + (r.lab ? '' : ' nolab') + '">' + (r.lab ? '<div class="l">' + esc(r.lab) + '</div>' : '') + '<div class="v">' + v + '</div></div>';
+    }
+    function dlHtml(p) {
+        const m = String(p.deadline || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!m) return p.deadline ? '<span class="an-dl">' + esc(p.deadline) + '</span>' : '';
+        const d = new Date(+m[1], +m[2] - 1, +m[3]), n = Math.round((d - sod(new Date())) / 864e5);
+        const tail = n <= 0 ? ' \u00b7 hari ini' : n === 1 ? ' \u00b7 besok' : '';
+        return '<span class="an-dl' + (n <= 1 ? ' hot' : '') + '">\ud83d\udcc5 s/d ' + d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) + tail + '</span>';
+    }
+    function cardHtml(x, preview) {
+        const p = x.p, k = KM[p.kind] ? p.kind : 'info', m = KM[k], t = tsOf(p);
+        const q = parseIsi(p.isi);
+        const canFold = !preview && (q.rows.length > 3 || q.lead.length + q.tail.length > 170 || q.lead.split('\n').length > 3);
+        const open = !canFold || !!S.open[p.id];
+        const rows = open ? q.rows : q.rows.slice(0, 3);
+        const wa = 'https://wa.me/?text=' + encodeURIComponent('*' + p.judul + '*\n\n' + (p.isi || '') + '\n\n_Portal A9_');
+        return '<article class="an-card k-' + k + (open ? '' : ' fold') + '">'
+            + '<div class="an-top"><span class="an-kind">' + m[0] + ' ' + esc(m[1]) + '</span><span>' + (preview ? 'pratinjau' : rel(t)) + '</span>' + (!preview && Date.now() - t < 36 * 36e5 ? '<span class="an-new">BARU</span>' : '') + '</div>'
+            + '<h4 class="an-t">' + esc(stripEmoji(p.judul)) + '</h4>'
+            + (q.lead ? '<p class="an-lead">' + esc(q.lead) + '</p>' : '')
+            + (rows.length ? '<div class="an-rows">' + rows.map(rowHtml).join('') + '</div>' : '')
+            + (!open && q.rows.length > 3 ? '<div class="an-rest">+' + (q.rows.length - 3) + ' rincian lagi</div>' : '')
+            + (open && q.tail ? '<p class="an-tail">' + esc(q.tail) + '</p>' : '')
+            + '<div class="an-foot">' + dlHtml(p) + (preview ? '' : '<span class="an-acts">'
+                + (canFold ? '<button type="button" class="an-btn" data-an="tg" data-id="' + esc(p.id) + '">' + (open ? 'Ringkas \u25b4' : 'Selengkapnya \u25be') + '</button>' : '')
+                + '<a class="an-btn" target="_blank" rel="noopener" href="' + wa + '">Bagikan</a>'
+                + (isAdmin() ? '<button type="button" class="an-btn danger" data-an="del" data-i="' + x.i + '">Hapus</button>' : '') + '</span>') + '</div>'
+            + '</article>';
+    }
+    function renderPengumuman() {
+        const el = $('pengumuman-list'); if (!el) return;
+        const all = (Array.isArray(dbData.pengumuman) ? dbData.pengumuman : []).map((p, i) => ({ p, i })).filter(x => x.p && x.p.judul);
+        all.sort((a, b) => (b.p.kind === 'penting') - (a.p.kind === 'penting') || tsOf(b.p) - tsOf(a.p));
+        const cnt = {}; all.forEach(x => { const g = grpOf(x.p.kind); cnt[g] = (cnt[g] || 0) + 1; });
+        if (S.filter !== 'all' && !cnt[S.filter]) S.filter = 'all';
+        const list = S.filter === 'all' ? all : all.filter(x => grpOf(x.p.kind) === S.filter);
+        const lim = S.limit || pageSize(), shown = list.slice(0, lim);
+        let h = '';
+        if (Object.keys(cnt).length > 1) h += '<div class="an-bar">' + FG.filter(f => f[0] === 'all' || cnt[f[0]]).map(f => '<button type="button" class="an-chip' + (S.filter === f[0] ? ' on' : '') + '" data-an="f" data-v="' + f[0] + '">' + f[1] + '<i>' + (f[0] === 'all' ? all.length : cnt[f[0]]) + '</i></button>').join('') + '</div>';
+        h += shown.length ? shown.map(x => cardHtml(x)).join('') : '<div class="an-empty">\ud83d\udced<br>Belum ada pengumuman.</div>';
+        if (list.length > shown.length) h += '<button type="button" class="an-more" data-an="more">Tampilkan ' + Math.min(pageSize(), list.length - shown.length) + ' lagi (' + (list.length - shown.length) + ' tersisa)</button>';
+        const sig = (isAdmin() ? 'A' : 'M') + '|' + h;
+        if (el.dataset.sig === sig) return;
+        el.dataset.sig = sig; el.innerHTML = h;
+    }
+    (function bindAnn() {
+        const el = $('pengumuman-list'); if (!el || el.dataset.b23) return; el.dataset.b23 = '1';
+        el.addEventListener('click', e => {
+            const b = e.target.closest('[data-an]'); if (!b) return;
+            const a = b.dataset.an;
+            if (a === 'f') { S.filter = b.dataset.v; S.limit = 0; }
+            else if (a === 'more') { S.limit = (S.limit || pageSize()) + pageSize(); }
+            else if (a === 'tg') { S.open[b.dataset.id] = !S.open[b.dataset.id]; }
+            else if (a === 'del') { if (typeof window.deleteItem === 'function') window.deleteItem('pengumuman', +b.dataset.i); return; }
+            renderPengumuman();
+        });
+    })();
+
+    // ======================================================================
+    // 2) HILANGKAN "PENGINGAT" & "INFO" LAMA + RAPIKAN KARTU JADWAL
+    // ======================================================================
+    function killBlock(e) {
+        const card = e.closest('.card'), ann = $('pengumuman-list');
+        if (card && !(ann && card.contains(ann))) {
+            const other = Array.from(card.querySelectorAll('input, select, textarea, table, canvas, ul, ol')).filter(x => !e.contains(x) && !['rem-text', 'up-title'].includes(x.id));
+            if (!other.length) { card.style.display = 'none'; return; }
+        }
+        e.style.display = 'none';
+        const pv = e.previousElementSibling;
+        if (pv && /^(H3|H4|H5|LABEL|SMALL)$/.test(pv.tagName)) pv.style.display = 'none';
+    }
+    function killForm(inp) {
+        const box = inp.closest('.admin-form-box');
+        (inp.closest('.form-group') || inp).style.display = 'none';
+        const lb = document.querySelector('label[for="' + inp.id + '"]'); if (lb) lb.style.display = 'none';
+        if (box) {
+            const others = Array.from(box.querySelectorAll('input, select, textarea')).filter(x => !['rem-text', 'up-title'].includes(x.id) && x.type !== 'hidden');
+            if (!others.length) box.style.display = 'none';
+        }
+    }
+    function hideLegacy() {
+        ['reminder-list', 'jadwal-update-list'].forEach(id => { const e = $(id); if (e && !e.dataset.k23) { e.dataset.k23 = '1'; killBlock(e); } });
+        ['rem-text', 'up-title'].forEach(id => { const e = $(id); if (e && !e.dataset.k23) { e.dataset.k23 = '1'; killForm(e); } });
+    }
+    window.addReminder = window.addJadwalUpdateWithFile = function () { alert('Pengingat & info jadwal sudah digabung ke Pengumuman. Pakai "Template perubahan / update" di bagian Pengumuman.'); };
+
+    // Kartu jadwal: tanpa "Deadline tugas" & "Kegiatan penting" (sudah ada di Pengumuman), bisa dilipat di HP
+    const tk = $('jb-ticker'), track = $('jb-track');
+    function foldKey() { try { return sessionStorage.getItem('a9_jb_fold'); } catch (e) { return null; } }
+    function trimTicker() {
+        if (!tk || !track) return;
+        track.querySelectorAll('.jb-day').forEach(d => { const tg = d.querySelector('.jb-tag'); const s = tg ? tg.textContent.trim().charAt(0) : ''; if (s === '\u23f0' || s === '\u2b50') d.remove(); });
+        const days = track.querySelectorAll('.jb-day'), cnt = d => d ? d.querySelectorAll('.jb-list li').length : 0;
+        const first = days[0] && days[0].querySelector('.jb-list li');
+        let sum;
+        if (first) sum = first.textContent.replace(/^\s*\u25b6\s*/, '').trim().slice(0, 44) + (cnt(days[0]) > 1 ? ' \u00b7 +' + (cnt(days[0]) - 1) : '') + (cnt(days[1]) ? ' \u00b7 besok ' + cnt(days[1]) : '');
+        else sum = 'Hari ini kosong' + (cnt(days[1]) ? ' \u00b7 besok ' + cnt(days[1]) + ' kegiatan' : '');
+        const s = $('jb-sum'); if (s && s.textContent !== sum) s.textContent = sum;
+    }
+    if (tk && track) {
+        const t1 = tk.querySelector('.jb-head > span:first-child');
+        if (t1) { t1.innerHTML = '\ud83d\udcc5 Jadwal<small id="jb-sum"></small>'; }
+        const hb = tk.querySelector('.jb-hbtns');
+        if (hb && !$('jb-fold')) {
+            const b = document.createElement('button'); b.type = 'button'; b.id = 'jb-fold'; b.className = 'jb-open'; b.setAttribute('aria-label', 'Lipat atau buka jadwal'); b.textContent = '\u25be';
+            b.addEventListener('click', () => { const f = tk.classList.toggle('jb-fold'); try { sessionStorage.setItem('a9_jb_fold', f ? '1' : '0'); } catch (e) { } });
+            hb.insertBefore(b, hb.firstChild);
+        }
+        const k = foldKey(); tk.classList.toggle('jb-fold', k === null ? isMobile() : k === '1');
+        new MutationObserver(trimTicker).observe(track, { childList: true });
+        trimTicker();
+    }
+
+    // Urutan Beranda: sapaan > jadwal (ringkas) > pengumuman > jalan pintas > notifikasi
+    function arrangeHome() {
+        const ann = $('pengumuman-list'), qk = $('a9-quick'), nf = $('a9-notif');
+        if (!tk || !ann || !tk.parentElement) return;
+        let blk = ann; while (blk && blk.parentElement !== tk.parentElement) blk = blk.parentElement;
+        if (!blk || blk === tk || blk.contains(tk) || blk.id === 'tab-home') return;
+        if (tk.nextElementSibling !== blk) tk.after(blk);
+        if (qk && blk.nextElementSibling !== qk) blk.after(qk);
+        if (nf && qk && qk.nextElementSibling !== nf) qk.after(nf);
+    }
+
+    // ======================================================================
+    // 3) ADMIN: TEMPLATE PERUBAHAN / UPDATE (spesifik: apa yang diganti, ditambah, dihapus)
+    // ======================================================================
+    const JENIS = {
+        jadwal: { lbl: '\ud83d\uddd3\ufe0f Jadwal', nama: 'Jadwal', kind: 'jadwal', parts: ['Hari/tanggal', 'Jam', 'Tempat / ruang', 'Dosen', 'Kegiatan', 'Link kuliah online'] },
+        materi: { lbl: '\ud83d\udcda Materi', nama: 'Materi', kind: 'materi', parts: ['Judul materi', 'Berkas / link', 'Slide / halaman', 'Dosen', 'Lokasi di portal'] },
+        tugas: { lbl: '\ud83d\udcdd Tugas', nama: 'Tugas', kind: 'tugas', parts: ['Deadline', 'Judul tugas', 'Ketentuan', 'Format berkas', 'Cara mengumpulkan', 'Berkas soal'] },
+        ujian: { lbl: '\ud83d\udccc Ujian / Praktikum / OSCE', nama: 'Ujian', kind: 'ujian', parts: ['Hari/tanggal', 'Jam', 'Tempat', 'Cakupan materi', 'Bentuk ujian', 'Yang dibawa', 'Pakaian'] },
+        berkas: { lbl: '\ud83d\udcc1 Berkas / link', nama: 'Berkas', kind: 'file', parts: ['Nama berkas', 'Lokasi di portal', 'Link', 'Isi berkas'] },
+        lain: { lbl: '\ud83d\udce2 Lainnya', nama: 'Info', kind: 'info', parts: ['Bagian'] }
+    };
+    const S2 = { jenis: 'jadwal', rows: [] };
+    const newRow = (lab, t) => ({ t: t || 'chg', lab: lab || '', a: '', b: '' });
+    const plus7 = () => { const d = new Date(); d.setDate(d.getDate() + 7); return isoLocal(d); };
+
+    function buildUpdate(silent) {
+        const J = JENIS[S2.jenis], tone = $('ut-tone').value, subj = $('ut-subj').value.trim();
+        const rows = S2.rows.map(r => ({ t: r.t, lab: r.lab.trim(), a: r.a.trim(), b: r.b.trim() })).filter(r => r.lab && r.b);
+        if (!subj || !rows.length) { if (!silent) alert('Isi dulu "Apa tepatnya?" dan minimal satu rincian (bagian + isinya).'); return null; }
+        const lines = rows.map(r => r.t === 'add' ? MK.add + ' ' + r.lab + ': ' + r.b
+            : r.t === 'del' ? MK.del + ' ' + r.lab + ': ' + r.b
+                : r.a ? MK.chg + ' ' + r.lab + ': ' + r.a + ARROW + r.b : MK.chg + ' ' + r.lab + ': sekarang ' + r.b);
+        const types = new Set(rows.map(r => r.t));
+        const verb = types.size > 1 ? 'diperbarui' : ({ chg: 'diubah', add: 'ditambah', del: 'dihapus' })[rows[0].t];
+        const s = tone === 'santai';
+        const why = $('ut-why').value.trim(), todo = $('ut-todo').value.trim(), note = $('ut-note').value.trim();
+        const isi = [
+            s ? 'Ada update ' + J.nama.toLowerCase() + ' nih, A9! \ud83d\udd04 ' + subj + ' \u2014 ini yang berubah:' : 'Diinformasikan bahwa terdapat pembaruan pada ' + J.nama.toLowerCase() + ' ' + subj + '. Rincian perubahan:',
+            lines.join('\n'),
+            why ? 'Alasan: ' + why : '', todo ? (s ? 'Yang perlu kamu lakukan: ' : 'Tindak lanjut: ') + todo : '', note ? 'Catatan: ' + note : '',
+            s ? 'Mohon disesuaikan ya! \ud83d\ude4f' : 'Mohon menyesuaikan. Terima kasih.'
+        ].filter(Boolean).join('\n');
+        return { judul: '\ud83d\udd04 ' + (S2.jenis === 'lain' ? 'Pembaruan' : J.nama + ' ' + verb) + ': ' + (subj.length > 70 ? subj.slice(0, 67) + '...' : subj), isi, until: $('ut-until').value || plus7(), kind: J.kind };
+    }
+    function paintRows() {
+        const J = JENIS[S2.jenis];
+        $('ut-chips').innerHTML = J.parts.map(p => '<button type="button" data-ut="chip" data-v="' + esc(p) + '">+ ' + esc(p) + '</button>').join('');
+        $('ut-dl').innerHTML = J.parts.map(p => '<option value="' + esc(p) + '">').join('');
+        $('ut-rows').innerHTML = S2.rows.map((r, i) => {
+            const two = r.t === 'chg';
+            return '<div class="ut-row" data-i="' + i + '"><div class="ut-r1">'
+                + '<select class="modern-input" data-f="t" aria-label="Jenis perubahan"><option value="chg"' + (r.t === 'chg' ? ' selected' : '') + '>Diubah</option><option value="add"' + (r.t === 'add' ? ' selected' : '') + '>Ditambah</option><option value="del"' + (r.t === 'del' ? ' selected' : '') + '>Dihapus</option></select>'
+                + '<input class="modern-input" data-f="lab" list="ut-dl" placeholder="Bagian (contoh: Jam)" value="' + esc(r.lab) + '">'
+                + '<button type="button" class="ut-rm" data-ut="rm" aria-label="Hapus baris">\u2715</button></div>'
+                + '<div class="ut-r2' + (two ? '' : ' one') + '">' + (two ? '<input class="modern-input" data-f="a" placeholder="Sebelumnya (contoh 07.50)" value="' + esc(r.a) + '"><span class="ar">\u2192</span>' : '')
+                + '<input class="modern-input" data-f="b" placeholder="' + (r.t === 'add' ? 'Yang ditambahkan' : r.t === 'del' ? 'Yang dihapus / dibatalkan' : 'Menjadi (contoh 09.40)') + '" value="' + esc(r.b) + '"></div></div>';
+        }).join('');
+        paintPrev();
+    }
+    function paintPrev() {
+        const r = buildUpdate(true), el = $('ut-prev'); if (!el) return;
+        el.innerHTML = r ? cardHtml({ p: { judul: r.judul, isi: r.isi, kind: r.kind, deadline: r.until, tgl: new Date().toISOString(), id: 'prev' }, i: -1 }, true) : '<p class="hint">Isi nama dan minimal satu rincian untuk melihat pratinjau.</p>';
+    }
+    function resetUpdate() {
+        S2.rows = [newRow('')]; $('ut-subj').value = ''; $('ut-why').value = ''; $('ut-todo').value = ''; $('ut-note').value = ''; $('ut-until').value = plus7(); paintRows();
+    }
+    function sendUpdate(publish) {
+        const r = buildUpdate(false); if (!r) return;
+        $('p-judul').value = r.judul; $('p-isi').value = r.isi; $('p-deadline').value = r.until; $('p-judul').dataset.kind = r.kind;
+        if (!publish) { alert('Template terisi ke form di bawah. Periksa lalu klik simpan pengumuman.'); return; }
+        if (!confirm('Terbitkan ke semua mahasiswa?\n\n' + r.judul)) return;
+        Promise.resolve(typeof window.addPengumuman === 'function' ? window.addPengumuman() : null).then(() => { if (!$('p-judul').value) resetUpdate(); });
+    }
+    (function mountBuilder() {
+        const jf = $('p-judul'); if (!jf || $('ut-box')) return;
+        const old = document.querySelector('.tpl-box');
+        const wrap = document.createElement('div'); wrap.id = 'ut-wrap';
+        wrap.innerHTML = '<div class="ut-tabs"><button type="button" class="ut-tab on" data-ut="tab" data-v="upd">\ud83d\udd04 Perubahan / update</button><button type="button" class="ut-tab" data-ut="tab" data-v="new">\u2728 Pengumuman baru</button></div>'
+            + '<div class="ut-box" id="ut-box"><label class="ut-h">\ud83d\udd04 Template perubahan / update</label>'
+            + '<div class="ut-g2"><div><span class="ut-l">Yang berubah</span><select id="ut-jenis" class="modern-input">' + Object.keys(JENIS).map(k => '<option value="' + k + '">' + JENIS[k].lbl + '</option>').join('') + '</select></div>'
+            + '<div><span class="ut-l">Gaya bahasa</span><select id="ut-tone" class="modern-input"><option value="resmi">Resmi</option><option value="santai">Santai</option></select></div></div>'
+            + '<span class="ut-l">Apa tepatnya? <small>(nama kuliah / tugas / materi)</small></span><input id="ut-subj" class="modern-input" placeholder="Contoh: Kuliah Anatomi Blok 1.3 (dr. Rina)" autocomplete="off">'
+            + '<span class="ut-l">Rincian yang berubah <small>(ketuk bagian untuk menambah baris)</small></span><div id="ut-chips" class="ut-chips"></div><datalist id="ut-dl"></datalist><div id="ut-rows"></div>'
+            + '<button type="button" class="btn btn-outline btn-sm" data-ut="add" style="margin-bottom:10px;">+ Tambah baris</button>'
+            + '<div class="ut-g2"><div><span class="ut-l">Alasan <small>(opsional)</small></span><input id="ut-why" class="modern-input" autocomplete="off"></div><div><span class="ut-l">Tampil sampai</span><input id="ut-until" type="date" class="modern-input"></div></div>'
+            + '<span class="ut-l">Yang perlu dilakukan mahasiswa <small>(opsional)</small></span><input id="ut-todo" class="modern-input" autocomplete="off" placeholder="Contoh: unduh ulang slide terbaru">'
+            + '<span class="ut-l">Catatan <small>(opsional)</small></span><input id="ut-note" class="modern-input" autocomplete="off">'
+            + '<span class="ut-l">Pratinjau (seperti yang dilihat mahasiswa)</span><div id="ut-prev" class="ut-prev"></div>'
+            + '<div class="ut-acts"><button type="button" class="btn btn-outline btn-sm" data-ut="fill">Isi ke form di bawah</button><button type="button" class="btn btn-primary btn-sm" data-ut="pub">Terbitkan sekarang</button></div></div>';
+        (old || jf.closest('.form-group') || jf).before(wrap);
+        if (old) old.style.display = 'none';
+        resetUpdate();
+        wrap.addEventListener('click', e => {
+            const b = e.target.closest('[data-ut]'); if (!b) return;
+            const a = b.dataset.ut;
+            if (a === 'tab') {
+                const upd = b.dataset.v === 'upd';
+                wrap.querySelectorAll('.ut-tab').forEach(t => t.classList.toggle('on', t === b));
+                $('ut-box').style.display = upd ? '' : 'none'; if (old) old.style.display = upd ? 'none' : '';
+            } else if (a === 'add') { S2.rows.push(newRow('')); paintRows(); }
+            else if (a === 'chip') {
+                const empty = S2.rows.find(r => !r.lab && !r.a && !r.b);
+                if (empty) empty.lab = b.dataset.v; else S2.rows.push(newRow(b.dataset.v));
+                paintRows();
+            } else if (a === 'rm') { const i = +b.closest('.ut-row').dataset.i; S2.rows.splice(i, 1); if (!S2.rows.length) S2.rows.push(newRow('')); paintRows(); }
+            else if (a === 'fill') sendUpdate(false);
+            else if (a === 'pub') sendUpdate(true);
+        });
+        wrap.addEventListener('input', e => {
+            const t = e.target, row = t.closest && t.closest('.ut-row');
+            if (row && t.dataset.f && S2.rows[+row.dataset.i]) S2.rows[+row.dataset.i][t.dataset.f] = t.value;
+            clearTimeout(wrap._t); wrap._t = setTimeout(paintPrev, 150);
+        });
+        wrap.addEventListener('change', e => {
+            const t = e.target;
+            if (t.id === 'ut-jenis') { S2.jenis = t.value; paintRows(); }
+            else if (t.id === 'ut-tone' || t.id === 'ut-until') paintPrev();
+            else if (t.dataset && t.dataset.f === 't') { const row = t.closest('.ut-row'); S2.rows[+row.dataset.i].t = t.value; paintRows(); }
+        });
+    })();
+
+    // ======================================================================
+    // 4) EDIT JADWAL OTOMATIS -> PENGUMUMAN SPESIFIK (apa yang berubah)
+    // ======================================================================
+    const jSnap = { s: null };
+    let savingJ = false, lastJDiff = null;
+    const norm = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const realSesi = j => ((j && Array.isArray(j.sesi)) ? j.sesi : []).filter(s => s && String(s.kegiatan || '').trim() && String(s.kegiatan).trim() !== '-');
+    function dayShort(iso) {
+        const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        return m ? new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }) : String(iso);
+    }
+    function diffJadwal(oldL, newL) {
+        const keyOf = j => { const d = (typeof a9ParseTgl === 'function') ? a9ParseTgl(j.tgl) : null; return d ? isoLocal(d) : String(j.tgl); };
+        const O = {}, N = {};
+        (oldL || []).forEach(j => { if (j && Array.isArray(j.sesi)) O[keyOf(j)] = j; });
+        (newL || []).forEach(j => { if (j && Array.isArray(j.sesi)) N[keyOf(j)] = j; });
+        const lines = [], touched = [];
+        const lab = (k, jam) => dayShort(k) + (jam ? ' \u00b7 ' + jam : '');
+        Array.from(new Set(Object.keys(O).concat(Object.keys(N)))).sort().forEach(k => {
+            const os = realSesi(O[k]), ns = realSesi(N[k]), used = new Set(), rest = [];
+            ns.forEach(n => {
+                const i = os.findIndex((o, ix) => !used.has(ix) && norm(o.jam) === norm(n.jam));
+                if (i >= 0) {
+                    used.add(i);
+                    if (norm(os[i].kegiatan) !== norm(n.kegiatan)) { lines.push(MK.chg + ' ' + lab(k, n.jam) + ': ' + String(os[i].kegiatan).trim() + ARROW + String(n.kegiatan).trim()); touched.push(k); }
+                } else rest.push(n);
+            });
+            const oleft = os.filter((o, ix) => !used.has(ix)), nleft = [];
+            rest.forEach(n => {
+                const i = oleft.findIndex(o => norm(o.kegiatan) === norm(n.kegiatan));
+                if (i >= 0) { const o = oleft.splice(i, 1)[0]; lines.push(MK.chg + ' ' + lab(k, '') + ' \u00b7 ' + String(n.kegiatan).trim() + ': jam ' + (o.jam || '-') + ARROW + (n.jam || '-')); touched.push(k); }
+                else nleft.push(n);
+            });
+            nleft.forEach(n => { lines.push(MK.add + ' ' + lab(k, n.jam) + ': ' + String(n.kegiatan).trim()); touched.push(k); });
+            oleft.forEach(o => { lines.push(MK.del + ' ' + lab(k, o.jam) + ': ' + String(o.kegiatan).trim()); touched.push(k); });
+        });
+        return { lines, dates: Array.from(new Set(touched)) };
+    }
+    const _save = window.saveCategoryData;
+    if (typeof _save === 'function') window.saveCategoryData = async function (cat) {
+        if (cat === 'jadwal') {
+            savingJ = true;
+            try { lastJDiff = jSnap.s ? Object.assign(diffJadwal(JSON.parse(jSnap.s), dbData.jadwalCustom), { ts: Date.now() }) : null; } catch (e) { lastJDiff = null; }
+        }
+        try {
+            const ok = await _save.apply(this, arguments);
+            if (cat === 'jadwal' && ok) { try { jSnap.s = JSON.stringify(dbData.jadwalCustom || []); } catch (e) { } }
+            return ok;
+        } finally { if (cat === 'jadwal') savingJ = false; }
+    };
+    const _post = window.postUpdate;
+    if (typeof _post === 'function') window.postUpdate = function (kind, judul, isi, opt) {
+        try {
+            opt = opt || {};
+            const D = lastJDiff;
+            if (kind === 'jadwal' && (opt.key === 'jadwal-edit' || opt.key === 'jadwal') && D && D.lines.length && Date.now() - D.ts < 20000) {
+                const shown = D.lines.slice(0, 12), extra = D.lines.length - shown.length;
+                judul = '\ud83d\uddd3\ufe0f Jadwal diubah: ' + (D.dates.length === 1 ? dayShort(D.dates[0]) : D.dates.length + ' tanggal');
+                isi = 'Ada perubahan jadwal kuliah. Yang berubah:\n' + shown.join('\n') + (extra > 0 ? '\n' + MK.chg + ' dan ' + extra + ' perubahan lain' : '') + '\nCek menu Kuliah \u203a Jadwal.';
+                const o2 = Object.assign({}, opt), key = opt.key;
+                o2.merge = n => {
+                    const ex = (dbData.pengumuman || []).find(p => p && p.auto && p.key === key);
+                    const labOf = l => l.replace(/^[\u2022\uff0b\u2715]\s*/, '').split(': ')[0];
+                    const prev = ex ? String(ex.isi || '').split('\n').map(l => l.trim()).filter(l => /^[\u2022\uff0b\u2715]/.test(l)) : [];
+                    const mine = new Set(D.lines.map(labOf));
+                    const all = prev.filter(l => !mine.has(labOf(l))).concat(D.lines).slice(-14);
+                    if (ex) ex.judul = '\ud83d\uddd3\ufe0f Jadwal diubah' + (n > 1 ? ' (' + n + ' pembaruan)' : '');
+                    return 'Ada perubahan jadwal kuliah. Yang berubah:\n' + all.join('\n') + '\nCek menu Kuliah \u203a Jadwal.';
+                };
+                opt = o2;
+            }
+        } catch (e) { console.error(e); }
+        return _post.call(this, kind, judul, isi, opt);
+    };
+
+    // ======================================================================
+    // 5) PENGATURAN: bottom-sheet, bagian bisa dibuka-tutup, pilihan tema
+    // ======================================================================
+    const SMETA = { 'Profil': ['\ud83d\udc64', 'Nama & foto', 'Akun'], 'Ganti password': ['\ud83d\udd11', 'Ubah password login', 'Keamanan'], 'Email pemulihan': ['\u2709\ufe0f', 'Untuk reset password', 'Keamanan'], 'Notifikasi': ['\ud83d\udd14', 'Jadwal harian', 'Preferensi'], 'Tampilan': ['\ud83c\udfa8', 'Warna & tema', 'Preferensi'], 'Tentang web': ['\u2139\ufe0f', 'Versi & keluar', 'Lainnya'] };
+    const THEMES = [['embun', 'Embun', '#edf1ed'], ['kapas', 'Kapas', '#f4efe8'], ['langit', 'Langit', '#eceff5'], ['senja', 'Senja', '#1f2124'], ['malam', 'Malam', '#1b2230'], ['auto', 'Otomatis', 'linear-gradient(90deg,#f4f6f4 50%,#2f3a40 50%)']];
+    const curTheme = () => { try { return localStorage.getItem('a9_theme2') || 'auto'; } catch (e) { return 'auto'; } };
+    function heroHtml() {
+        let prof = {}; try { prof = JSON.parse(localStorage.getItem('a9_prof_' + ((currentUser && currentUser.nim) || 'admin')) || '{}') || {}; } catch (e) { }
+        const nm = (currentUser && currentUser.name) || 'Pengguna';
+        return '<div class="a9s-hero-av">' + (prof.photo ? '<img alt="" src="' + esc(prof.photo) + '">' : esc(nm.trim().charAt(0).toUpperCase())) + '</div><div><b>' + esc(nm) + '</b><small>' + (isAdmin() ? 'Admin' : 'Mahasiswa' + (currentUser && currentUser.nim ? ' \u00b7 ' + esc(currentUser.nim) : '')) + '</small></div>';
+    }
+    function enhanceSettings(ov) {
+        if (ov.dataset.b23) return; ov.dataset.b23 = '1';
+        const sheet = ov.querySelector('.a9s-sheet'); if (!sheet) return;
+        const top = sheet.querySelector('.a9s-top');
+        const hero = document.createElement('div'); hero.className = 'a9s-hero'; hero.innerHTML = heroHtml();
+        if (top) top.after(hero); else sheet.prepend(hero);
+        const sp = $('a9s-saveprof'); if (sp) sp.addEventListener('click', () => setTimeout(() => { hero.innerHTML = heroHtml(); }, 60));
+
+        // kartu "Tampilan" (tema) disisipkan setelah Notifikasi
+        const cards0 = Array.from(sheet.querySelectorAll(':scope > .a9s-card'));
+        const titleOf = c => { const h = c.querySelector(':scope > h4'); return h ? h.textContent.trim() : ''; };
+        const th = document.createElement('section'); th.className = 'a9s-card';
+        th.innerHTML = '<h4>Tampilan</h4><div class="a9s-th">' + THEMES.map(t => '<button type="button" data-th="' + t[0] + '"><span class="sw" style="background:' + t[2] + '"></span>' + t[1] + '</button>').join('') + '</div>';
+        const nfc = cards0.find(c => titleOf(c) === 'Notifikasi'), tentang = cards0.find(c => titleOf(c) === 'Tentang web');
+        if (nfc) nfc.after(th); else if (tentang) tentang.before(th); else sheet.appendChild(th);
+        const markTh = () => th.querySelectorAll('[data-th]').forEach(b => b.classList.toggle('on', b.dataset.th === curTheme()));
+        th.addEventListener('click', e => {
+            const b = e.target.closest('[data-th]'); if (!b) return;
+            try { localStorage.setItem('a9_theme2', b.dataset.th); } catch (x) { }
+            if (typeof window.applyTheme === 'function') window.applyTheme();
+            markTh();
+        });
+        markTh();
+
+        // ubah tiap kartu jadi bagian yang bisa dibuka-tutup + judul kelompok
+        let lastGrp = '';
+        Array.from(sheet.querySelectorAll(':scope > .a9s-card')).forEach(c => {
+            const h = c.querySelector(':scope > h4'); if (!h) return;
+            const title = h.textContent.trim();
+            const meta = title.indexOf('Panel admin') === 0 ? ['\ud83d\udee1\ufe0f', 'Lihat & reset password mahasiswa', 'Admin'] : (SMETA[title] || ['\u2699\ufe0f', '', 'Lainnya']);
+            if (meta[2] !== lastGrp) { lastGrp = meta[2]; const g = document.createElement('div'); g.className = 'a9s-grp'; g.textContent = meta[2]; c.before(g); }
+            const body = document.createElement('div'); body.className = 'a9s-bd';
+            while (h.nextSibling) body.appendChild(h.nextSibling);
+            const hd = document.createElement('button'); hd.type = 'button'; hd.className = 'a9s-hd'; hd.setAttribute('aria-expanded', 'false');
+            hd.innerHTML = '<span class="ic">' + meta[0] + '</span><span class="tx"><b>' + esc(title.indexOf('Panel admin') === 0 ? 'Panel admin' : title) + '</b><small>' + esc(title === 'Tentang web' ? 'Versi & keluar' : meta[1]) + '</small></span><span class="chev">\u203a</span>';
+            h.remove(); c.appendChild(hd); c.appendChild(body);
+            hd.addEventListener('click', () => {
+                const open = !c.classList.contains('open');
+                sheet.querySelectorAll(':scope > .a9s-card.open').forEach(x => { x.classList.remove('open'); const b = x.querySelector('.a9s-hd'); if (b) b.setAttribute('aria-expanded', 'false'); });
+                c.classList.toggle('open', open); hd.setAttribute('aria-expanded', open ? 'true' : 'false');
+                if (open) setTimeout(() => { try { c.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { } }, 30);
+            });
+        });
+    }
+    new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n && n.id === 'a9-set') enhanceSettings(n); }).observe(document.body, { childList: true });
+
+    // ======================================================================
+    // Pemasangan
+    // ======================================================================
+    const prevRender = window.renderAll;
+    window.renderAll = function () {
+        const r = prevRender.apply(this, arguments);
+        try {
+            if (!savingJ) jSnap.s = JSON.stringify(dbData.jadwalCustom || []);
+            renderPengumuman(); hideLegacy(); arrangeHome();
+        } catch (e) { console.error(e); }
+        return r;
+    };
+    window.A9_B23 = { parseIsi, diffJadwal, buildUpdate, S2 };   // untuk pengujian
+    try { window.renderAll(); } catch (e) { console.error(e); }
+    setTimeout(() => { try { hideLegacy(); arrangeHome(); } catch (e) { } }, 800);
+})();
+
+// ==========================================================================
