@@ -8093,7 +8093,7 @@ let LATIHAN_BANK = [];
 const APP_VERSION = '2.1.0';
 const APP_BUILD = '2026-11-05';   // ubah dua baris ini setiap kali web diperbarui
 // URL Web App Apps Script "email-reset.gs" (lihat PANDUAN-LOGIN.md langkah 2). Kosong = lupa password nonaktif.
-const RESET_MAIL_URL = '';
+const RESET_MAIL_URL = 'https://script.google.com/macros/s/AKfycbzukaSfkNY0SjT5oShnQwqjKIsOet1glqISThsnnqhPFe2vsHzc-OEEOv-mAkO0VZLAFQ/exec';
 window.A9_VERSION = APP_VERSION;
 
 (function () {
