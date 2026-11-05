@@ -5823,7 +5823,7 @@ html body.a9soft #login-page h1::after, html body.a9soft #login-page h2::after, 
     function openPicker(btn) {
         if (panel) { closePicker(); return; }
         const cur = stored();
-        const row = (id, nama, ket, sw) => `<button type="button" data-th="${id}" class="${cur === id ? 'on' : ''}"><span class="sw" style="background:${sw[0]}"><i style="background:${sw[1]}"></i></span><span><b>${nama}</b><small>${ket}</small></span>${cur === id ? '<span class="ck">ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“</span>' : ''}</button>`;
+        const row = (id, nama, ket, sw) => `<button type="button" data-th="${id}" class="${cur === id ? 'on' : ''}"><span class="sw" style="background:${sw[0]}"><i style="background:${sw[1]}"></i></span><span><b>${nama}</b><small>${ket}</small></span>${cur === id ? '<span class="ck">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ</span>' : ''}</button>`;
         panel = document.createElement('div'); panel.className = 'a9-thm'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Pilih tema');
         panel.innerHTML = '<h4>Pilih tema tampilan</h4>' + THEMES.map(t => row(t.id, t.nama, t.ket, t.sw)).join('') +
             row('auto', 'Otomatis', 'Ikut mode terang / gelap perangkat', ['#f4f6f4', '#2f3a40']);
@@ -7501,6 +7501,7 @@ body.cbt-locked #a9-notif, body.cbt-locked #a9-quick, body.cbt-locked #a9-crumb 
     const nf = document.createElement('div');
     nf.id = 'a9-notif'; nf.setAttribute('role', 'region'); nf.setAttribute('aria-label', 'Notifikasi jadwal');
     function paintNotif() {
+        try { if (window.a9Notif && typeof window.a9Notif.onPaint === 'function') window.a9Notif.onPaint(); } catch (e) { }
         const show = !!currentUser && !!VAPID_PUBLIC_KEY;
         nf.classList.toggle('on', show);
         if (!show) return;
@@ -7526,6 +7527,12 @@ body.cbt-locked #a9-notif, body.cbt-locked #a9-quick, body.cbt-locked #a9-crumb 
         const b = e.target.closest('[data-nf]'); if (!b) return;
         if (b.dataset.nf === 'on') enableNotif(); else if (b.dataset.nf === 'off') disableNotif(); else if (b.dataset.nf === 'test') testNotif();
     });
+
+    // Dipakai oleh layar Pengaturan (Bagian 22) supaya tombol notifikasi ada di dua tempat
+    window.a9Notif = {
+        enable: enableNotif, disable: disableNotif, test: testNotif, onPaint: null,
+        state: () => ({ hasKey: !!VAPID_PUBLIC_KEY, ios: onIOS() && !standalone(), unsupported: !pushOK(), denied: pushOK() && Notification.permission === 'denied', active: !!current, working: working })
+    };
 
     // ======================================================================
     // 2) JALAN PINTAS BERANDA + PENUNJUK LOKASI
@@ -8069,4 +8076,575 @@ let LATIHAN_BANK = [];
         };
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+
+
+// ==========================================================================
+// BAGIAN 22 - LOGIN AMAN (Supabase) + PENGATURAN AKUN + PANEL ADMIN
+//   Layar login hanya untuk mahasiswa: NIM + password.
+//     - Pertama kali (belum punya password): isi email + buat password. Disimpan di Supabase.
+//     - Berikutnya: NIM + password (bisa dari perangkat mana pun).
+//     - Lupa password: kode 6 digit dikirim ke email terdaftar (lewat Apps Script email-reset.gs).
+//   Mode admin: tulis NIM "A9" lalu password admin. Pemeriksaan dilakukan di server.
+//   Password tidak pernah dibaca dari browser: semua lewat fungsi RPC di setup-supabase.sql.
+//   Pengaturan (tombol di samping nama): profil, password, email pemulihan, notifikasi, versi web.
+//   Admin: panel "password mahasiswa" yang meminta kode khusus.
+// ==========================================================================
+const APP_VERSION = '2.1.0';
+const APP_BUILD = '2026-11-05';   // ubah dua baris ini setiap kali web diperbarui
+// URL Web App Apps Script "email-reset.gs" (lihat PANDUAN-LOGIN.md langkah 2). Kosong = lupa password nonaktif.
+const RESET_MAIL_URL = '';
+window.A9_VERSION = APP_VERSION;
+
+(function () {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const ls = {
+        get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+        set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
+    };
+    const getJSON = k => { try { return JSON.parse(ls.get(k) || 'null'); } catch (e) { return null; } };
+    const MIN_PW = 6;
+    const profKey = () => 'a9_prof_' + ((currentUser && currentUser.nim) || 'admin');
+    const getProfile = () => getJSON(profKey()) || {};
+    const isAdminNim = v => String(v || '').trim().toUpperCase() === 'A9';
+    const nimEl = () => $('login-nim-input');
+    const nimVal = () => (nimEl() ? nimEl().value.trim().toUpperCase() : '');
+    const fmtDetik = s => { s = Math.max(1, Math.round(s || 0)); return s >= 60 ? Math.ceil(s / 60) + ' menit' : s + ' detik'; };
+
+    // ---------------- komunikasi dengan server ----------------
+    async function rpc(name, args) {
+        if (!supabaseClient) return { ok: false, alasan: 'offline' };
+        try {
+            const { data, error } = await supabaseClient.rpc(name, args);
+            if (error) { console.error(name, error); return { ok: false, alasan: 'server' }; }
+            return data || { ok: false, alasan: 'server' };
+        } catch (e) { return { ok: false, alasan: 'offline' }; }
+    }
+    const ERR = {
+        offline: 'Tidak bisa terhubung ke server. Periksa internet lalu coba lagi.',
+        server: 'Server belum siap. Pastikan setup-supabase.sql sudah dijalankan.',
+        tidak_terdaftar: 'NIM tidak terdaftar di server. Minta admin menambahkannya.',
+        sudah_ada: 'Akun ini sudah punya password. Silakan login.',
+        email_salah: 'Format email tidak valid.',
+        email_tidak_cocok: 'Email tidak sama dengan email yang didaftarkan admin untuk NIM ini.',
+        pw_pendek: 'Password minimal ' + MIN_PW + ' karakter.',
+        pw_panjang: 'Password maksimal 64 karakter.',
+        pw_sama_nim: 'Password tidak boleh sama dengan NIM.',
+        kode_salah: 'Kode salah.',
+        kedaluwarsa: 'Kode sudah kedaluwarsa. Minta kode baru.',
+        terlalu_cepat: 'Tunggu 1 menit sebelum meminta kode lagi.',
+        terlalu_sering: 'Terlalu sering meminta kode. Coba lagi nanti.',
+        tanpa_email: 'Akun ini belum punya email. Minta admin mereset password kamu.',
+        belum_punya_pw: 'Akun ini belum punya password. Buat password lewat halaman login.',
+        ditolak: 'Ditolak oleh server. Periksa API_SECRET di Apps Script.'
+    };
+    function errText(r) {
+        r = r || {};
+        if (r.alasan === 'terkunci') return 'Terlalu banyak percobaan salah. Coba lagi dalam ' + fmtDetik(r.detik) + '.';
+        if (r.alasan === 'salah') return r.sisa > 0 ? 'Password salah. Sisa percobaan: ' + r.sisa + '.' : 'Password salah. Akses dikunci sementara.';
+        if (r.alasan === 'kode_salah' && r.sisa != null) return r.sisa > 0 ? 'Kode salah. Sisa percobaan: ' + r.sisa + '.' : 'Kode salah. Dikunci sementara, minta kode baru nanti.';
+        return ERR[r.alasan] || ('Gagal' + (r.alasan ? ' (' + r.alasan + ')' : '') + '.');
+    }
+
+    // ---------------- layar login (khusus mahasiswa) ----------------
+    // L.mode: idle | cek | err | buat | login | admin | reset1 | reset2
+    const L = { mode: 'idle', busy: false, info: null, cache: {}, timer: null, seq: 0, nim: '', err: '', sentTo: '' };
+
+    function userOnlyLayout() {
+        const r = $('login-role');
+        if (r) {
+            r.value = 'guest';
+            let w = r.closest('.form-group') || r;
+            if (nimEl() && w.contains(nimEl())) w = r;
+            w.style.display = 'none';
+            const pv = w.previousElementSibling;
+            if (pv && pv.tagName === 'LABEL') pv.style.display = 'none';
+        }
+        if ($('admin-fields')) $('admin-fields').style.display = 'none';
+        if ($('guest-fields')) $('guest-fields').style.display = 'block';
+        const n = nimEl();
+        if (n) n.setAttribute('inputmode', 'text');   // NIM angka, tetapi mode admin memakai huruf "A9"
+    }
+
+    function buildBox() {
+        let b = $('a9l-box');
+        if (b) return b;
+        const host = $('guest-fields') || (nimEl() && nimEl().parentElement);
+        if (!host) return null;
+        b = document.createElement('div'); b.id = 'a9l-box'; b.style.display = 'none';
+        b.innerHTML = '<p id="a9l-note" class="a9l-note"></p>'
+            + '<div class="form-group" id="a9l-w-email"><label for="a9l-email">Email (untuk reset password)</label><input type="email" id="a9l-email" class="modern-input" autocomplete="email" placeholder="nama@email.com"></div>'
+            + '<div class="form-group" id="a9l-w-kode"><label for="a9l-kode">Kode dari email</label><input type="text" id="a9l-kode" class="modern-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="6 digit"></div>'
+            + '<div class="form-group" id="a9l-w-pw1"><label for="a9l-pw1" id="a9l-l1">Password</label><input type="password" id="a9l-pw1" class="modern-input" placeholder="Password"></div>'
+            + '<div class="form-group" id="a9l-w-pw2"><label for="a9l-pw2">Ulangi password</label><input type="password" id="a9l-pw2" class="modern-input" autocomplete="new-password" placeholder="Ketik sekali lagi"></div>'
+            + '<label class="a9l-show" id="a9l-show"><input type="checkbox" id="a9l-showcb"> Tampilkan password</label>'
+            + '<button type="button" class="btn btn-primary" id="a9l-btn"></button>'
+            + '<div class="a9l-links"><a href="#" id="a9l-forgot">Lupa password?</a><a href="#" id="a9l-resend">Kirim ulang kode</a><a href="#" id="a9l-back">Kembali ke login</a></div>';
+        host.appendChild(b);
+
+        const enter = e => { if (e.key === 'Enter') window.handleLogin(); };
+        ['a9l-email', 'a9l-kode', 'a9l-pw1', 'a9l-pw2'].forEach(id => $(id).addEventListener('keypress', enter));
+        $('a9l-showcb').addEventListener('change', e => { const t = e.target.checked ? 'text' : 'password'; $('a9l-pw1').type = t; $('a9l-pw2').type = t; });
+        $('a9l-forgot').addEventListener('click', e => { e.preventDefault(); L.mode = 'reset1'; paint(); });
+        $('a9l-back').addEventListener('click', e => { e.preventDefault(); L.mode = 'login'; paint(); });
+        $('a9l-resend').addEventListener('click', e => { e.preventDefault(); guarded(() => kirimKode(nimVal())); });
+        $('a9l-btn').addEventListener('click', () => guarded(() => actionReset()));
+        return b;
+    }
+
+    function paint() {
+        const b = buildBox(); if (!b) return;
+        const M = L.mode;
+        b.style.display = (M === 'idle') ? 'none' : 'block';
+        if (M === 'idle') return;
+        const on = (id, v) => { const e = $(id); if (e) e.style.display = v ? '' : 'none'; };
+        const pwMode = M === 'buat' || M === 'login' || M === 'admin' || M === 'reset2';
+        on('a9l-w-email', M === 'buat');
+        on('a9l-w-kode', M === 'reset2');
+        on('a9l-w-pw1', pwMode);
+        on('a9l-w-pw2', M === 'buat' || M === 'reset2');
+        on('a9l-show', pwMode);
+        on('a9l-btn', M === 'reset1' || M === 'reset2');
+        on('a9l-forgot', M === 'login');
+        on('a9l-resend', M === 'reset2');
+        on('a9l-back', M === 'reset1' || M === 'reset2');
+
+        const info = L.info || {};
+        let note = '';
+        if (M === 'cek') note = 'Memeriksa NIM\u2026';
+        else if (M === 'err') note = L.err;
+        else if (M === 'buat') note = 'Pertama kali masuk. Buat password untuk akunmu (minimal ' + MIN_PW + ' karakter) dan isi email aktif untuk reset jika suatu saat lupa password.' + (info.email_terdaftar ? ' Pakai email yang didaftarkan admin.' : '');
+        else if (M === 'login') note = 'Masukkan password kamu.';
+        else if (M === 'admin') note = 'Mode admin. Masukkan password admin.';
+        else if (M === 'reset1') note = 'Kode reset 6 digit akan dikirim ke email yang terdaftar' + (info.email_mask ? ' (' + info.email_mask + ')' : '') + '.';
+        else if (M === 'reset2') note = 'Kode sudah dikirim ke ' + L.sentTo + '. Berlaku 15 menit (cek folder Spam). Isi kode, lalu buat password baru.';
+        $('a9l-note').textContent = note;
+        $('a9l-l1').textContent = M === 'buat' ? 'Buat password' : (M === 'reset2' ? 'Password baru' : 'Password');
+        $('a9l-pw1').setAttribute('autocomplete', (M === 'buat' || M === 'reset2') ? 'new-password' : 'current-password');
+        $('a9l-pw1').placeholder = M === 'buat' ? 'Buat password' : (M === 'reset2' ? 'Password baru' : 'Password');
+        $('a9l-btn').textContent = M === 'reset1' ? 'Kirim kode ke email' : 'Simpan password baru';
+    }
+
+    async function refreshMode() {
+        const nim = nimVal(), my = ++L.seq;
+        if (!nim) { L.mode = 'idle'; paint(); return; }
+        if (isAdminNim(nim)) { L.nim = nim; L.mode = 'admin'; paint(); return; }
+        if (!allowedUsers[nim]) { L.mode = 'idle'; paint(); return; }
+        if ((L.mode === 'reset1' || L.mode === 'reset2') && L.nim === nim) return;   // jangan putus langkah reset
+        L.nim = nim;
+        let info = L.cache[nim];
+        if (!info) {
+            L.mode = 'cek'; paint();
+            info = await rpc('a9_status', { p_nim: nim });
+            if (my !== L.seq) return;
+            if (info && info.terdaftar !== undefined) L.cache[nim] = info;
+        }
+        L.info = info;
+        if (info.alasan) { L.mode = 'err'; L.err = errText(info); }
+        else if (!info.terdaftar) { L.mode = 'err'; L.err = ERR.tidak_terdaftar; }
+        else L.mode = info.punya_pw ? 'login' : 'buat';
+        paint();
+    }
+    function onNim() { clearTimeout(L.timer); L.timer = setTimeout(refreshMode, 250); }
+    async function guarded(fn) {
+        if (L.busy) return;
+        L.busy = true;
+        try { await fn(); } finally { L.busy = false; }
+    }
+
+    async function doBuat(nim) {
+        const email = $('a9l-email').value.trim(), p1 = $('a9l-pw1').value, p2 = $('a9l-pw2').value;
+        if (!email) { alert('Isi email untuk reset password.'); return; }
+        if (p1.length < MIN_PW) { alert(ERR.pw_pendek); return; }
+        if (p1 !== p2) { alert('Ulangi password tidak sama.'); return; }
+        const r = await rpc('a9_buat_pw', { p_nim: nim, p_email: email, p_pw: p1 });
+        if (!r.ok) {
+            alert(errText(r));
+            if (r.alasan === 'sudah_ada') { delete L.cache[nim]; refreshMode(); }
+            return;
+        }
+        delete L.cache[nim];
+        await doLogin(nim, p1);
+    }
+
+    async function doLogin(nim, pwOverride) {
+        const pw = pwOverride !== undefined ? pwOverride : $('a9l-pw1').value;
+        if (!pw) { alert('Masukkan password.'); return; }
+        if (!isAdminNim(nim) && dbData.maintenance) { alert('\u26a0\ufe0f PORTAL SEDANG MAINTENANCE.'); return; }
+        const r = await rpc('a9_login', { p_nim: nim, p_pw: pw });
+        if (!r.ok) { alert(errText(r)); return; }
+        ['a9l-pw1', 'a9l-pw2', 'a9l-email', 'a9l-kode'].forEach(id => { if ($(id)) $(id).value = ''; });
+        if (r.role === 'admin') currentUser = { role: 'admin', name: 'Admin Utama' };
+        else {
+            const prof = getJSON('a9_prof_' + nim) || {};
+            currentUser = { role: 'guest', name: prof.name || r.nama, fullName: r.nama, nim: nim };
+        }
+        finishLogin();
+    }
+
+    async function kirimKode(nim) {
+        if (!RESET_MAIL_URL) { alert('Fitur kirim kode belum diaktifkan (RESET_MAIL_URL di script.js masih kosong). Hubungi admin.'); return; }
+        let j;
+        try {
+            const resp = await fetch(RESET_MAIL_URL, { method: 'POST', body: JSON.stringify({ aksi: 'kirim_kode', nim: nim }) });
+            j = await resp.json();
+        } catch (e) { alert(ERR.offline); return; }
+        if (!j || !j.ok) { alert(errText(j)); return; }
+        L.sentTo = j.email_mask || 'emailmu';
+        L.mode = 'reset2';
+        if ($('a9l-kode')) $('a9l-kode').value = '';
+        paint();
+        if ($('a9l-kode')) $('a9l-kode').focus();
+    }
+
+    async function simpanReset(nim) {
+        const kode = $('a9l-kode').value.trim(), p1 = $('a9l-pw1').value, p2 = $('a9l-pw2').value;
+        if (!/^\d{6}$/.test(kode)) { alert('Kode terdiri dari 6 digit angka.'); return; }
+        if (p1.length < MIN_PW) { alert(ERR.pw_pendek); return; }
+        if (p1 !== p2) { alert('Ulangi password tidak sama.'); return; }
+        const r = await rpc('a9_reset_pw', { p_nim: nim, p_kode: kode, p_pw_baru: p1 });
+        if (!r.ok) { alert(errText(r)); return; }
+        ['a9l-pw1', 'a9l-pw2', 'a9l-kode'].forEach(id => { $(id).value = ''; });
+        L.mode = 'login'; paint();
+        alert('Password berhasil diubah. Silakan login dengan password baru.');
+    }
+    function actionReset() {
+        const nim = nimVal();
+        return L.mode === 'reset1' ? kirimKode(nim) : simpanReset(nim);
+    }
+
+    window.handleLogin = function () {
+        return guarded(async () => {
+            try { await Promise.race([dbReady, new Promise(r => setTimeout(r, 1500))]); } catch (e) { }
+            const nim = nimVal();
+            if (!nim) { alert('Masukkan NIM.'); return; }
+            if (!isAdminNim(nim) && !allowedUsers[nim]) { alert('Nomor Identitas tidak terdaftar!'); return; }
+            if (L.mode === 'reset1' || L.mode === 'reset2') return actionReset();
+            if (L.mode === 'idle' || L.mode === 'cek' || L.mode === 'err') { await refreshMode(); }
+            if (L.mode === 'buat') return doBuat(nim);
+            if (L.mode === 'login' || L.mode === 'admin') return doLogin(nim);
+            if (L.mode === 'err') alert(L.err);
+        });
+    };
+
+    // ---------------- profil ----------------
+    const fullNameOf = () => (currentUser && (currentUser.fullName || (currentUser.nim && allowedUsers[currentUser.nim]))) || 'Admin Utama';
+    function applyProfile() {
+        if (!currentUser) return;
+        currentUser.fullName = fullNameOf();
+        const p = getProfile();
+        currentUser.name = (p.name || '').trim() || currentUser.fullName;
+        try { sessionStorage.setItem('portal_current_user', JSON.stringify(currentUser)); } catch (e) { }
+        const ui = $('user-info');
+        if (ui) ui.innerText = currentUser.name + ' (' + (currentUser.role === 'admin' ? 'Admin' : 'Mahasiswa') + ')';
+    }
+    const avatarHTML = (photo, name, cls) => photo
+        ? '<img class="' + cls + '" src="' + esc(photo) + '" alt="">'
+        : '<span class="' + cls + ' a9-avtx">' + esc((name || '?').trim().charAt(0).toUpperCase()) + '</span>';
+    function mountButton() {
+        if (!currentUser) return;
+        const ui = $('user-info'); if (!ui) return;
+        let btn = $('a9-set-btn');
+        if (!btn) {
+            btn = document.createElement('button');
+            btn.id = 'a9-set-btn'; btn.type = 'button'; btn.className = 'btn btn-outline btn-sm';
+            btn.setAttribute('aria-label', 'Pengaturan akun');
+            btn.addEventListener('click', openSettings);
+            ui.parentNode.insertBefore(btn, ui.nextSibling);
+        }
+        btn.innerHTML = avatarHTML(getProfile().photo, currentUser.name, 'a9-av') + '<span class="a9-lb">\u2699\ufe0f Pengaturan</span>';
+    }
+    const prevFinish = window.finishLogin;
+    window.finishLogin = function () {
+        applyProfile();
+        const r = prevFinish.apply(this, arguments);
+        try { applyProfile(); mountButton(); } catch (e) { console.error(e); }
+        return r;
+    };
+    function resizePhoto(file) {
+        return new Promise((res, rej) => {
+            const img = new Image(), url = URL.createObjectURL(file);
+            img.onload = () => {
+                const S = 256, c = document.createElement('canvas'); c.width = c.height = S;
+                const m = Math.min(img.width, img.height);
+                c.getContext('2d').drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, S, S);
+                URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.85));
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('Gambar tidak bisa dibaca.')); };
+            img.src = url;
+        });
+    }
+
+    // ---------------- layar Pengaturan ----------------
+    let overlay = null, draftPhoto, kkKode = '', kkTimer = null;   // draftPhoto: undefined = tetap, '' = dihapus, teks = foto baru
+    const onKey = e => { if (e.key === 'Escape') closeSettings(); };
+    function closeSettings() {
+        if (!overlay) return;
+        if (window.a9Notif) window.a9Notif.onPaint = null;
+        hideKK();
+        overlay.remove(); overlay = null;
+        document.removeEventListener('keydown', onKey);
+    }
+    const msg = (id, text, ok) => { const e = $(id); if (!e) return; e.textContent = text || ''; e.className = 'a9s-msg' + (text ? (ok ? ' ok' : ' bad') : ''); };
+
+    function paintNf() {
+        const sw = $('a9s-nf'), tx = $('a9s-nf-txt'), tb = $('a9s-nf-test'); if (!sw || !tx) return;
+        const N = window.a9Notif;
+        if (!N) { sw.disabled = true; sw.checked = false; tx.textContent = 'Fitur notifikasi belum tersedia.'; return; }
+        const s = N.state();
+        let t = '', off = false;
+        if (!s.hasKey) { t = 'Notifikasi belum disiapkan oleh admin.'; off = true; }
+        else if (s.ios) { t = 'Di iPhone: ketuk tombol Bagikan lalu Tambah ke Layar Utama. Buka portal dari ikon itu, lalu aktifkan di sini.'; off = true; }
+        else if (s.unsupported) { t = 'Browser ini belum mendukung notifikasi. Coba Chrome (Android) atau Safari terbaru.'; off = true; }
+        else if (s.denied) { t = 'Notifikasi diblokir. Izinkan lewat pengaturan browser, lalu muat ulang halaman.'; off = true; }
+        else if (s.active) t = 'Aktif. Jadwal masuk otomatis pukul 06.00 (hari ini) dan 19.00 (besok), walau portal tertutup.';
+        else t = 'Terima jadwal kuliah tiap pagi dan malam tanpa perlu membuka portal.';
+        sw.checked = !!s.active;
+        sw.disabled = off || !!s.working;
+        tx.textContent = s.working ? 'Memproses\u2026' : t;
+        if (tb) tb.style.display = s.active ? '' : 'none';
+    }
+
+    // ---- panel admin: password mahasiswa (butuh kode khusus) ----
+    function hideKK() {
+        clearTimeout(kkTimer); kkTimer = null; kkKode = '';
+        const l = $('a9s-kk-list'); if (l) l.innerHTML = '';
+        const h = $('a9s-kk-hide'); if (h) h.style.display = 'none';
+        const k = $('a9s-kk'); if (k) k.value = '';
+    }
+    function renderKK(rows) {
+        const el = $('a9s-kk-list'); if (!el) return;
+        el.innerHTML = '<div class="a9s-tw"><table class="a9s-tbl"><thead><tr><th>NIM</th><th>Nama</th><th>Email</th><th>Password</th><th></th></tr></thead><tbody>'
+            + rows.map(x => '<tr><td>' + esc(x.nim) + '</td><td>' + esc(x.nama) + '</td><td>' + esc(x.email || '\u2014') + '</td><td><code>' + (x.password ? esc(x.password) : '\u2014') + '</code></td>'
+                + '<td>' + (x.password ? '<button type="button" class="btn btn-outline btn-sm" data-rs="' + esc(x.nim) + '">Reset</button>' : '') + '</td></tr>').join('')
+            + '</tbody></table></div>';
+    }
+    function kkErr(r) {
+        if (r && r.alasan === 'salah') return r.sisa > 0 ? 'Kode khusus salah. Sisa percobaan: ' + r.sisa + '.' : 'Kode khusus salah. Dikunci sementara.';
+        return errText(r);
+    }
+    async function loadKK(kode) {
+        const r = await rpc('a9_admin_lihat', { p_kode: kode });
+        if (!r.ok) { hideKK(); msg('a9s-kk-msg', kkErr(r), false); return; }
+        kkKode = kode;
+        renderKK(r.data || []);
+        $('a9s-kk-hide').style.display = '';
+        $('a9s-kk').value = '';
+        msg('a9s-kk-msg', 'Tampil otomatis disembunyikan dalam 90 detik.', true);
+        clearTimeout(kkTimer); kkTimer = setTimeout(() => { hideKK(); msg('a9s-kk-msg', 'Disembunyikan otomatis.', true); }, 90000);
+    }
+
+    async function openSettings() {
+        if (!currentUser) return;
+        closeSettings();
+        draftPhoto = undefined;
+        const guest = currentUser.role === 'guest', admin = currentUser.role === 'admin', nim = currentUser.nim || '';
+        const prof = getProfile();
+        let built = new Date(APP_BUILD + 'T00:00:00');
+        built = isNaN(built) ? APP_BUILD : built.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        overlay = document.createElement('div');
+        overlay.id = 'a9-set'; overlay.setAttribute('role', 'dialog'); overlay.setAttribute('aria-modal', 'true'); overlay.setAttribute('aria-label', 'Pengaturan');
+        overlay.innerHTML = '<div class="a9s-sheet">'
+            + '<div class="a9s-top"><h3>\u2699\ufe0f Pengaturan</h3><button type="button" class="btn btn-outline btn-sm" id="a9s-close">Tutup</button></div>'
+
+            + '<section class="a9s-card"><h4>Profil</h4>'
+            + '<div class="a9s-prof"><div id="a9s-av">' + avatarHTML(prof.photo, currentUser.name, 'a9s-avimg') + '</div>'
+            + '<div class="a9s-prof-b"><label class="btn btn-outline btn-sm" for="a9s-photo">Ganti foto</label><input type="file" id="a9s-photo" accept="image/*" hidden>'
+            + '<button type="button" class="btn btn-outline btn-sm" id="a9s-rmphoto">Hapus foto</button></div></div>'
+            + '<div class="form-group"><label for="a9s-name">Nama tampilan</label><input type="text" id="a9s-name" class="modern-input" maxlength="40" value="' + esc(prof.name || '') + '" placeholder="' + esc(fullNameOf()) + '"></div>'
+            + (guest ? '<div class="a9s-row"><span>NIM</span><b>' + esc(nim) + '</b></div>' : '')
+            + '<div class="a9s-row"><span>Peran</span><b>' + (guest ? 'Mahasiswa' : 'Admin') + '</b></div>'
+            + '<p class="a9s-hint">Kosongkan nama untuk memakai nama asli (' + esc(fullNameOf()) + '). Nama dan foto tersimpan di perangkat ini.</p>'
+            + '<button type="button" class="btn btn-primary btn-sm" id="a9s-saveprof">Simpan profil</button><div id="a9s-prof-msg" class="a9s-msg"></div></section>'
+
+            + (guest ? '<section class="a9s-card"><h4>Ganti password</h4>'
+                + '<div class="form-group"><label for="a9s-pw0">Password sekarang</label><input type="password" id="a9s-pw0" class="modern-input" autocomplete="current-password"></div>'
+                + '<div class="form-group"><label for="a9s-pw1">Password baru</label><input type="password" id="a9s-pw1" class="modern-input" autocomplete="new-password" placeholder="Minimal ' + MIN_PW + ' karakter"></div>'
+                + '<div class="form-group"><label for="a9s-pw2">Ulangi password baru</label><input type="password" id="a9s-pw2" class="modern-input" autocomplete="new-password"></div>'
+                + '<button type="button" class="btn btn-primary btn-sm" id="a9s-savepw">Ganti password</button><div id="a9s-pw-msg" class="a9s-msg"></div></section>'
+
+                + '<section class="a9s-card"><h4>Email pemulihan</h4>'
+                + '<div class="a9s-row"><span>Email sekarang</span><b id="a9s-em-now">\u2026</b></div>'
+                + '<p class="a9s-hint">Kode reset password dikirim ke email ini. Pastikan masih aktif.</p>'
+                + '<div class="form-group"><label for="a9s-em1">Email baru</label><input type="email" id="a9s-em1" class="modern-input" autocomplete="email" placeholder="nama@email.com"></div>'
+                + '<div class="form-group"><label for="a9s-em-pw">Password sekarang</label><input type="password" id="a9s-em-pw" class="modern-input" autocomplete="current-password"></div>'
+                + '<button type="button" class="btn btn-primary btn-sm" id="a9s-em-save">Simpan email</button><div id="a9s-em-msg" class="a9s-msg"></div></section>' : '')
+
+            + '<section class="a9s-card"><h4>Notifikasi</h4>'
+            + '<div class="a9s-nf"><div class="a9s-nf-t"><b>Notifikasi jadwal harian</b><small id="a9s-nf-txt"></small></div>'
+            + '<label class="a9s-sw"><input type="checkbox" id="a9s-nf" aria-label="Notifikasi jadwal harian"><span></span></label></div>'
+            + '<button type="button" class="btn btn-outline btn-sm" id="a9s-nf-test" style="display:none">Coba tampilan notifikasi</button></section>'
+
+            + (admin ? '<section class="a9s-card"><h4>Panel admin: password mahasiswa</h4>'
+                + '<p class="a9s-hint">Masukkan kode khusus untuk melihat password. Data hanya tampil di layar ini dan disembunyikan otomatis setelah 90 detik. Tombol Reset mengosongkan password mahasiswa supaya ia bisa membuat yang baru.</p>'
+                + '<div class="form-group"><input type="password" id="a9s-kk" class="modern-input" placeholder="Kode khusus" autocomplete="off"></div>'
+                + '<div class="a9s-act"><button type="button" class="btn btn-primary btn-sm" id="a9s-kk-go">Tampilkan password</button>'
+                + '<button type="button" class="btn btn-outline btn-sm" id="a9s-kk-hide" style="display:none">Sembunyikan</button></div>'
+                + '<div id="a9s-kk-msg" class="a9s-msg"></div><div id="a9s-kk-list"></div></section>' : '')
+
+            + '<section class="a9s-card"><h4>Tentang web</h4>'
+            + '<div class="a9s-row"><span>Versi web sekarang</span><b>v' + esc(APP_VERSION) + '</b></div>'
+            + '<div class="a9s-row"><span>Tanggal rilis</span><b>' + esc(built) + '</b></div>'
+            + '<div class="a9s-act"><button type="button" class="btn btn-outline btn-sm" id="a9s-reload">Muat ulang versi terbaru</button>'
+            + '<button type="button" class="btn btn-outline btn-sm" id="a9s-logout">Keluar</button></div></section>'
+            + '</div>';
+        document.body.appendChild(overlay);
+        document.addEventListener('keydown', onKey);
+        overlay.addEventListener('click', e => { if (e.target === overlay) closeSettings(); });
+        $('a9s-close').onclick = closeSettings;
+
+        // profil (disimpan di perangkat ini)
+        const setAv = () => { $('a9s-av').innerHTML = avatarHTML(draftPhoto === undefined ? prof.photo : draftPhoto, $('a9s-name').value.trim() || fullNameOf(), 'a9s-avimg'); };
+        $('a9s-name').addEventListener('input', setAv);
+        $('a9s-photo').addEventListener('change', async e => {
+            const f = e.target.files && e.target.files[0]; if (!f) return;
+            try { draftPhoto = await resizePhoto(f); setAv(); msg('a9s-prof-msg', 'Foto dipilih. Klik Simpan profil.', true); }
+            catch (err) { msg('a9s-prof-msg', err.message, false); }
+            e.target.value = '';
+        });
+        $('a9s-rmphoto').onclick = () => { draftPhoto = ''; setAv(); msg('a9s-prof-msg', 'Foto dihapus. Klik Simpan profil.', true); };
+        $('a9s-saveprof').onclick = () => {
+            const np = { name: $('a9s-name').value.trim().slice(0, 40), photo: draftPhoto === undefined ? prof.photo : draftPhoto };
+            if (!np.photo) delete np.photo;
+            if (!ls.set(profKey(), JSON.stringify(np))) { msg('a9s-prof-msg', 'Gagal menyimpan (penyimpanan browser penuh atau mode privat).', false); return; }
+            prof.name = np.name; prof.photo = np.photo; draftPhoto = undefined;
+            applyProfile(); mountButton();
+            try { renderAll(); } catch (e) { }
+            msg('a9s-prof-msg', 'Profil disimpan.', true);
+        };
+
+        if (guest) {
+            // ganti password (diperiksa server)
+            $('a9s-savepw').onclick = async () => {
+                const a = $('a9s-pw0').value, b = $('a9s-pw1').value, c = $('a9s-pw2').value;
+                if (!a) { msg('a9s-pw-msg', 'Isi password sekarang.', false); return; }
+                if (b.length < MIN_PW) { msg('a9s-pw-msg', ERR.pw_pendek, false); return; }
+                if (b !== c) { msg('a9s-pw-msg', 'Ulangi password baru tidak sama.', false); return; }
+                const btn = $('a9s-savepw'); btn.disabled = true; msg('a9s-pw-msg', 'Memproses\u2026', true);
+                const r = await rpc('a9_ganti_pw', { p_nim: nim, p_lama: a, p_baru: b });
+                btn.disabled = false;
+                if (!r.ok) { msg('a9s-pw-msg', errText(r), false); return; }
+                msg('a9s-pw-msg', 'Password berhasil diganti. Pakai password baru saat login berikutnya.', true);
+                ['a9s-pw0', 'a9s-pw1', 'a9s-pw2'].forEach(id => { $(id).value = ''; });
+            };
+            // email pemulihan
+            rpc('a9_status', { p_nim: nim }).then(r => { const e = $('a9s-em-now'); if (e) e.textContent = (r && r.email_mask) || 'belum diisi'; });
+            $('a9s-em-save').onclick = async () => {
+                const em = $('a9s-em1').value.trim(), pw = $('a9s-em-pw').value;
+                if (!em) { msg('a9s-em-msg', 'Isi email baru.', false); return; }
+                if (!pw) { msg('a9s-em-msg', 'Isi password sekarang.', false); return; }
+                const btn = $('a9s-em-save'); btn.disabled = true; msg('a9s-em-msg', 'Memproses\u2026', true);
+                const r = await rpc('a9_ganti_email', { p_nim: nim, p_pw: pw, p_email: em });
+                btn.disabled = false;
+                if (!r.ok) { msg('a9s-em-msg', errText(r), false); return; }
+                if ($('a9s-em-now')) $('a9s-em-now').textContent = r.email_mask || '';
+                $('a9s-em1').value = ''; $('a9s-em-pw').value = '';
+                msg('a9s-em-msg', 'Email pemulihan disimpan.', true);
+            };
+        }
+
+        // notifikasi
+        const N = window.a9Notif;
+        if (N) {
+            N.onPaint = paintNf;
+            $('a9s-nf').addEventListener('change', e => { if (e.target.checked) N.enable(); else N.disable(); });
+            $('a9s-nf-test').onclick = () => N.test();
+        }
+        paintNf();
+
+        // panel admin
+        if (admin) {
+            const go = async () => {
+                const k = $('a9s-kk').value;
+                if (!k) { msg('a9s-kk-msg', 'Isi kode khusus.', false); return; }
+                const btn = $('a9s-kk-go'); btn.disabled = true; msg('a9s-kk-msg', 'Memproses\u2026', true);
+                await loadKK(k);
+                btn.disabled = false;
+            };
+            $('a9s-kk-go').onclick = go;
+            $('a9s-kk').addEventListener('keypress', e => { if (e.key === 'Enter') go(); });
+            $('a9s-kk-hide').onclick = () => { hideKK(); msg('a9s-kk-msg', '', true); };
+            $('a9s-kk-list').addEventListener('click', async e => {
+                const b = e.target.closest('[data-rs]'); if (!b || !kkKode) return;
+                if (!confirm('Kosongkan password ' + b.dataset.rs + '? Mahasiswa itu harus membuat password baru saat login berikutnya.')) return;
+                const r = await rpc('a9_admin_reset', { p_kode: kkKode, p_nim: b.dataset.rs });
+                if (!r.ok) { msg('a9s-kk-msg', kkErr(r), false); return; }
+                await loadKK(kkKode);
+                msg('a9s-kk-msg', 'Password ' + b.dataset.rs + ' dikosongkan.', true);
+            });
+        }
+
+        // tentang
+        $('a9s-reload').onclick = async () => {
+            try { const r = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if (r) await r.update(); } catch (e) { }
+            location.reload();
+        };
+        $('a9s-logout').onclick = () => { closeSettings(); window.handleLogout(); };
+    }
+    window.openSettings = openSettings;
+
+    // ---------------- gaya ----------------
+    const css = document.createElement('style');
+    css.textContent = `
+label[for="login-role"] { display: none !important; }
+#a9l-box { margin-top: 4px; }
+#a9l-box .a9l-note { font-size: 13px; color: var(--text-muted); margin: 0 0 10px; text-align: left !important; line-height: 1.45; }
+#a9l-box .a9l-show { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); margin: 2px 0 10px; cursor: pointer; }
+#a9l-box #a9l-btn { margin-bottom: 8px; }
+#a9l-box .a9l-links { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; margin-bottom: 6px; }
+#a9l-box .a9l-links a { color: var(--primary); }
+#a9-set-btn { display: inline-flex !important; align-items: center; gap: 6px; width: auto !important; margin-left: 8px; }
+.a9-av { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex: none; }
+.a9-avtx { display: inline-flex; align-items: center; justify-content: center; background: var(--primary); color: #fff; font-weight: 700; font-size: 13px; }
+body.cbt-locked #a9-set-btn { display: none !important; }
+@media (max-width: 560px) { #a9-set-btn .a9-lb { display: none; } #a9-set-btn { padding: 4px 8px; } }
+#a9-set { position: fixed; inset: 0; z-index: 100000; background: rgba(0,0,0,.45); display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 16px 12px calc(24px + env(safe-area-inset-bottom)); }
+#a9-set .a9s-sheet { width: 100%; max-width: 560px; background: var(--bg-base); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 18px; padding: 14px; box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+#a9-set .a9s-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+#a9-set .a9s-top h3 { margin: 0; font-size: 18px; }
+#a9-set .a9s-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+#a9-set .a9s-card h4 { margin: 0 0 10px; font-size: 15px; }
+#a9-set .a9s-prof { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+#a9-set .a9s-prof-b { display: flex; gap: 8px; flex-wrap: wrap; }
+#a9-set .a9s-avimg { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; display: inline-flex; font-size: 26px; }
+#a9-set .a9s-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px dashed var(--border-color); font-size: 14px; }
+#a9-set .a9s-row span { color: var(--text-muted); }
+#a9-set .a9s-hint { font-size: 12.5px; color: var(--text-muted); margin: 8px 0 10px; line-height: 1.45; }
+#a9-set .form-group { margin-bottom: 10px; }
+#a9-set .a9s-msg { font-size: 13px; margin-top: 8px; }
+#a9-set .a9s-msg.ok { color: var(--primary); }
+#a9-set .a9s-msg.bad { color: #c0392b; }
+#a9-set .a9s-nf { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 10px; }
+#a9-set .a9s-nf-t b { display: block; font-size: 14px; }
+#a9-set .a9s-nf-t small { display: block; color: var(--text-muted); font-size: 12.5px; line-height: 1.4; margin-top: 2px; }
+#a9-set .a9s-sw { position: relative; flex: none; width: 46px; height: 26px; }
+#a9-set .a9s-sw input { opacity: 0; width: 100%; height: 100%; position: absolute; inset: 0; margin: 0; cursor: pointer; z-index: 1; }
+#a9-set .a9s-sw span { position: absolute; inset: 0; background: var(--border-color); border-radius: 26px; transition: background .2s; }
+#a9-set .a9s-sw span::before { content: ''; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+#a9-set .a9s-sw input:checked + span { background: var(--primary); }
+#a9-set .a9s-sw input:checked + span::before { transform: translateX(20px); }
+#a9-set .a9s-sw input:disabled { cursor: not-allowed; }
+#a9-set .a9s-sw input:disabled + span { opacity: .5; }
+#a9-set .a9s-act { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+#a9-set .a9s-tw { overflow-x: auto; margin-top: 10px; }
+#a9-set .a9s-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+#a9-set .a9s-tbl th, #a9-set .a9s-tbl td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+#a9-set .a9s-tbl code { font-family: ui-monospace, Menlo, Consolas, monospace; background: var(--primary-light, rgba(0,0,0,.06)); padding: 2px 6px; border-radius: 6px; word-break: break-all; }
+`;
+    document.head.appendChild(css);
+
+    // ---------------- pemasangan ----------------
+    function init() {
+        userOnlyLayout();
+        const n = nimEl();
+        if (n && !n.dataset.a9pw) { n.dataset.a9pw = '1'; n.addEventListener('input', onNim); n.addEventListener('change', onNim); }
+        buildBox();
+        const ui = $('user-info');
+        if (ui && !ui.dataset.a9set) { ui.dataset.a9set = '1'; ui.style.cursor = 'pointer'; ui.addEventListener('click', openSettings); }
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+    setTimeout(init, 450);   // sesudah "hardenLogin" (Bagian 17) selesai, supaya inputmode & tampilan tidak ditimpa
 })();
