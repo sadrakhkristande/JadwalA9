@@ -4715,7 +4715,9 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
     const DRK = (k, m) => ((m || (trial ? 'trial' : 'real')) === 'trial' ? 'a9_sjT_draft_' : 'a9_sj_draft_') + (INFO[k].b.legacy ? INFO[k].n : INFO[k].b.key + '_' + INFO[k].n);
     const TRK = k => 'a9_sjT_srv_' + k;
 
-    const blank = () => ({ istilah: [{ t: '', d: '' }], soal: [], lo: '', belajar: '', sumber: '', gambar: [], by: '', ts: 0 });
+    const blank = () => ({ istilah: [{ t: '', d: '' }], soal: [], lo: '', belajar: '', sumber: '', laporan: [], gambar: [], by: '', ts: 0 });
+    const blankLap = () => ({ by: '', kat: '', a: '', src: '' });
+    const KATS = ['Menjawab soal', 'Menambah informasi', 'Meluruskan / koreksi', 'Menjelaskan istilah', 'Kesimpulan'];
     const me = () => (currentUser && (currentUser.name || currentUser.nim)) || 'Anonim';
     const AUTOSAVE_MS = 5000;
     const NAMES = Array.from(new Set(Object.values(typeof allowedUsers !== 'undefined' ? allowedUsers : {})));
@@ -4747,6 +4749,7 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
             d.soal = qs;
         }
         delete d.masalah; delete d.jawaban;
+        if (!Array.isArray(d.laporan)) d.laporan = [];
         return d;
     }
     const fmtTs = ts => ts ? new Date(ts).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
@@ -4764,6 +4767,7 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
         soal: (d.soal || []).map(x => ({ q: String(x.q || '').trim(), by: String(x.by || '').trim(), a: (x.a || []).map(a => ({ t: String(a.t || '').trim(), by: String(a.by || '').trim() })).filter(a => a.t) })).filter(x => x.q || x.a.length),
         lo: String(d.lo || '').trim(),
         belajar: String(d.belajar || '').trim(), sumber: String(d.sumber || '').trim(),
+        laporan: (d.laporan || []).map(x => ({ by: String(x.by || '').trim(), kat: String(x.kat || '').trim(), a: String(x.a || '').trim(), src: String(x.src || '').trim() })).filter(x => x.a || x.src),
         gambar: (d.gambar || []).filter(g => g && g.url).map(g => ({ url: String(g.url), id: String(g.id || ''), cap: String(g.cap || '').trim() }))
     });
     const same = (a, b) => JSON.stringify(cleanData(a || blank())) === JSON.stringify(cleanData(b || blank()));
@@ -4811,7 +4815,11 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
 .sj-docs a { color:var(--primary, #2563eb); }
 .sj-q { border:1px solid var(--border-color); border-radius:10px; padding:10px; margin-bottom:10px; }
 .sj-qhead, .sj-a { display:grid; grid-template-columns:1fr 170px auto; gap:8px; align-items:start; margin-bottom:8px; }
-.sj-qn { font-weight:700; color:var(--text-main); font-size:13px; margin-bottom:4px; display:block; }
+.sj-qn { font-weight:700; color:var(--text-main); font-size:13px; margin-bottom:4px; display:flex; align-items:center; gap:8px; }
+.sj-mv { display:inline-flex; gap:4px; } .sj-mv button { padding:1px 8px; line-height:1.4; } .sj-mv button:disabled { opacity:.35; cursor:default; }
+.sj-laphead, .sj-lapr { display:grid; grid-template-columns:140px 160px 1fr 1fr auto; gap:8px; align-items:start; margin-bottom:8px; }
+.sj-laphead { font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:4px; }
+.sj-lapr input, .sj-lapr textarea { width:100%; box-sizing:border-box; min-height:0; } .sj-lapr textarea { min-height:56px; }
 .sj-ans { margin-left:14px; padding-left:10px; border-left:3px solid var(--border-color); }
 .sj-q textarea { min-height:56px; }
 .sj-q input { width:100%; box-sizing:border-box; }
@@ -4830,6 +4838,7 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
 .sj-doc .sj-dn { font-weight:600; word-break:break-word; }
 .sj-doc .sj-linkrow { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; align-items:center; }
 .sj-danger { color:#b91c1c !important; border-color:#b91c1c !important; }
+@media (max-width:760px) { .sj-laphead { display:none; } .sj-lapr { grid-template-columns:1fr; border:1px solid var(--border-color); border-radius:10px; padding:8px; } }
 @media (max-width:640px) { .sj-row, .sj-qhead, .sj-a { grid-template-columns:1fr; } .sj-ans { margin-left:4px; } .sj-bloks button { flex:1 1 100%; } }
 `;
     document.head.appendChild(css);
@@ -5021,7 +5030,8 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
         if (!s) { r.innerHTML = head + `<p class="sj-status">Blok ini belum punya skenario.</p>`; return; }
         const istilah = v.istilah && v.istilah.length ? v.istilah : [{ t: '', d: '' }];
         const gambar = v.gambar || [];
-        const soal = v.soal && v.soal.length ? v.soal : [{ q: '', by: me(), a: [{ t: '', by: me() }] }];
+        const soal = v.soal && v.soal.length ? v.soal : [{ q: '', by: '', a: [{ t: '', by: '' }] }];
+        const lap = v.laporan && v.laporan.length ? v.laporan : [blankLap()];
         const used = new Set(istilah.map(x => (x.t || '').trim().toLowerCase()));
         const dl = docs[b.key] || [];
         r.innerHTML = head + `
@@ -5033,16 +5043,21 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
   <div id="sj-rows">${istilah.map((x, i) => `<div class="sj-row" data-i="${i}"><input class="modern-input" data-t placeholder="Istilah" value="${esc(x.t)}"><textarea class="modern-input" data-d placeholder="Arti / penjelasan">${esc(x.d)}</textarea><button type="button" class="btn btn-outline btn-sm" data-del="${i}" title="Hapus baris">\u2715</button></div>`).join('')}</div>
   <div class="sj-acts"><button type="button" class="btn btn-outline btn-sm" data-add>+ Tambah istilah</button></div>
   <div class="sj-hints">${s.hint.filter(h => !used.has(h.toLowerCase())).map(h => `<button type="button" data-hint="${esc(h)}">+ ${esc(h)}</button>`).join('')}</div></div>
-<div class="sj-card"><h4>Langkah 2\u20133 \u2013 Rumusan masalah dan jawaban sementara</h4><p class="sj-sub">Tulis masalah, lalu tambahkan satu atau lebih jawaban di bawahnya. Nama terisi otomatis dengan akunmu dan bisa diganti (ketik atau pilih dari daftar). Jawaban sementara dibuat tanpa membuka gadget atau literatur.</p>
+<div class="sj-card"><h4>Langkah 2\u20133 \u2013 Rumusan masalah dan jawaban sementara</h4><p class="sj-sub">Tulis masalah, lalu tambahkan satu atau lebih jawaban di bawahnya. Kolom nama sengaja dikosongkan: isi sendiri bila perlu (ketik atau pilih dari daftar). Urutan masalah bisa diatur dengan tombol \u25b2 \u25bc. Jawaban sementara dibuat tanpa membuka gadget atau literatur.</p>
   <datalist id="sj-names">${NAMES.map(x => `<option value="${esc(x)}">`).join('')}</datalist>
   <div id="sj-soal">${soal.map((x, qi) => `<div class="sj-q" data-qi="${qi}">
-    <span class="sj-qn">Masalah ${qi + 1}</span>
+    <span class="sj-qn">Masalah ${qi + 1} <span class="sj-mv"><button type="button" class="btn btn-outline btn-sm" data-upq="${qi}" title="Naikkan"${qi === 0 ? ' disabled' : ''}>\u25b2</button><button type="button" class="btn btn-outline btn-sm" data-dnq="${qi}" title="Turunkan"${qi === soal.length - 1 ? ' disabled' : ''}>\u25bc</button></span></span>
     <div class="sj-qhead"><textarea class="modern-input" data-q placeholder="Contoh: Mengapa ...?">${esc(x.q)}</textarea><input class="modern-input" data-qby list="sj-names" placeholder="Nama penanya" value="${esc(x.by)}"><button type="button" class="btn btn-outline btn-sm" data-delq="${qi}" title="Hapus masalah ini">\u2715</button></div>
-    <div class="sj-ans">${(x.a && x.a.length ? x.a : [{ t: '', by: me() }]).map((a, ai) => `<div class="sj-a" data-ai="${ai}"><textarea class="modern-input" data-at placeholder="Jawaban ${ai + 1}">${esc(a.t)}</textarea><input class="modern-input" data-aby list="sj-names" placeholder="Nama penjawab" value="${esc(a.by)}"><button type="button" class="btn btn-outline btn-sm" data-dela="${qi}-${ai}" title="Hapus jawaban">\u2715</button></div>`).join('')}
+    <div class="sj-ans">${(x.a && x.a.length ? x.a : [{ t: '', by: '' }]).map((a, ai) => `<div class="sj-a" data-ai="${ai}"><textarea class="modern-input" data-at placeholder="Jawaban ${ai + 1}">${esc(a.t)}</textarea><input class="modern-input" data-aby list="sj-names" placeholder="Nama penjawab" value="${esc(a.by)}"><button type="button" class="btn btn-outline btn-sm" data-dela="${qi}-${ai}" title="Hapus jawaban">\u2715</button></div>`).join('')}
     <button type="button" class="btn btn-outline btn-sm" data-adda="${qi}">+ Tambah jawaban</button></div></div>`).join('')}</div>
   <div class="sj-acts"><button type="button" class="btn btn-outline btn-sm" data-addq>+ Tambah masalah</button></div></div>
 <div class="sj-card"><h4>Langkah 5 \u2013 Learning Objectives (LO)</h4><p class="sj-sub">Satu LO per baris.</p><textarea class="modern-input" data-f="lo" placeholder="Mahasiswa mampu menjelaskan ...">${esc(v.lo)}</textarea></div>
-<div class="sj-card"><h4>Pertemuan 2 \u2013 Hasil belajar mandiri (opsional)</h4><p class="sj-sub">Informasi baru yang dilaporkan dan dibahas pada pertemuan kedua.</p><textarea class="modern-input" data-f="belajar" placeholder="Isi bila sudah ada">${esc(v.belajar)}</textarea></div>
+<div class="sj-card"><h4>Langkah 7 \u2013 Laporan hasil belajar mandiri (Pertemuan 2)</h4><p class="sj-sub">Isi per baris: siapa yang melapor, kategorinya (misalnya menjawab soal), jawabannya, dan sumbernya. Kolom nama dikosongkan dulu, isi sendiri bila perlu.</p>
+  <datalist id="sj-kats">${KATS.map(x => `<option value="${esc(x)}">`).join('')}</datalist>
+  <div class="sj-laphead"><span>Nama</span><span>Kategori</span><span>Jawaban</span><span>Sumber</span><span></span></div>
+  <div id="sj-lap">${lap.map((x, li) => `<div class="sj-lapr" data-li="${li}"><input class="modern-input" data-lby list="sj-names" placeholder="Nama" value="${esc(x.by)}"><input class="modern-input" data-lkat list="sj-kats" placeholder="Kategori (mis. menjawab soal)" value="${esc(x.kat)}"><textarea class="modern-input" data-la placeholder="Jawaban / informasi yang didapat">${esc(x.a)}</textarea><textarea class="modern-input" data-lsrc placeholder="Sumber (judul | link)">${esc(x.src)}</textarea><button type="button" class="btn btn-outline btn-sm" data-dellap="${li}" title="Hapus baris">\u2715</button></div>`).join('')}</div>
+  <div class="sj-acts"><button type="button" class="btn btn-outline btn-sm" data-addlap>+ Tambah baris</button></div>
+  ${v.belajar ? `<p class="sj-sub" style="margin-top:12px;">Catatan lama (teks bebas dari versi sebelumnya, tetap tersimpan):</p><textarea class="modern-input" data-f="belajar">${esc(v.belajar)}</textarea>` : ''}</div>
 <div class="sj-card"><h4>\ud83d\uddbc\ufe0f Gambar pendukung</h4><p class="sj-sub">Tambahkan gambar (skema, foto, tabel) untuk memperkuat alasan. Tulis keterangan di bawah tiap gambar. Foto otomatis diperkecil sebelum diunggah.${trial ? ' (Dimatikan di Mode Coba.)' : ''}</p>
   <div class="sj-imgs">${gambar.map((g, i) => `<div class="sj-img" data-url="${esc(g.url)}" data-id="${esc(g.id || '')}"><img src="${esc(imgSrc(g))}" alt="Gambar ${i + 1}" loading="lazy" referrerpolicy="no-referrer"><input class="modern-input" data-cap placeholder="Keterangan / alasan gambar ini" value="${esc(g.cap || '')}"><button type="button" class="btn btn-outline btn-sm" data-delimg="${i}">Hapus dari daftar</button></div>`).join('')}</div>
   <input type="file" id="sj-file" accept="image/*" multiple hidden>
@@ -5064,10 +5079,11 @@ ${trial ? '' : docsPanel()}`;
     function collect() {
         const r = $('sj-root'); if (!r || !r.querySelector('#sj-rows')) return;
         const k = curKey();
-        const b = view(k), d = { istilah: [], soal: [], lo: b.lo, belajar: b.belajar, sumber: b.sumber, gambar: [] };
+        const b = view(k), d = { istilah: [], soal: [], lo: b.lo, belajar: b.belajar, sumber: b.sumber, laporan: [], gambar: [] };
         r.querySelectorAll('.sj-row').forEach(row => d.istilah.push({ t: row.querySelector('[data-t]').value, d: row.querySelector('[data-d]').value }));
         r.querySelectorAll('[data-f]').forEach(el => { d[el.dataset.f] = el.value; });
         r.querySelectorAll('.sj-q').forEach(q => d.soal.push({ q: q.querySelector('[data-q]').value, by: q.querySelector('[data-qby]').value, a: Array.from(q.querySelectorAll('.sj-a')).map(a => ({ t: a.querySelector('[data-at]').value, by: a.querySelector('[data-aby]').value })) }));
+        r.querySelectorAll('.sj-lapr').forEach(row => d.laporan.push({ by: row.querySelector('[data-lby]').value, kat: row.querySelector('[data-lkat]').value, a: row.querySelector('[data-la]').value, src: row.querySelector('[data-lsrc]').value }));
         r.querySelectorAll('.sj-img').forEach(el => d.gambar.push({ url: el.dataset.url, id: el.dataset.id || '', cap: el.querySelector('[data-cap]').value }));
         if (same(d, srv[k])) { if (draft[k]) dropDraft(k); }
         else setDraft(k, d);
@@ -5075,7 +5091,7 @@ ${trial ? '' : docsPanel()}`;
     }
 
     // ubah draft dari tombol (tambah/hapus baris, gambar, dst.)
-    function mutate(fn) { collect(); const k = curKey(); const d = clone(view(k)); if (!d.istilah || !d.istilah.length) d.istilah = [{ t: '', d: '' }]; if (!d.soal || !d.soal.length) d.soal = [{ q: '', by: me(), a: [] }]; d.soal.forEach(x => { if (!x.a) x.a = []; }); fn(d); setDraft(k, d); render(); }
+    function mutate(fn) { collect(); const k = curKey(); const d = clone(view(k)); if (!d.istilah || !d.istilah.length) d.istilah = [{ t: '', d: '' }]; if (!d.soal || !d.soal.length) d.soal = [{ q: '', by: '', a: [] }]; if (!Array.isArray(d.laporan)) d.laporan = []; d.soal.forEach(x => { if (!x.a) x.a = []; }); fn(d); setDraft(k, d); render(); }
 
     // perkecil foto sebelum diunggah (maks 1600 px, JPEG)
     function shrink(file) {
@@ -5132,9 +5148,17 @@ ${trial ? '' : docsPanel()}`;
             if (t.hasAttribute('data-add')) { mutate(d => d.istilah.push({ t: '', d: '' })); const rows = r.querySelectorAll('.sj-row'); const last = rows[rows.length - 1]; if (last) last.querySelector('[data-t]').focus(); return; }
             if (t.dataset.hint) { mutate(d => { const e0 = d.istilah.findIndex(x => !x.t && !x.d); if (e0 >= 0) d.istilah[e0].t = t.dataset.hint; else d.istilah.push({ t: t.dataset.hint, d: '' }); }); return; }
             if (t.dataset.del != null) { mutate(d => { d.istilah.splice(+t.dataset.del, 1); if (!d.istilah.length) d.istilah = [{ t: '', d: '' }]; }); return; }
-            if (t.hasAttribute('data-addq')) { mutate(d => d.soal.push({ q: '', by: me(), a: [{ t: '', by: me() }] })); const qs = r.querySelectorAll('.sj-q'); const last = qs[qs.length - 1]; if (last) last.querySelector('[data-q]').focus(); return; }
+            if (t.hasAttribute('data-addq')) { mutate(d => d.soal.push({ q: '', by: '', a: [{ t: '', by: '' }] })); const qs = r.querySelectorAll('.sj-q'); const last = qs[qs.length - 1]; if (last) last.querySelector('[data-q]').focus(); return; }
             if (t.dataset.delq != null) { mutate(d => { d.soal.splice(+t.dataset.delq, 1); }); return; }
-            if (t.dataset.adda != null) { const qi = +t.dataset.adda; mutate(d => { if (d.soal[qi]) { if (!d.soal[qi].a.length) d.soal[qi].a.push({ t: '', by: me() }); d.soal[qi].a.push({ t: '', by: me() }); } }); const q = r.querySelectorAll('.sj-q')[qi]; if (q) { const as = q.querySelectorAll('[data-at]'); if (as.length) as[as.length - 1].focus(); } return; }
+            if (t.dataset.upq != null || t.dataset.dnq != null) {
+                const up = t.dataset.upq != null, i = +(up ? t.dataset.upq : t.dataset.dnq), j = up ? i - 1 : i + 1;
+                mutate(d => { if (d.soal[i] && d.soal[j]) { const tmp = d.soal[i]; d.soal[i] = d.soal[j]; d.soal[j] = tmp; } });
+                const moved = r.querySelectorAll('.sj-q')[j]; if (moved) { moved.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+                return;
+            }
+            if (t.hasAttribute('data-addlap')) { mutate(d => d.laporan.push(blankLap())); const rows = r.querySelectorAll('.sj-lapr'); const last = rows[rows.length - 1]; if (last) last.querySelector('[data-lby]').focus(); return; }
+            if (t.dataset.dellap != null) { mutate(d => { d.laporan.splice(+t.dataset.dellap, 1); }); return; }
+            if (t.dataset.adda != null) { const qi = +t.dataset.adda; mutate(d => { if (d.soal[qi]) { if (!d.soal[qi].a.length) d.soal[qi].a.push({ t: '', by: '' }); d.soal[qi].a.push({ t: '', by: '' }); } }); const q = r.querySelectorAll('.sj-q')[qi]; if (q) { const as = q.querySelectorAll('[data-at]'); if (as.length) as[as.length - 1].focus(); } return; }
             if (t.dataset.dela != null) { const p = t.dataset.dela.split('-').map(Number); mutate(d => { if (d.soal[p[0]]) d.soal[p[0]].a.splice(p[1], 1); }); return; }
             if (t.hasAttribute('data-addimg')) { if (trial) { toast('Unggah gambar dimatikan di Mode Coba.'); return; } const f = $('sj-file'); if (f) f.click(); return; }
             if (t.dataset.delimg != null) { mutate(d => { d.gambar.splice(+t.dataset.delimg, 1); }); return; }
@@ -5330,14 +5354,17 @@ ${trial ? '' : docsPanel()}`;
                 (x.a.length ? '<ul style="margin-top:0">' + x.a.map(a => `<li>${nm(a.by, esc(a.t))}</li>`).join('') + '</ul>' : '') + '</li>'));
             const gam = v.gambar.map((g, i) => (tokens && g.id ? `<p>[[IMG:${g.id}]]</p>` : `<p><img src="${esc(imgSrc(g))}" width="440"></p>`) +
                 `<p style="font-size:9pt;color:#555"><em>Gambar ${i + 1}${g.cap ? '. ' + esc(g.cap) : ''}</em></p>`).join('');
-            const sl = lines(v.sumber);
+            const lapRows = v.laporan || [];
+            const sl = lines(v.sumber).concat([].concat.apply([], lapRows.map(x => lines(x.src))));
             sl.forEach(x => { const kk = x.toLowerCase(); if (!seen.has(kk)) { seen.add(kk); allSrc.push(x); } });
             return ctr('SKENARIO ' + s.n) + ctr(U(s.topik)) + sp + ctr(U(s.judul)) + sp +
                 s.teks.map(p => `<p>${esc(p)}</p>`).join('') +
                 hd('Klasifikasi kata sulit') + istilah +
                 hd('Rumusan Masalah') + soal +
                 hd('Learning Objectives (LO)') + ol(lines(v.lo).map(x => `<li>${esc(x)}</li>`)) +
-                (v.belajar ? hd('Hasil belajar mandiri (pertemuan 2)') + ol(lines(v.belajar).map(x => `<li>${esc(x)}</li>`)) : '') +
+                ((v.belajar || lapRows.length) ? hd('Laporan hasil belajar mandiri (pertemuan 2)') + (v.belajar ? ol(lines(v.belajar).map(x => `<li>${esc(x)}</li>`)) : '') +
+                    (lapRows.length ? '<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%;font-size:10pt"><tr><th>Nama</th><th>Kategori</th><th>Jawaban</th><th>Sumber</th></tr>' +
+                        lapRows.map(x => `<tr><td>${esc(x.by)}</td><td>${esc(x.kat)}</td><td>${esc(x.a).replace(/\n/g, '<br>')}</td><td>${lines(x.src).map(u => srcLi(u)).join('<br>')}</td></tr>`).join('') + '</table>' : '') : '') +
                 (window.__sjxDoc ? window.__sjxDoc(b, n, L) : '') +
                 (gam ? hd('Gambar pendukung') + gam : '') +
                 (sl.length ? hd('Sumber / referensi') + `<ol style="margin-top:0">${sl.map(x => `<li>${srcLi(x)}</li>`).join('')}</ol>` : '') +
@@ -5600,38 +5627,10 @@ body.theme-dark .modern-input { background: #17120c; border-bottom-color: var(--
         if (m) m.content = document.body.classList.contains('theme-dark') ? '#16120d' : '#efe6d2';
     } catch (e) { }
 
-    // ---------- 4) Login: jangan memicu isi otomatis / kunci sandi browser ----------
-    //   Penyebab popup kunci (Safari/Chrome): kolom "kode admin" bertipe password di formulir yang sama
-    //   membuat browser menganggap ini formulir login, lalu menawarkan akun tersimpan.
-    //   Solusi: tidak ada kolom password, nama kolom acak, dan semua tanda "jangan isi otomatis".
-    const textSecuritySupported = (() => { try { return !!(window.CSS && CSS.supports && (CSS.supports('-webkit-text-security', 'disc') || CSS.supports('text-security', 'disc'))); } catch (e) { return false; } })();
+    // ---------- 4) Login: sekarang BOLEH disimpan browser (NIM + password) ----------
+    //   Dulu bagian ini mematikan isi otomatis. Sekarang tidak lagi: atribut login diatur di Bagian 22
+    //   (name/autocomplete yang benar + formulir sungguhan). Di sini tinggal mengganti ikon topi wisuda.
     function hardenLogin() {
-        const nim = document.getElementById('login-nim-input');
-        const adm = document.getElementById('login-admin-code');
-        const role = document.getElementById('login-role');
-        if (!nim && !adm) return;
-        const rnd = () => 'a9f_' + Math.random().toString(36).slice(2, 10);
-        [nim, adm, role].forEach(el => {
-            if (!el || el.dataset.a9Hard) return;
-            el.dataset.a9Hard = '1';
-            el.setAttribute('autocomplete', 'off');
-            el.setAttribute('name', rnd());
-            el.setAttribute('data-lpignore', 'true');      // LastPass
-            el.setAttribute('data-1p-ignore', 'true');     // 1Password
-            el.setAttribute('data-bwignore', 'true');      // Bitwarden
-            el.setAttribute('data-form-type', 'other');    // Dashlane
-            if (el.tagName === 'INPUT') {
-                el.setAttribute('autocapitalize', 'off');
-                el.setAttribute('autocorrect', 'off');
-                el.setAttribute('spellcheck', 'false');
-            }
-        });
-        if (nim) nim.setAttribute('inputmode', 'numeric');
-        // kode admin: tampil titik-titik lewat CSS, bukan type=password (di browser yang mendukung)
-        if (adm && adm.type === 'password' && textSecuritySupported) { adm.type = 'text'; adm.classList.add('a9-secret'); }
-        const form = (nim || adm).closest('form');
-        if (form) { form.setAttribute('autocomplete', 'off'); form.setAttribute('novalidate', ''); }
-        // ikon topi wisuda -> simbol medis (tongkat Asklepios), sesuai tema klasik
         const page = document.getElementById('login-page');
         if (page) {
             const w = document.createTreeWalker(page, NodeFilter.SHOW_TEXT);
@@ -5823,7 +5822,7 @@ html body.a9soft #login-page h1::after, html body.a9soft #login-page h2::after, 
     function openPicker(btn) {
         if (panel) { closePicker(); return; }
         const cur = stored();
-        const row = (id, nama, ket, sw) => `<button type="button" data-th="${id}" class="${cur === id ? 'on' : ''}"><span class="sw" style="background:${sw[0]}"><i style="background:${sw[1]}"></i></span><span><b>${nama}</b><small>${ket}</small></span>${cur === id ? '<span class="ck">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ</span>' : ''}</button>`;
+        const row = (id, nama, ket, sw) => `<button type="button" data-th="${id}" class="${cur === id ? 'on' : ''}"><span class="sw" style="background:${sw[0]}"><i style="background:${sw[1]}"></i></span><span><b>${nama}</b><small>${ket}</small></span>${cur === id ? '<span class="ck">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“</span>' : ''}</button>`;
         panel = document.createElement('div'); panel.className = 'a9-thm'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Pilih tema');
         panel.innerHTML = '<h4>Pilih tema tampilan</h4>' + THEMES.map(t => row(t.id, t.nama, t.ket, t.sw)).join('') +
             row('auto', 'Otomatis', 'Ikut mode terang / gelap perangkat', ['#f4f6f4', '#2f3a40']);
@@ -6097,6 +6096,7 @@ html body.a9soft #login-page h1::after, html body.a9soft #login-page h2::after, 
     const LS = k => 'a9_sjx_' + k;
     const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const stamp = x => x.upd || x.ts || 0;
+    const ordKey = x => (x.ord != null ? x.ord : (x.ts || 0));   // urutan: ord (bila pernah digeser) atau waktu dibuat
     const fmt = ts => ts ? new Date(ts).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
     const linkify = s => esc(s).replace(/https?:\/\/[^\s<]+/g, u => '<a href="' + u + '" target="_blank" rel="noopener">' + u + '</a>');
     const parseArr = v => { if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { v = null; } } return Array.isArray(v) ? v : []; };
@@ -6140,7 +6140,7 @@ html body.a9soft #login-page h1::after, html body.a9soft #login-page h2::after, 
     window.__sjxDoc = function (b, n, L) {
         L = typeof L === 'function' ? L : (() => '');
         const hd = t => `<p style="margin:12pt 0 4pt 0">${L()} ${t}</p>`;
-        const pq = (CACHE[kOf('pq', b, n)] || []).filter(x => !x.del).sort((p, q) => (p.ts || 0) - (q.ts || 0));
+        const pq = (CACHE[kOf('pq', b, n)] || []).filter(x => !x.del).sort((p, q) => ordKey(p) - ordKey(q));
         const nt = (CACHE[kOf('nt', b, n)] || []).filter(x => !x.del).sort((p, q) => (p.ts || 0) - (q.ts || 0));
         let h = '';
         if (pq.length) {
@@ -6248,6 +6248,7 @@ html body.a9soft #login-page h1::after, html body.a9soft #login-page h2::after, 
 .sjx-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .sjx-acts button{border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-main);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer}
 .sjx-acts .danger{color:#dc2626}
+.sjx-acts button:disabled{opacity:.35;cursor:default}
 .sjx textarea{width:100%;min-height:130px;resize:vertical;box-sizing:border-box}
 .sjx-vs{font-size:13px;color:#dc2626;min-height:18px;margin:6px 0}
 .sjx-note{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0;font-size:14px;line-height:1.55}
@@ -6280,7 +6281,7 @@ ${view === 'pq' ? pqPane : ntPane}`;
     function itemsPq(c) {
         const ns = scope === 'blok' ? c.b.skenario.map(s => s.n) : [c.n], out = [];
         ns.forEach(n => (CACHE[kOf('pq', c.b, n)] || []).filter(x => !x.del).forEach(it => out.push({ it, n })));
-        return out.sort((a, b) => (a.it.ts || 0) - (b.it.ts || 0));
+        return out.sort((a, b) => (a.n - b.n) || (ordKey(a.it) - ordKey(b.it)));
     }
     function lists() {
         const box = $('sjx-box'), c = ctx(); if (!box || !c) return;
@@ -6294,11 +6295,12 @@ ${view === 'pq' ? pqPane : ntPane}`;
         const pl = $('sjx-list');
         if (pl) {
             const shown = pq.filter(x => flt === 'all' || (flt === 'done') === (x.it.status === 'done'));
-            pl.innerHTML = shown.length ? shown.map(x => {
+            pl.innerHTML = shown.length ? shown.map((x, si) => {
                 const it = x.it, done = it.status === 'done', mine = it.by === me() || isAdmin();
+                const pv = shown[si - 1] && shown[si - 1].n === x.n ? shown[si - 1].it.id : '', nx = shown[si + 1] && shown[si + 1].n === x.n ? shown[si + 1].it.id : '';
                 return `<div class="sjx-item${done ? ' done' : ''}" data-n="${x.n}" data-id="${esc(it.id)}"><div class="sjx-q">${esc(it.q)}</div><small>${scope === 'blok' ? 'Skenario ' + x.n + ' \u00b7 ' : ''}${esc(it.by)} \u00b7 ${esc(fmt(it.ts))}</small>` +
                     (done ? `<div class="sjx-a"><b>Jawaban:</b> ${linkify(it.a)}${it.aby ? ` <small>(${esc(it.aby)})</small>` : ''}${it.src ? `<br><small>Sumber: ${linkify(it.src)}</small>` : ''}</div>` : '') +
-                    `<div class="sjx-acts"><button type="button" data-xa="ans">${done ? 'Ubah jawaban' : '\u270d\ufe0f Jawab'}</button>${done ? '<button type="button" data-xa="reopen">Buka lagi</button>' : ''}${mine ? '<button type="button" class="danger" data-xa="delq">Hapus</button>' : ''}</div></div>`;
+                    `<div class="sjx-acts"><button type="button" data-xa="up" data-nb="${esc(pv)}" title="Naikkan urutan"${pv ? '' : ' disabled'}>\u25b2</button><button type="button" data-xa="down" data-nb="${esc(nx)}" title="Turunkan urutan"${nx ? '' : ' disabled'}>\u25bc</button><button type="button" data-xa="ans">${done ? 'Ubah jawaban' : '\u270d\ufe0f Jawab'}</button>${done ? '<button type="button" data-xa="reopen">Buka lagi</button>' : ''}${mine ? '<button type="button" class="danger" data-xa="delq">Hapus</button>' : ''}</div></div>`;
             }).join('') : `<p class="hint" style="margin-top:12px">${flt === 'open' ? (pq.length ? 'Tidak ada pertanyaan yang tersisa. Semua sudah terjawab \ud83c\udf89' : 'Belum ada pertanyaan. Catat hal yang belum terjawab saat diskusi, lalu bawa ke pertemuan berikutnya.') : 'Tidak ada data untuk filter ini.'}</p>`;
         }
         const nl = $('sjx-nlist');
@@ -6349,6 +6351,16 @@ ${view === 'pq' ? pqPane : ntPane}`;
                     if (!r) return;
                     if (!r.a.trim()) { alert('Jawaban masih kosong.'); return; }
                     await change(pk, trial, l => { const x = l.find(i => i.id === id); if (x) { x.status = 'done'; x.a = r.a.trim(); x.src = r.s.trim(); x.aby = me(); x.upd = Date.now(); } });
+                    lists(); return;
+                }
+                if ((a === 'up' || a === 'down') && id) {
+                    const nb = t.dataset.nb; if (!nb) return;
+                    await change(pk, trial, l => {
+                        const x = l.find(i => i.id === id), y = l.find(i => i.id === nb); if (!x || !y) return;
+                        const kx = ordKey(x), ky = ordKey(y), now = Date.now();
+                        if (kx === ky) x.ord = ky + (a === 'up' ? -0.5 : 0.5); else { x.ord = ky; y.ord = kx; y.upd = now; }
+                        x.upd = now;
+                    });
                     lists(); return;
                 }
                 if (a === 'reopen' && id) { await change(pk, trial, l => { const x = l.find(i => i.id === id); if (x) { x.status = 'open'; x.upd = Date.now(); } }); lists(); return; }
@@ -8148,6 +8160,58 @@ window.A9_VERSION = APP_VERSION;
         return ERR[r.alasan] || ('Gagal' + (r.alasan ? ' (' + r.alasan + ')' : '') + '.');
     }
 
+    // ---------------- NIM + password bisa disimpan browser ----------------
+    const LAST_NIM = 'a9_last_nim';
+    // Formulir sungguhan + name/autocomplete yang benar = browser menawarkan "Simpan sandi" dan mengisi otomatis.
+    function prepareForm() {
+        const n = nimEl(); if (!n) return;
+        n.setAttribute('name', 'username');
+        n.setAttribute('autocomplete', 'username');
+        n.setAttribute('autocapitalize', 'off'); n.setAttribute('autocorrect', 'off'); n.setAttribute('spellcheck', 'false');
+        ['data-lpignore', 'data-1p-ignore', 'data-bwignore', 'data-form-type'].forEach(a => n.removeAttribute(a));
+        const adm = $('login-admin-code');            // kolom kode admin lama (sudah tidak dipakai): matikan supaya tidak mengacaukan simpan sandi
+        if (adm) { adm.disabled = true; adm.setAttribute('autocomplete', 'off'); adm.setAttribute('name', 'a9-unused'); }
+        let form = n.closest('form');
+        const host = $('guest-fields');
+        if (!form && host && host.parentNode) {
+            form = document.createElement('form');
+            form.id = 'a9-login-form';
+            host.parentNode.insertBefore(form, host);
+            form.appendChild(host);
+        }
+        if (form && !form.dataset.a9f) {
+            form.dataset.a9f = '1';
+            form.setAttribute('autocomplete', 'on');
+            form.setAttribute('method', 'post');
+            form.addEventListener('submit', e => { e.preventDefault(); window.handleLogin(); });
+        }
+    }
+    // Dipanggil setelah login BERHASIL (sebelum kolom dikosongkan).
+    function offerSaveCreds(nim, pw, nama) {
+        try {   // Chrome / Edge / Opera
+            if (window.PasswordCredential && navigator.credentials && navigator.credentials.store) {
+                navigator.credentials.store(new PasswordCredential({ id: nim, password: pw, name: nama || nim })).catch(() => { });
+                return;
+            }
+        } catch (e) { }
+        try {   // Safari / Firefox: kirim formulir ke iframe tersembunyi supaya browser menawarkan simpan sandi
+            const f = $('a9-login-form') || (nimEl() && nimEl().closest('form')); if (!f) return;
+            ['a9l-pw1', 'a9l-pw2'].forEach(id => { if ($(id)) $(id).type = 'password'; });
+            if ($('a9l-showcb')) $('a9l-showcb').checked = false;
+            if (!$('a9-cred-frame')) {
+                const fr = document.createElement('iframe');
+                fr.name = 'a9-cred-frame'; fr.id = 'a9-cred-frame'; fr.tabIndex = -1; fr.setAttribute('aria-hidden', 'true');
+                fr.style.cssText = 'display:none;width:0;height:0;border:0;';
+                document.body.appendChild(fr);
+            }
+            const old = { t: f.getAttribute('target'), a: f.getAttribute('action'), m: f.getAttribute('method') };
+            f.setAttribute('target', 'a9-cred-frame'); f.setAttribute('action', 'about:blank'); f.setAttribute('method', 'post');
+            f.submit();
+            const back = (k, v) => v == null ? f.removeAttribute(k) : f.setAttribute(k, v);
+            back('target', old.t); back('action', old.a); back('method', old.m || 'post');
+        } catch (e) { }
+    }
+
     // ---------------- layar login (khusus mahasiswa) ----------------
     // L.mode: idle | cek | err | buat | login | admin | reset1 | reset2
     const L = { mode: 'idle', busy: false, info: null, cache: {}, timer: null, seq: 0, nim: '', err: '', sentTo: '' };
@@ -8175,10 +8239,10 @@ window.A9_VERSION = APP_VERSION;
         if (!host) return null;
         b = document.createElement('div'); b.id = 'a9l-box'; b.style.display = 'none';
         b.innerHTML = '<p id="a9l-note" class="a9l-note"></p>'
-            + '<div class="form-group" id="a9l-w-email"><label for="a9l-email">Email (untuk reset password)</label><input type="email" id="a9l-email" class="modern-input" autocomplete="email" placeholder="nama@email.com"></div>'
+            + '<div class="form-group" id="a9l-w-email"><label for="a9l-email">Email (untuk reset password)</label><input type="email" id="a9l-email" name="email" class="modern-input" autocomplete="email" placeholder="nama@email.com"></div>'
             + '<div class="form-group" id="a9l-w-kode"><label for="a9l-kode">Kode dari email</label><input type="text" id="a9l-kode" class="modern-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="6 digit"></div>'
-            + '<div class="form-group" id="a9l-w-pw1"><label for="a9l-pw1" id="a9l-l1">Password</label><input type="password" id="a9l-pw1" class="modern-input" placeholder="Password"></div>'
-            + '<div class="form-group" id="a9l-w-pw2"><label for="a9l-pw2">Ulangi password</label><input type="password" id="a9l-pw2" class="modern-input" autocomplete="new-password" placeholder="Ketik sekali lagi"></div>'
+            + '<div class="form-group" id="a9l-w-pw1"><label for="a9l-pw1" id="a9l-l1">Password</label><input type="password" id="a9l-pw1" name="password" class="modern-input" autocomplete="current-password" placeholder="Password"></div>'
+            + '<div class="form-group" id="a9l-w-pw2"><label for="a9l-pw2">Ulangi password</label><input type="password" id="a9l-pw2" name="password2" class="modern-input" autocomplete="new-password" placeholder="Ketik sekali lagi"></div>'
             + '<label class="a9l-show" id="a9l-show"><input type="checkbox" id="a9l-showcb"> Tampilkan password</label>'
             + '<button type="button" class="btn btn-primary" id="a9l-btn"></button>'
             + '<div class="a9l-links"><a href="#" id="a9l-forgot">Lupa password?</a><a href="#" id="a9l-resend">Kirim ulang kode</a><a href="#" id="a9l-back">Kembali ke login</a></div>';
@@ -8197,10 +8261,9 @@ window.A9_VERSION = APP_VERSION;
     function paint() {
         const b = buildBox(); if (!b) return;
         const M = L.mode;
-        b.style.display = (M === 'idle') ? 'none' : 'block';
-        if (M === 'idle') return;
+        b.style.display = 'block';
         const on = (id, v) => { const e = $(id); if (e) e.style.display = v ? '' : 'none'; };
-        const pwMode = M === 'buat' || M === 'login' || M === 'admin' || M === 'reset2';
+        const pwMode = M === 'idle' || M === 'buat' || M === 'login' || M === 'admin' || M === 'reset2';
         on('a9l-w-email', M === 'buat');
         on('a9l-w-kode', M === 'reset2');
         on('a9l-w-pw1', pwMode);
@@ -8221,6 +8284,7 @@ window.A9_VERSION = APP_VERSION;
         else if (M === 'reset1') note = 'Kode reset 6 digit akan dikirim ke email yang terdaftar' + (info.email_mask ? ' (' + info.email_mask + ')' : '') + '.';
         else if (M === 'reset2') note = 'Kode sudah dikirim ke ' + L.sentTo + '. Berlaku 15 menit (cek folder Spam). Isi kode, lalu buat password baru.';
         $('a9l-note').textContent = note;
+        $('a9l-note').style.display = note ? '' : 'none';
         $('a9l-l1').textContent = M === 'buat' ? 'Buat password' : (M === 'reset2' ? 'Password baru' : 'Password');
         $('a9l-pw1').setAttribute('autocomplete', (M === 'buat' || M === 'reset2') ? 'new-password' : 'current-password');
         $('a9l-pw1').placeholder = M === 'buat' ? 'Buat password' : (M === 'reset2' ? 'Password baru' : 'Password');
@@ -8275,6 +8339,8 @@ window.A9_VERSION = APP_VERSION;
         if (!isAdminNim(nim) && dbData.maintenance) { alert('\u26a0\ufe0f PORTAL SEDANG MAINTENANCE.'); return; }
         const r = await rpc('a9_login', { p_nim: nim, p_pw: pw });
         if (!r.ok) { alert(errText(r)); return; }
+        offerSaveCreds(nim, pw, r.nama);
+        if (r.role !== 'admin') ls.set(LAST_NIM, nim);
         ['a9l-pw1', 'a9l-pw2', 'a9l-email', 'a9l-kode'].forEach(id => { if ($(id)) $(id).value = ''; });
         if (r.role === 'admin') currentUser = { role: 'admin', name: 'Admin Utama' };
         else {
@@ -8639,9 +8705,16 @@ body.cbt-locked #a9-set-btn { display: none !important; }
     // ---------------- pemasangan ----------------
     function init() {
         userOnlyLayout();
+        prepareForm();
         const n = nimEl();
         if (n && !n.dataset.a9pw) { n.dataset.a9pw = '1'; n.addEventListener('input', onNim); n.addEventListener('change', onNim); }
         buildBox();
+        prepareForm();
+        if (n && !n.dataset.a9last) {   // cadangan bila browser tidak menawarkan simpan sandi: ingat NIM terakhir di perangkat ini
+            n.dataset.a9last = '1';
+            const last = ls.get(LAST_NIM);
+            if (last && !n.value) { n.value = last; onNim(); }
+        }
         const ui = $('user-info');
         if (ui && !ui.dataset.a9set) { ui.dataset.a9set = '1'; ui.style.cursor = 'pointer'; ui.addEventListener('click', openSettings); }
     }
