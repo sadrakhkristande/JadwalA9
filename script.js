@@ -5661,6 +5661,10 @@ body.theme-dark .modern-input { background: #17120c; border-bottom-color: var(--
 
     // ---------- 2) Daftar tema ----------
     const THEMES = [
+        { id: 'awan', nama: 'Awan', ket: 'Abu kebiruan ala Apple, terang', dark: false, bg: '#eef0f4', sw: ['#f8f9fb', '#3d68d0'] },
+        { id: 'lembayung', nama: 'Lembayung', ket: 'Ungu lembut, terang', dark: false, bg: '#efedf6', sw: ['#f9f8fc', '#6657c4'] },
+        { id: 'tinta', nama: 'Tinta', ket: 'Grafit hangat, gelap', dark: true, bg: '#17181b', sw: ['#202226', '#7ba3f0'] },
+        { id: 'nebula', nama: 'Nebula', ket: 'Indigo malam, gelap', dark: true, bg: '#171828', sw: ['#20223a', '#a39af2'] },
         { id: 'embun', nama: 'Embun', ket: 'Hijau sage, terang', dark: false, bg: '#edf1ed', sw: ['#f8faf7', '#447a6c'] },
         { id: 'kapas', nama: 'Kapas', ket: 'Krem hangat, terang', dark: false, bg: '#f4efe8', sw: ['#fcfaf6', '#a9644b'] },
         { id: 'langit', nama: 'Langit', ket: 'Biru keabuan, terang', dark: false, bg: '#eceff5', sw: ['#f8f9fc', '#4a6fa5'] },
@@ -5793,12 +5797,12 @@ html body.a9soft #login-page h1::after, html body.a9soft #login-page h2::after, 
             const v = localStorage.getItem(KEY);
             if (v === 'auto' || THEMES.some(t => t.id === v)) return v;
             const old = localStorage.getItem('a9_theme');           // pilihan lama (terang / gelap) tetap dihormati
-            if (old === 'dark') return 'senja';
-            if (old === 'light') return 'embun';
+            if (old === 'dark') return 'tinta';
+            if (old === 'light') return 'awan';
         } catch (e) { }
         return 'auto';
     }
-    const resolve = v => THEMES.find(t => t.id === (v === 'auto' ? (prefersDark() ? 'senja' : 'embun') : v)) || THEMES[0];
+    const resolve = v => THEMES.find(t => t.id === (v === 'auto' ? (prefersDark() ? 'tinta' : 'awan') : v)) || THEMES[0];
     function apply(v) {
         const t = resolve(v), b = document.body;
         THEMES.forEach(x => b.classList.remove('th-' + x.id));
@@ -9237,7 +9241,7 @@ body.cbt-locked #a9-set-btn { display: none !important; }
     // 5) PENGATURAN: bottom-sheet, bagian bisa dibuka-tutup, pilihan tema
     // ======================================================================
     const SMETA = { 'Profil': ['\ud83d\udc64', 'Nama & foto', 'Akun'], 'Ganti password': ['\ud83d\udd11', 'Ubah password login', 'Keamanan'], 'Email pemulihan': ['\u2709\ufe0f', 'Untuk reset password', 'Keamanan'], 'Notifikasi': ['\ud83d\udd14', 'Jadwal harian', 'Preferensi'], 'Tampilan': ['\ud83c\udfa8', 'Warna & tema', 'Preferensi'], 'Tentang web': ['\u2139\ufe0f', 'Versi & keluar', 'Lainnya'] };
-    const THEMES = [['embun', 'Embun', '#edf1ed'], ['kapas', 'Kapas', '#f4efe8'], ['langit', 'Langit', '#eceff5'], ['senja', 'Senja', '#1f2124'], ['malam', 'Malam', '#1b2230'], ['auto', 'Otomatis', 'linear-gradient(90deg,#f4f6f4 50%,#2f3a40 50%)']];
+    const THEMES = [['awan', 'Awan', '#eef0f4'], ['lembayung', 'Lembayung', '#efedf6'], ['tinta', 'Tinta', '#17181b'], ['nebula', 'Nebula', '#171828'], ['embun', 'Embun', '#edf1ed'], ['kapas', 'Kapas', '#f4efe8'], ['langit', 'Langit', '#eceff5'], ['senja', 'Senja', '#1f2124'], ['malam', 'Malam', '#1b2230'], ['auto', 'Otomatis', 'linear-gradient(90deg,#f4f6f4 50%,#2f3a40 50%)']];
     const curTheme = () => { try { return localStorage.getItem('a9_theme2') || 'auto'; } catch (e) { return 'auto'; } };
     function heroHtml() {
         let prof = {}; try { prof = JSON.parse(localStorage.getItem('a9_prof_' + ((currentUser && currentUser.nim) || 'admin')) || '{}') || {}; } catch (e) { }
@@ -9308,3 +9312,264 @@ body.cbt-locked #a9-set-btn { display: none !important; }
 })();
 
 // ==========================================================================
+
+// ==========================================================================
+// BAGIAN 24 - TAMPILAN BARU "AURA" (lembut di mata, interaktif, gaya Apple)
+//   Ditaruh paling akhir. Hanya menambah tampilan & gerak, tidak menyentuh data atau fungsi.
+//   - Palet baru (Awan, Lembayung, Tinta, Nebula). Tidak ada putih/hitam murni, kontras tetap nyaman dibaca.
+//   - Huruf sistem Apple (SF Pro) dengan cadangan Inter; sudut besar, bayangan berlapis, kaca buram di navigasi.
+//   - Interaktif: penanda menu yang meluncur, efek riak pada tombol, sorotan mengikuti kursor pada kartu,
+//     bilah progres gulir, latar halus yang bergerak pelan, animasi masuk per halaman.
+//   - Semua gerak otomatis mati bila perangkat memilih "kurangi gerakan".
+//   Pilihan tema tetap di Pengaturan > Tampilan atau ikon tema.
+// ==========================================================================
+(function () {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const REDUCED = (() => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
+
+    // ---------- 1) Huruf cadangan (Windows / Android) ----------
+    if (!$('a9-font-aura')) {
+        const f = document.createElement('link'); f.id = 'a9-font-aura'; f.rel = 'stylesheet';
+        f.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap';
+        document.head.appendChild(f);
+    }
+
+    // ---------- 2) Gaya ----------
+    const css = document.createElement('style');
+    css.id = 'a9-aura';
+    css.textContent = `
+/* ================= Palet baru ================= */
+html body.a9soft.th-awan { --bg-base:#eef0f4; --bg-card:#f8f9fb; --text-main:#25272d; --text-muted:#646a76; --border-color:#dde1e8; --border-strong:#c3cad6;
+  --primary:#3d68d0; --primary-hover:#3256b3; --on-primary:#ffffff; --primary-light:#e3e9f8; --primary-text:#2e51a8; --primary-bd:#b4c4ea; --input-bg:#f1f3f7;
+  --accent2:#5560d4; --ring:rgba(61,104,208,.26); --danger:#b0413b; --danger-bg:#f8e7e4; --danger-bd:#e4bcb7; --warning:#8f6310; --gold:#8f6310;
+  --shadow-sm:0 1px 2px rgba(30,36,60,.05); --shadow-lg:0 16px 38px -18px rgba(30,36,60,.25); --shadow-glow:0 0 0 3px rgba(61,104,208,.26); }
+html body.a9soft.th-lembayung { --bg-base:#efedf6; --bg-card:#f9f8fc; --text-main:#2a2838; --text-muted:#686479; --border-color:#dedbea; --border-strong:#c6c1d8;
+  --primary:#6657c4; --primary-hover:#5646ab; --on-primary:#ffffff; --primary-light:#e8e4f6; --primary-text:#4f40a6; --primary-bd:#bdb4e6; --input-bg:#f2f0f8;
+  --accent2:#8a63c9; --ring:rgba(102,87,196,.26); --danger:#b0413b; --danger-bg:#f8e7e4; --danger-bd:#e4bcb7; --warning:#8f6310; --gold:#8f6310;
+  --shadow-sm:0 1px 2px rgba(42,40,56,.05); --shadow-lg:0 16px 38px -18px rgba(42,40,56,.25); --shadow-glow:0 0 0 3px rgba(102,87,196,.26); }
+html body.a9soft.th-tinta { --bg-base:#17181b; --bg-card:#202226; --text-main:#dcdee3; --text-muted:#9a9ea8; --border-color:#31343a; --border-strong:#454a52;
+  --primary:#7ba3f0; --primary-hover:#94b5f4; --on-primary:#0f1d3a; --primary-light:rgba(123,163,240,.14); --primary-text:#a9c3f6; --primary-bd:rgba(123,163,240,.4); --input-bg:#1b1d20;
+  --accent2:#a690ee; --ring:rgba(123,163,240,.32); --danger:#e58a82; --danger-bg:rgba(229,138,130,.12); --danger-bd:rgba(229,138,130,.35); --warning:#e0b45a; --gold:#e0b45a;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3); --shadow-lg:0 18px 40px -16px rgba(0,0,0,.6); --shadow-glow:0 0 0 3px rgba(123,163,240,.32); }
+html body.a9soft.th-nebula { --bg-base:#171828; --bg-card:#20223a; --text-main:#dadcee; --text-muted:#9a9dbd; --border-color:#343658; --border-strong:#4a4d78;
+  --primary:#a39af2; --primary-hover:#b7b0f6; --on-primary:#1a1640; --primary-light:rgba(163,154,242,.15); --primary-text:#c4bdf7; --primary-bd:rgba(163,154,242,.4); --input-bg:#1b1d33;
+  --accent2:#7fb6dd; --ring:rgba(163,154,242,.32); --danger:#e58a82; --danger-bg:rgba(229,138,130,.12); --danger-bd:rgba(229,138,130,.35); --warning:#e0b45a; --gold:#e0b45a;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3); --shadow-lg:0 18px 40px -16px rgba(0,0,0,.6); --shadow-glow:0 0 0 3px rgba(163,154,242,.32); }
+/* tema lama tetap ada: beri warna kedua untuk gradasi */
+html body.a9soft.th-embun { --accent2:#3f7f8a; } html body.a9soft.th-kapas { --accent2:#b3794a; } html body.a9soft.th-langit { --accent2:#5a64b0; }
+html body.a9soft.th-senja { --accent2:#8fb4d9; } html body.a9soft.th-malam { --accent2:#a79ae0; }
+
+/* ================= Dasar ================= */
+html body.a9soft.a9aura {
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-head: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --radius-sm: 10px; --radius-md: 14px; --radius-lg: 20px; --radius-xl: 24px;
+  --ease: cubic-bezier(.22, .8, .3, 1);
+  --aura1: rgba(120,140,200,.12); --aura2: rgba(150,120,200,.10); --aura3: rgba(110,170,190,.10);
+  font-family: var(--font); line-height: 1.6; letter-spacing: -.005em; text-rendering: optimizeLegibility;
+}
+@supports (background: color-mix(in srgb, red 10%, transparent)) {
+  html body.a9soft.a9aura { --aura1: color-mix(in srgb, var(--primary) 16%, transparent); --aura2: color-mix(in srgb, var(--accent2) 13%, transparent); --aura3: color-mix(in srgb, var(--primary) 8%, transparent); }
+}
+html body.a9soft.a9aura.theme-dark { --aura1: rgba(110,140,230,.16); --aura2: rgba(150,110,230,.12); --aura3: rgba(90,170,200,.09); }
+html body.a9soft.a9aura h1, html body.a9soft.a9aura h2, html body.a9soft.a9aura h3, html body.a9soft.a9aura h4,
+html body.a9soft.a9aura .card-title { font-family: var(--font-head); font-weight: 650; letter-spacing: -.018em; }
+html body.a9soft.a9aura ::selection { background: var(--primary-light); }
+
+/* latar halus yang bergerak pelan */
+html body.a9soft.a9aura::before { content: ''; position: fixed; inset: -10vmax; z-index: -1; pointer-events: none;
+  background: radial-gradient(48vmax 38vmax at 10% 0%, var(--aura1), transparent 70%), radial-gradient(42vmax 34vmax at 100% 8%, var(--aura2), transparent 70%), radial-gradient(52vmax 40vmax at 55% 105%, var(--aura3), transparent 70%);
+  animation: a9drift 36s ease-in-out infinite alternate; }
+@keyframes a9drift { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(-2.5vmax, 2vmax, 0) scale(1.06); } }
+
+/* bilah progres gulir */
+#a9-prog { position: fixed; top: 0; left: 0; height: 3px; width: 100%; z-index: 99990; pointer-events: none; transform-origin: 0 50%; transform: scaleX(0);
+  background: linear-gradient(90deg, var(--primary), var(--accent2)); opacity: .9; transition: transform .12s linear; }
+
+/* ================= Kartu ================= */
+html body.a9soft.a9aura .card { border-radius: 22px; border: 1px solid var(--border-color); background: var(--bg-card);
+  box-shadow: var(--shadow-sm), 0 12px 30px -20px rgba(20,24,40,.18) !important; transition: box-shadow .35s var(--ease), border-color .35s var(--ease); }
+html body.a9soft.a9aura .card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm), 0 18px 40px -20px rgba(20,24,40,.26) !important; }
+html body.a9soft.a9aura.theme-dark .card { box-shadow: var(--shadow-sm), 0 14px 32px -20px rgba(0,0,0,.7) !important; }
+html body.a9soft.a9aura .card-header { border-bottom: 1px solid var(--border-color); }
+
+/* kartu sapaan: gradasi tenang + kilau pelan */
+html body.a9soft.a9aura .greeting { position: relative; overflow: hidden; color: var(--on-primary); border: 0; border-radius: 26px;
+  background: var(--primary); background: linear-gradient(135deg, var(--primary), var(--accent2)); box-shadow: 0 22px 44px -24px var(--primary) !important; }
+html body.a9soft.a9aura .greeting::after { content: ''; position: absolute; width: 340px; height: 340px; right: -90px; top: -150px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(255,255,255,.28), transparent 65%); animation: a9glow 9s ease-in-out infinite alternate; }
+@keyframes a9glow { from { transform: translate(0,0) scale(1); opacity: .8; } to { transform: translate(-30px, 24px) scale(1.15); opacity: 1; } }
+html body.a9soft.a9aura .greeting h1, html body.a9soft.a9aura .greeting h2, html body.a9soft.a9aura .greeting h3, html body.a9soft.a9aura .greeting p { color: var(--on-primary); position: relative; z-index: 1; }
+
+/* kartu kecil: terangkat + sorotan mengikuti kursor */
+html body.a9soft.a9aura .jd, html body.a9soft.a9aura .fv-folder, html body.a9soft.a9aura .fv-file, html body.a9soft.a9aura .lb-card,
+html body.a9soft.a9aura .osce-st, html body.a9soft.a9aura .sm-card, html body.a9soft.a9aura .prog-stat, html body.a9soft.a9aura .upd-card,
+html body.a9soft.a9aura .sj-bloks button { border-radius: 18px; transition: transform .3s var(--ease), box-shadow .3s var(--ease), border-color .3s var(--ease), background-color .3s var(--ease); }
+@media (hover: hover) {
+  html body.a9soft.a9aura .fv-folder:hover, html body.a9soft.a9aura .fv-file:hover, html body.a9soft.a9aura .lb-card:hover, html body.a9soft.a9aura .osce-st:hover,
+  html body.a9soft.a9aura .sm-card:hover, html body.a9soft.a9aura .prog-stat:hover, html body.a9soft.a9aura .jd:hover, html body.a9soft.a9aura .upd-card:hover,
+  html body.a9soft.a9aura .sj-bloks button:hover { transform: translateY(-3px); border-color: var(--primary-bd); box-shadow: 0 16px 30px -18px rgba(20,24,40,.35); }
+  html body.a9soft.a9aura .fv-folder:hover, html body.a9soft.a9aura .fv-file:hover, html body.a9soft.a9aura .lb-card:hover, html body.a9soft.a9aura .osce-st:hover,
+  html body.a9soft.a9aura .sm-card:hover, html body.a9soft.a9aura .prog-stat:hover, html body.a9soft.a9aura .upd-card:hover {
+    background-image: radial-gradient(260px circle at var(--mx, 50%) var(--my, 0%), var(--primary-light), transparent 65%) !important; }
+}
+html body.a9soft.a9aura .fv-folder:active, html body.a9soft.a9aura .fv-file:active, html body.a9soft.a9aura .lb-card:active { transform: scale(.985); }
+
+/* ================= Tombol ================= */
+html body.a9soft.a9aura .btn { position: relative; overflow: hidden; border-radius: 13px; font-weight: 600; letter-spacing: -.005em;
+  transition: transform .2s var(--ease), box-shadow .3s var(--ease), background-color .2s, border-color .2s, color .2s; }
+html body.a9soft.a9aura .btn:active:not(:disabled) { transform: scale(.965); }
+html body.a9soft.a9aura .btn:disabled { opacity: .5; cursor: not-allowed; }
+html body.a9soft.a9aura .btn-primary { background: var(--primary); background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 90%, #fff), var(--primary));
+  box-shadow: 0 8px 18px -10px var(--primary), inset 0 1px 0 rgba(255,255,255,.2); }
+html body.a9soft.a9aura .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 14px 24px -12px var(--primary), inset 0 1px 0 rgba(255,255,255,.22); }
+html body.a9soft.a9aura .btn-outline:hover:not(:disabled) { transform: translateY(-1px); }
+.a9-rip { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .22; transform: scale(0); animation: a9rip .6s var(--ease, ease-out) forwards; }
+@keyframes a9rip { to { transform: scale(1); opacity: 0; } }
+
+/* ================= Isian ================= */
+html body.a9soft.a9aura .modern-input { border-radius: 14px; transition: border-color .2s, box-shadow .25s var(--ease), background-color .2s; }
+html body.a9soft.a9aura .modern-input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--ring); background: var(--bg-card); }
+html body.a9soft.a9aura .option-label { border-radius: 16px; transition: transform .25s var(--ease), border-color .2s, background-color .2s, box-shadow .25s; }
+@media (hover: hover) { html body.a9soft.a9aura .option-label:hover { transform: translateX(3px); border-color: var(--primary-bd); } }
+
+/* ================= Navigasi: kaca buram + penanda meluncur ================= */
+html body.a9soft.a9aura .simple-nav { background: var(--bg-card); border-bottom: 1px solid var(--border-color); transition: box-shadow .3s, background-color .3s; }
+@supports (backdrop-filter: blur(8px)) and (background: color-mix(in srgb, red 10%, transparent)) {
+  @media (min-width: 769px) { html body.a9soft.a9aura .simple-nav { background: color-mix(in srgb, var(--bg-card) 74%, transparent); -webkit-backdrop-filter: saturate(1.5) blur(18px); backdrop-filter: saturate(1.5) blur(18px); } }
+  @media (max-width: 768px) { html body.a9soft.a9aura #sn-main { background: color-mix(in srgb, var(--bg-card) 78%, transparent); -webkit-backdrop-filter: saturate(1.5) blur(18px); backdrop-filter: saturate(1.5) blur(18px); } }
+}
+html body.a9soft.a9aura.a9-scrolled .simple-nav { box-shadow: 0 10px 30px -18px rgba(20,24,40,.35); }
+html body.a9soft.a9aura #sn-sub { background: var(--bg-base); border-radius: 16px; }
+@media (min-width: 769px) { #sn-main { position: relative; } }
+#sn-sub { position: relative; }
+html body.a9soft.a9aura .nav-pill, html body.a9soft.a9aura .sn-chip { position: relative; z-index: 1; border-radius: 999px !important; transition: color .25s, transform .2s var(--ease), background-color .25s; }
+html body.a9soft.a9aura .nav-pill:active, html body.a9soft.a9aura .sn-chip:active { transform: scale(.94); }
+.a9-ind { position: absolute; z-index: 0; pointer-events: none; border-radius: 999px; background: var(--primary-light); box-shadow: inset 0 0 0 1px var(--primary-bd);
+  transition: left .42s cubic-bezier(.3,1.25,.4,1), top .42s cubic-bezier(.3,1.25,.4,1), width .42s cubic-bezier(.3,1.25,.4,1), height .42s cubic-bezier(.3,1.25,.4,1), opacity .2s; }
+.a9-has-ind .nav-pill.active, .a9-has-ind .sn-chip.active { background: transparent !important; box-shadow: none !important; border-color: transparent !important; color: var(--primary-text) !important; font-weight: 650; }
+html body.a9soft.a9aura .sn-badge { box-shadow: 0 0 0 2px var(--bg-card); }
+
+/* ================= Tabel ================= */
+html body.a9soft.a9aura .table-responsive { border-radius: 18px; overflow: auto; }
+html body.a9soft.a9aura .modern-table tr { transition: background-color .2s; }
+
+/* ================= Animasi masuk halaman ================= */
+html body.a9soft.a9aura .tab-content { animation: a9tab .5s var(--ease) both !important; }
+html body.a9soft.a9aura .tab-content > .card, html body.a9soft.a9aura .tab-content > .greeting { animation: a9up .6s var(--ease) both; }
+html body.a9soft.a9aura .tab-content > :nth-child(2) { animation-delay: .05s; } html body.a9soft.a9aura .tab-content > :nth-child(3) { animation-delay: .1s; }
+html body.a9soft.a9aura .tab-content > :nth-child(4) { animation-delay: .15s; } html body.a9soft.a9aura .tab-content > :nth-child(5) { animation-delay: .2s; }
+html body.a9soft.a9aura .tab-content > :nth-child(n+6) { animation-delay: .25s; }
+@keyframes a9tab { from { opacity: 0; } to { opacity: 1; } }
+@keyframes a9up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+/* ================= Lain-lain ================= */
+html body.a9soft.a9aura .toast { border-radius: 16px; animation: a9up .4s var(--ease) both; }
+html body.a9soft.a9aura #to-top { border-radius: 50%; transition: transform .25s var(--ease), box-shadow .25s; }
+html body.a9soft.a9aura #to-top:hover { transform: translateY(-3px); }
+html body.a9soft.a9aura .modal-content, html body.a9soft.a9aura #preview-modal > div, html body.a9soft.a9aura #admin-settings-modal > div, html body.a9soft.a9aura .fd-modal { border-radius: 24px; animation: a9pop .4s var(--ease) both; }
+@keyframes a9pop { from { opacity: 0; transform: scale(.95) translateY(8px); } to { opacity: 1; transform: none; } }
+.a9-thm { max-height: min(78vh, 600px); overflow: auto; border-radius: 20px; animation: a9pop .3s var(--ease, ease-out) both; }
+html body.a9soft.a9aura * { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+html body.a9soft.a9aura ::-webkit-scrollbar { width: 10px; height: 10px; } html body.a9soft.a9aura ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 10px; border: 2px solid transparent; background-clip: content-box; }
+
+/* ================= Halaman masuk ================= */
+html body.a9soft.a9aura #login-page { overflow: hidden; isolation: isolate; }
+html body.a9soft.a9aura #login-page .card, html body.a9soft.a9aura #login-page .login-card, html body.a9soft.a9aura #login-page .login-box, html body.a9soft.a9aura #login-page .login-container {
+  border-radius: 28px; animation: a9up .8s var(--ease) both; background: var(--bg-card); }
+@supports (backdrop-filter: blur(8px)) and (background: color-mix(in srgb, red 10%, transparent)) {
+  html body.a9soft.a9aura #login-page .card, html body.a9soft.a9aura #login-page .login-card, html body.a9soft.a9aura #login-page .login-box, html body.a9soft.a9aura #login-page .login-container {
+    background: color-mix(in srgb, var(--bg-card) 80%, transparent); -webkit-backdrop-filter: blur(22px) saturate(1.4); backdrop-filter: blur(22px) saturate(1.4); }
+}
+.a9-orb { position: absolute; z-index: -1; border-radius: 50%; pointer-events: none; filter: blur(60px); opacity: .5; will-change: transform;
+  transform: translate3d(calc(var(--px, 0) * var(--k, 20px)), calc(var(--py, 0) * var(--k, 20px)), 0); transition: transform .5s ease-out; }
+.a9-orb i { display: block; width: 100%; height: 100%; border-radius: 50%; animation: a9float 14s ease-in-out infinite alternate; }
+.a9-orb.o1 { width: 46vmax; height: 46vmax; left: -14vmax; top: -16vmax; --k: 26px; } .a9-orb.o1 i { background: var(--primary); }
+.a9-orb.o2 { width: 40vmax; height: 40vmax; right: -12vmax; bottom: -14vmax; --k: -22px; } .a9-orb.o2 i { background: var(--accent2); animation-duration: 18s; }
+.a9-orb.o3 { width: 26vmax; height: 26vmax; right: 18%; top: -8vmax; --k: 14px; opacity: .3; } .a9-orb.o3 i { background: var(--primary-bd); animation-duration: 22s; }
+@keyframes a9float { from { transform: translate(0,0) scale(1); } to { transform: translate(5vmax, 3vmax) scale(1.12); } }
+
+@media (prefers-reduced-motion: reduce) {
+  html body.a9soft.a9aura::before, html body.a9soft.a9aura .greeting::after, .a9-orb i { animation: none !important; }
+  html body.a9soft.a9aura .tab-content, html body.a9soft.a9aura .tab-content > *, html body.a9soft.a9aura .card, html body.a9soft.a9aura #login-page .card { animation: none !important; }
+  .a9-ind { transition: none; } .a9-rip { display: none; }
+}
+`;
+    document.head.appendChild(css);
+    document.body.classList.add('a9aura');
+
+    // ---------- 3) Pakai tema baru sebagai awal (sekali saja per perangkat) ----------
+    try {
+        if (localStorage.getItem('a9_look') !== 'aura1') {
+            localStorage.setItem('a9_look', 'aura1');
+            localStorage.setItem('a9_theme2', 'auto');      // Otomatis = Awan (terang) / Tinta (gelap). Tema lama tetap bisa dipilih lagi.
+            if (typeof window.applyTheme === 'function') window.applyTheme();
+        }
+    } catch (e) { }
+
+    // ---------- 4) Interaksi ----------
+    // 4a) Bilah progres gulir + bayangan navigasi saat digulir
+    const bar = document.createElement('div'); bar.id = 'a9-prog'; bar.setAttribute('aria-hidden', 'true'); document.body.appendChild(bar);
+    let tick = false;
+    function onScroll() {
+        if (tick) return; tick = true;
+        requestAnimationFrame(() => {
+            tick = false;
+            const el = document.documentElement, max = el.scrollHeight - el.clientHeight, y = window.scrollY || el.scrollTop || 0;
+            bar.style.transform = 'scaleX(' + (max > 0 ? Math.min(1, y / max) : 0) + ')';
+            document.body.classList.toggle('a9-scrolled', y > 8);
+        });
+    }
+    window.addEventListener('scroll', onScroll, { passive: true }); window.addEventListener('resize', onScroll, { passive: true }); onScroll();
+
+    // 4b) Efek riak pada tombol
+    if (!REDUCED) document.addEventListener('pointerdown', e => {
+        const t = e.target.closest && e.target.closest('.btn'); if (!t || t.disabled) return;
+        const r = t.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2, sp = document.createElement('span');
+        sp.className = 'a9-rip'; sp.style.cssText = 'width:' + d + 'px;height:' + d + 'px;left:' + (e.clientX - r.left - d / 2) + 'px;top:' + (e.clientY - r.top - d / 2) + 'px;';
+        t.appendChild(sp); setTimeout(() => sp.remove(), 650);
+    }, { passive: true });
+
+    // 4c) Sorotan mengikuti kursor pada kartu kecil
+    const TILES = '.jd, .fv-folder, .fv-file, .lb-card, .osce-st, .sm-card, .prog-stat, .upd-card';
+    let raf = 0;
+    document.addEventListener('pointermove', e => {
+        if (e.pointerType !== 'mouse' || raf) return;
+        const t = e.target.closest && e.target.closest(TILES); if (!t) return;
+        raf = requestAnimationFrame(() => { raf = 0; const r = t.getBoundingClientRect(); t.style.setProperty('--mx', (e.clientX - r.left) + 'px'); t.style.setProperty('--my', (e.clientY - r.top) + 'px'); });
+    }, { passive: true });
+
+    // 4d) Penanda menu yang meluncur (menu dibuat ulang tiap pindah halaman, penanda dipasang lagi dan bergeser mulus)
+    function slider(id) {
+        const c = $(id); if (!c || c.dataset.a9ind) return !!c;
+        c.dataset.a9ind = '1';
+        const ind = document.createElement('span'); ind.className = 'a9-ind'; ind.setAttribute('aria-hidden', 'true');
+        function place() {
+            try {
+                if (!c.contains(ind)) c.insertBefore(ind, c.firstChild);
+                const a = c.querySelector('.active');
+                if (!a || !c.getClientRects().length) { ind.style.opacity = '0'; c.classList.remove('a9-has-ind'); return; }
+                ind.style.opacity = '1'; c.classList.add('a9-has-ind');
+                ind.style.left = a.offsetLeft + 'px'; ind.style.top = a.offsetTop + 'px'; ind.style.width = a.offsetWidth + 'px'; ind.style.height = a.offsetHeight + 'px';
+            } catch (e) { }
+        }
+        new MutationObserver(place).observe(c, { childList: true });
+        window.addEventListener('resize', place, { passive: true });
+        setTimeout(place, 60); setTimeout(place, 600);
+        return true;
+    }
+    let tries = 0;
+    const wait = setInterval(() => { tries++; const a = slider('sn-main'), b = slider('sn-sub'); if ((a && b) || tries > 40) clearInterval(wait); }, 250);
+
+    // 4e) Halaman masuk: bola cahaya melayang yang sedikit mengikuti kursor
+    function loginFx() {
+        const lp = $('login-page'); if (!lp || lp.dataset.a9fx) return; lp.dataset.a9fx = '1';
+        try { if (getComputedStyle(lp).position === 'static') lp.style.position = 'relative'; } catch (e) { }
+        ['o1', 'o2', 'o3'].forEach(k => { const o = document.createElement('div'); o.className = 'a9-orb ' + k; o.innerHTML = '<i></i>'; lp.insertBefore(o, lp.firstChild); });
+        if (!REDUCED) lp.addEventListener('pointermove', e => {
+            lp.style.setProperty('--px', ((e.clientX / window.innerWidth) - .5).toFixed(3)); lp.style.setProperty('--py', ((e.clientY / window.innerHeight) - .5).toFixed(3));
+        }, { passive: true });
+    }
+    loginFx(); window.addEventListener('DOMContentLoaded', loginFx); setTimeout(loginFx, 400);
+})();
