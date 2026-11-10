@@ -5032,6 +5032,8 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
         const gambar = v.gambar || [];
         const soal = v.soal && v.soal.length ? v.soal : [{ q: '', by: '', a: [{ t: '', by: '' }] }];
         const lap = v.laporan && v.laporan.length ? v.laporan : [blankLap()];
+        const sumCard = `<div class="sj-card sj-sum"><h4>\ud83e\udded Rangkuman pertanyaan</h4><p class="sj-sub">Semua masalah yang sudah ditulis, diringkas dalam satu daftar. Tahan <b>\u283f</b> lalu seret ke atas atau ke bawah untuk mengatur urutan. Ketuk barisnya untuk melompat ke masalah itu.</p>
+  <div id="sj-sum">${(v.soal && v.soal.length ? v.soal : []).map((x, qi) => `<div class="sj-sumrow" data-qi="${qi}"><span class="a9-grip" role="button" aria-label="Seret untuk mengubah urutan" title="Seret untuk mengubah urutan">\u283f</span><span class="sj-sumn">${qi + 1}</span><span class="sj-sumq">${esc(x.q) || '(belum diisi)'}</span><span class="sj-sumc">${(x.a || []).filter(a => a && String(a.t || '').trim()).length} jawaban</span></div>`).join('') || '<p class="sj-sub" style="margin:0">Belum ada masalah. Tambahkan di Langkah 2\u20133 di bawah.</p>'}</div></div>`;
         const used = new Set(istilah.map(x => (x.t || '').trim().toLowerCase()));
         const dl = docs[b.key] || [];
         r.innerHTML = head + `
@@ -5043,6 +5045,7 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
   <div id="sj-rows">${istilah.map((x, i) => `<div class="sj-row" data-i="${i}"><input class="modern-input" data-t placeholder="Istilah" value="${esc(x.t)}"><textarea class="modern-input" data-d placeholder="Arti / penjelasan">${esc(x.d)}</textarea><button type="button" class="btn btn-outline btn-sm" data-del="${i}" title="Hapus baris">\u2715</button></div>`).join('')}</div>
   <div class="sj-acts"><button type="button" class="btn btn-outline btn-sm" data-add>+ Tambah istilah</button></div>
   <div class="sj-hints">${s.hint.filter(h => !used.has(h.toLowerCase())).map(h => `<button type="button" data-hint="${esc(h)}">+ ${esc(h)}</button>`).join('')}</div></div>
+${sumCard}
 <div class="sj-card"><h4>Langkah 2\u20133 \u2013 Rumusan masalah dan jawaban sementara</h4><p class="sj-sub">Tulis masalah, lalu tambahkan satu atau lebih jawaban di bawahnya. Kolom nama sengaja dikosongkan: isi sendiri bila perlu (ketik atau pilih dari daftar). Urutan masalah bisa diatur dengan tombol \u25b2 \u25bc. Jawaban sementara dibuat tanpa membuka gadget atau literatur.</p>
   <datalist id="sj-names">${NAMES.map(x => `<option value="${esc(x)}">`).join('')}</datalist>
   <div id="sj-soal">${soal.map((x, qi) => `<div class="sj-q" data-qi="${qi}">
@@ -5057,12 +5060,12 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
   <div class="sj-laphead"><span>Nama</span><span>Kategori</span><span>Jawaban</span><span>Sumber</span><span></span></div>
   <div id="sj-lap">${lap.map((x, li) => `<div class="sj-lapr" data-li="${li}"><input class="modern-input" data-lby list="sj-names" placeholder="Nama" value="${esc(x.by)}"><input class="modern-input" data-lkat list="sj-kats" placeholder="Kategori (mis. menjawab soal)" value="${esc(x.kat)}"><textarea class="modern-input" data-la placeholder="Jawaban / informasi yang didapat">${esc(x.a)}</textarea><textarea class="modern-input" data-lsrc placeholder="Sumber (judul | link)">${esc(x.src)}</textarea><button type="button" class="btn btn-outline btn-sm" data-dellap="${li}" title="Hapus baris">\u2715</button></div>`).join('')}</div>
   <div class="sj-acts"><button type="button" class="btn btn-outline btn-sm" data-addlap>+ Tambah baris</button></div>
-  ${v.belajar ? `<p class="sj-sub" style="margin-top:12px;">Catatan lama (teks bebas dari versi sebelumnya, tetap tersimpan):</p><textarea class="modern-input" data-f="belajar">${esc(v.belajar)}</textarea>` : ''}</div>
+  ${v.belajar ? `<p class="sj-sub" style="margin-top:12px;">Catatan lama (teks bebas dari versi sebelumnya, tetap tersimpan):</p><textarea class="modern-input" data-f="belajar">${esc(v.belajar)}</textarea>` : ''}
+  ${v.sumber ? `<p class="sj-sub" style="margin-top:12px;">Daftar sumber lama (kolom sumber terpisah sudah dihapus; isi ini tetap tersimpan dan ikut ke dokumen):</p><textarea class="modern-input" data-f="sumber">${esc(v.sumber)}</textarea>` : ''}</div>
 <div class="sj-card"><h4>\ud83d\uddbc\ufe0f Gambar pendukung</h4><p class="sj-sub">Tambahkan gambar (skema, foto, tabel) untuk memperkuat alasan. Tulis keterangan di bawah tiap gambar. Foto otomatis diperkecil sebelum diunggah.${trial ? ' (Dimatikan di Mode Coba.)' : ''}</p>
   <div class="sj-imgs">${gambar.map((g, i) => `<div class="sj-img" data-url="${esc(g.url)}" data-id="${esc(g.id || '')}"><img src="${esc(imgSrc(g))}" alt="Gambar ${i + 1}" loading="lazy" referrerpolicy="no-referrer"><input class="modern-input" data-cap placeholder="Keterangan / alasan gambar ini" value="${esc(g.cap || '')}"><button type="button" class="btn btn-outline btn-sm" data-delimg="${i}">Hapus dari daftar</button></div>`).join('')}</div>
   <input type="file" id="sj-file" accept="image/*" multiple hidden>
   <div class="sj-acts"><button type="button" class="btn btn-outline btn-sm" data-addimg>+ Tambah gambar</button></div></div>
-<div class="sj-card"><h4>\ud83d\udd17 Sumber / referensi</h4><p class="sj-sub">Satu sumber per baris. Boleh <em>Judul | link</em> atau tempel link saja. Tampil di akhir dokumen.</p><textarea class="modern-input" data-f="sumber" placeholder="Guyton & Hall, Textbook of Medical Physiology | https://...">${esc(v.sumber)}</textarea></div>
 ${trial ? '' : linkCard()}
 <div class="sj-acts">
   <button type="button" class="btn btn-primary" data-save>${trial ? 'Simpan (coba) skenario ' : 'Simpan skenario '}${s.n}</button>
@@ -5073,6 +5076,25 @@ ${trial ? '' : linkCard()}
   <button type="button" class="btn btn-outline" data-cp="all">Salin ke Google Docs (semua skenario)</button>
   <span class="sj-status ${st[1]}" id="sj-state">${esc(st[0])}</span></div>
 ${trial ? '' : docsPanel()}`;
+        try {
+            const sm = r.querySelector('#sj-sum');
+            if (sm && window.__a9Sortable) {
+                window.__a9Sortable(sm, '.sj-sumrow', () => {
+                    const order = Array.from(sm.querySelectorAll('.sj-sumrow')).map(x => +x.dataset.qi);
+                    mutate(d => { const nx = order.map(i => d.soal[i]).filter(Boolean); if (nx.length === d.soal.length) d.soal = nx; });
+                });
+                sm.addEventListener('click', e => {
+                    if (e.target.closest('.a9-grip')) return;
+                    const row = e.target.closest('.sj-sumrow'); if (!row) return;
+                    const q = r.querySelectorAll('.sj-q')[+row.dataset.qi]; if (!q) return;
+                    q.scrollIntoView({ behavior: 'smooth', block: 'center' }); q.classList.add('a9-flash'); setTimeout(() => q.classList.remove('a9-flash'), 1300);
+                });
+            }
+            r.querySelectorAll('.sj-q').forEach(q => {
+                const ta = q.querySelector('[data-q]'), i = q.dataset.qi;
+                if (ta) ta.addEventListener('input', () => { const el = r.querySelector('.sj-sumrow[data-qi="' + i + '"] .sj-sumq'); if (el) el.textContent = ta.value.trim() || '(belum diisi)'; });
+            });
+        } catch (e) { }
     }
 
     // ambil isi form ke draft
@@ -6287,6 +6309,23 @@ ${view === 'pq' ? pqPane : ntPane}`;
         ns.forEach(n => (CACHE[kOf('pq', c.b, n)] || []).filter(x => !x.del).forEach(it => out.push({ it, n })));
         return out.sort((a, b) => (a.n - b.n) || (ordKey(a.it) - ordKey(b.it)));
     }
+    async function dropPq() {
+        const c = ctx(), pl = $('sjx-list'); if (!c || !pl) return;
+        const trial = !!c.trial, groups = {};
+        pl.querySelectorAll(':scope > .sjx-item').forEach(el => { const n = el.dataset.n ? +el.dataset.n : c.n; (groups[n] = groups[n] || []).push(el.dataset.id); });
+        try {
+            for (const n of Object.keys(groups)) {
+                const ids = groups[n], now = Date.now();
+                await change(kOf('pq', c.b, +n), trial, l => {
+                    const objs = ids.map(id => l.find(i => i.id === id)).filter(Boolean);
+                    const keys = objs.map(ordKey).sort((a, b) => a - b);
+                    for (let j = 1; j < keys.length; j++) if (keys[j] <= keys[j - 1]) keys[j] = keys[j - 1] + 0.001;
+                    objs.forEach((o, j) => { o.ord = keys[j]; o.upd = now; });
+                });
+            }
+        } catch (e) { fail(e); }
+        lists();
+    }
     function lists() {
         const box = $('sjx-box'), c = ctx(); if (!box || !c) return;
         const pq = itemsPq(c), openN = pq.filter(x => x.it.status !== 'done').length, doneN = pq.length - openN;
@@ -6302,11 +6341,12 @@ ${view === 'pq' ? pqPane : ntPane}`;
             pl.innerHTML = shown.length ? shown.map((x, si) => {
                 const it = x.it, done = it.status === 'done', mine = it.by === me() || isAdmin();
                 const pv = shown[si - 1] && shown[si - 1].n === x.n ? shown[si - 1].it.id : '', nx = shown[si + 1] && shown[si + 1].n === x.n ? shown[si + 1].it.id : '';
-                return `<div class="sjx-item${done ? ' done' : ''}" data-n="${x.n}" data-id="${esc(it.id)}"><div class="sjx-q">${esc(it.q)}</div><small>${scope === 'blok' ? 'Skenario ' + x.n + ' \u00b7 ' : ''}${esc(it.by)} \u00b7 ${esc(fmt(it.ts))}</small>` +
+                return `<div class="sjx-item a9-has-grip${done ? ' done' : ''}" data-n="${x.n}" data-id="${esc(it.id)}"><span class="a9-grip" role="button" aria-label="Seret untuk mengubah urutan" title="Seret untuk mengubah urutan">\u283f</span><div class="sjx-q">${esc(it.q)}</div><small>${scope === 'blok' ? 'Skenario ' + x.n + ' \u00b7 ' : ''}${esc(it.by)} \u00b7 ${esc(fmt(it.ts))}</small>` +
                     (done ? `<div class="sjx-a"><b>Jawaban:</b> ${linkify(it.a)}${it.aby ? ` <small>(${esc(it.aby)})</small>` : ''}${it.src ? `<br><small>Sumber: ${linkify(it.src)}</small>` : ''}</div>` : '') +
                     `<div class="sjx-acts"><button type="button" data-xa="up" data-nb="${esc(pv)}" title="Naikkan urutan"${pv ? '' : ' disabled'}>\u25b2</button><button type="button" data-xa="down" data-nb="${esc(nx)}" title="Turunkan urutan"${nx ? '' : ' disabled'}>\u25bc</button><button type="button" data-xa="ans">${done ? 'Ubah jawaban' : '\u270d\ufe0f Jawab'}</button>${done ? '<button type="button" data-xa="reopen">Buka lagi</button>' : ''}${mine ? '<button type="button" class="danger" data-xa="delq">Hapus</button>' : ''}</div></div>`;
             }).join('') : `<p class="hint" style="margin-top:12px">${flt === 'open' ? (pq.length ? 'Tidak ada pertanyaan yang tersisa. Semua sudah terjawab \ud83c\udf89' : 'Belum ada pertanyaan. Catat hal yang belum terjawab saat diskusi, lalu bawa ke pertemuan berikutnya.') : 'Tidak ada data untuk filter ini.'}</p>`;
         }
+        if (pl && window.__a9Sortable) { pl._a9drop = dropPq; window.__a9Sortable(pl, '.sjx-item', () => pl._a9drop && pl._a9drop()); }
         const nl = $('sjx-nlist');
         if (nl) nl.innerHTML = nt.length ? nt.map(x => {
             const mine = x.by === me() || isAdmin();
@@ -8339,11 +8379,12 @@ window.A9_VERSION = APP_VERSION;
 
     async function doLogin(nim, pwOverride) {
         const pw = pwOverride !== undefined ? pwOverride : $('a9l-pw1').value;
-        if (!pw) { alert('Masukkan password.'); return; }
+        if (!pw) { alert('Masukkan password.'); return { ok: false, alasan: 'kosong' }; }
         if (!isAdminNim(nim) && dbData.maintenance) { alert('\u26a0\ufe0f PORTAL SEDANG MAINTENANCE.'); return; }
         const r = await rpc('a9_login', { p_nim: nim, p_pw: pw });
-        if (!r.ok) { alert(errText(r)); return; }
+        if (!r.ok) { alert(errText(r)); return r; }
         offerSaveCreds(nim, pw, r.nama);
+        try { if (window.__a9OnLogin) window.__a9OnLogin(nim, pw, r); } catch (e) { }
         if (r.role !== 'admin') ls.set(LAST_NIM, nim);
         ['a9l-pw1', 'a9l-pw2', 'a9l-email', 'a9l-kode'].forEach(id => { if ($(id)) $(id).value = ''; });
         if (r.role === 'admin') currentUser = { role: 'admin', name: 'Admin Utama' };
@@ -8352,7 +8393,10 @@ window.A9_VERSION = APP_VERSION;
             currentUser = { role: 'guest', name: prof.name || r.nama, fullName: r.nama, nim: nim };
         }
         finishLogin();
+        return r;
     }
+    window.__a9Rpc = rpc;
+    window.__a9BioLogin = (nim, pw) => { if (L.busy) return Promise.resolve(null); L.busy = true; return doLogin(nim, pw).finally(() => { L.busy = false; }); };
 
     async function kirimKode(nim) {
         if (!RESET_MAIL_URL) { alert('Fitur kirim kode belum diaktifkan (RESET_MAIL_URL di script.js masih kosong). Hubungi admin.'); return; }
@@ -9572,4 +9616,393 @@ html body.a9soft.a9aura #login-page .card, html body.a9soft.a9aura #login-page .
         }, { passive: true });
     }
     loginFx(); window.addEventListener('DOMContentLoaded', loginFx); setTimeout(loginFx, 400);
+})();
+
+// ==========================================================================
+// BAGIAN 25 - BENTUK BARU "KAPSUL & SQUIRCLE" (bukan sekadar ganti warna)
+//   - Navigasi: HP = dock melayang berbentuk kapsul; laptop = pulau kapsul di tengah (menu ganti halaman meluncur).
+//   - Kartu: sudut sangat bulat tanpa garis tepi, judul diberi lencana ikon, tiap judul bagian punya penanda warna.
+//   - Isian, tombol, filter: semua berbentuk kapsul. Kotak filter berkas diubah jadi deretan kapsul.
+//   - Daftar berkas Materi/Lab/Tutorial: kartu poster, kartu pertama lebih besar (gaya bento), kondisi kosong yang ramah.
+//   - Seret-untuk-urut (dipakai Rangkuman pertanyaan & daftar Pertanyaan belum terjawab).
+//   Hanya tampilan; data dan fungsi tidak disentuh.
+// ==========================================================================
+(function () {
+    'use strict';
+
+    // ---------- Seret untuk mengatur urutan (mouse & sentuh) ----------
+    window.__a9Sortable = function (list, itemSel, onDrop) {
+        if (!list || list.dataset.a9sort) return;
+        list.dataset.a9sort = '1';
+        const items = () => Array.prototype.filter.call(list.children, el => el.matches(itemSel));
+        list.addEventListener('pointerdown', e => {
+            if (e.button != null && e.button > 0) return;
+            const grip = e.target.closest && e.target.closest('.a9-grip'); if (!grip || !list.contains(grip)) return;
+            const item = grip.closest(itemSel); if (!item || item.parentNode !== list) return;
+            e.preventDefault();
+            const group = item.dataset.n || '', before = items();
+            item.classList.add('a9-dragging'); list.classList.add('a9-sorting');
+            try { grip.setPointerCapture(e.pointerId); } catch (x) { }
+            let lastY = e.clientY, raf = 0;
+            const place = y => {
+                const sibs = items().filter(x => x !== item && (x.dataset.n || '') === group);
+                let tgt = null;
+                for (const s of sibs) { const r = s.getBoundingClientRect(); if (y < r.top + r.height / 2) { tgt = s; break; } }
+                if (tgt) { if (item.nextElementSibling !== tgt) list.insertBefore(item, tgt); }
+                else if (sibs.length) { const last = sibs[sibs.length - 1]; if (last.nextElementSibling !== item) last.after(item); }
+            };
+            const auto = () => {
+                raf = 0; const h = window.innerHeight, edge = 70; let dy = 0;
+                if (lastY < edge) dy = -Math.ceil((edge - lastY) / 5); else if (lastY > h - edge) dy = Math.ceil((lastY - (h - edge)) / 5);
+                if (dy) { window.scrollBy(0, dy); place(lastY); raf = requestAnimationFrame(auto); }
+            };
+            const move = ev => { lastY = ev.clientY; place(lastY); if (!raf) raf = requestAnimationFrame(auto); };
+            const end = () => {
+                grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', end); grip.removeEventListener('pointercancel', end);
+                cancelAnimationFrame(raf); item.classList.remove('a9-dragging'); list.classList.remove('a9-sorting');
+                try { grip.releasePointerCapture(e.pointerId); } catch (x) { }
+                const after = items();
+                if (after.some((el, i) => el !== before[i])) { try { onDrop(); } catch (x) { console.error(x); } }
+            };
+            grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
+        });
+    };
+
+    // ---------- Gaya bentuk ----------
+    const css = document.createElement('style');
+    css.id = 'a9-shape';
+    css.textContent = `
+html body.a9soft.a9aura.a9shape { --r-xl: 32px; --r-lg: 24px; --r-md: 18px; --pill: 999px; }
+
+/* titik-titik halus di latar (bentuk, bukan warna) */
+html body.a9soft.a9aura.a9shape::after { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .5;
+  background-image: radial-gradient(var(--border-strong) 1px, transparent 1.3px); background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 0%, #000, transparent 75%); mask-image: radial-gradient(ellipse 70% 55% at 50% 0%, #000, transparent 75%); }
+
+/* ================= Navigasi ================= */
+@media (min-width: 769px) {
+  html body.a9soft.a9aura.a9shape .simple-nav { background: linear-gradient(var(--bg-base) 62%, transparent) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; border: 0 !important; box-shadow: none !important; padding: 14px 16px 8px; }
+  html body.a9soft.a9aura.a9shape #sn-main { width: fit-content; max-width: 100%; margin: 0 auto; padding: 6px; gap: 2px; border-radius: 30px; border: 1px solid var(--border-color); background: var(--bg-card); box-shadow: var(--shadow-lg); }
+  html body.a9soft.a9aura.a9shape #sn-sub { width: fit-content; max-width: 100%; margin: 10px auto 0; padding: 5px; border-radius: 24px; background: var(--input-bg); border: 1px solid var(--border-color); box-shadow: none; }
+  html body.a9soft.a9aura.a9shape #sn-main .nav-pill { transition: transform .3s cubic-bezier(.3,1.4,.4,1), color .25s; }
+  html body.a9soft.a9aura.a9shape #sn-main .nav-pill:hover { transform: translateY(-3px) scale(1.07); }
+  html body.a9soft.a9aura.a9shape #sn-main .nav-pill:active { transform: scale(.95); }
+}
+@media (max-width: 768px) {
+  html body.a9soft.a9aura.a9shape { padding-bottom: 112px; }
+  html body.a9soft.a9aura.a9shape #sn-main { left: 12px !important; right: 12px !important; bottom: calc(10px + env(safe-area-inset-bottom)) !important; border-radius: 30px !important; border: 1px solid var(--border-color) !important;
+    padding: 6px !important; background: var(--bg-card); box-shadow: 0 22px 44px -14px rgba(10,14,30,.42), 0 2px 6px rgba(10,14,30,.08) !important; }
+  html body.a9soft.a9aura.a9shape #sn-sub { border-radius: 22px; background: var(--input-bg); border: 1px solid var(--border-color); }
+  html body.a9soft.a9aura.a9shape #toast-wrap { bottom: 124px; } html body.a9soft.a9aura.a9shape #to-top { bottom: 128px; }
+}
+
+/* ================= Kartu & judul ================= */
+html body.a9soft.a9aura.a9shape .card { border: 0; border-radius: var(--r-xl);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border-color) 70%, transparent), 0 1px 2px rgba(20,24,40,.04), 0 24px 48px -28px rgba(20,24,40,.28) !important; }
+html body.a9soft.a9aura.a9shape .card:hover { box-shadow: 0 0 0 1px var(--border-strong), 0 1px 2px rgba(20,24,40,.05), 0 30px 56px -28px rgba(20,24,40,.36) !important; }
+html body.a9soft.a9aura.a9shape.theme-dark .card { box-shadow: 0 0 0 1px color-mix(in srgb, var(--border-color) 80%, transparent), 0 28px 52px -28px rgba(0,0,0,.8) !important; }
+html body.a9soft.a9aura.a9shape .card-header { border-bottom: 0 !important; padding-bottom: 4px; }
+html body.a9soft.a9aura.a9shape .card-title, html body.a9soft.a9aura.a9shape .card-header > h1, html body.a9soft.a9aura.a9shape .card-header > h2, html body.a9soft.a9aura.a9shape .card-header > h3 { font-size: 1.35rem; display: flex; align-items: center; gap: 12px; }
+.a9-ib { display: inline-grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 16px; font-size: 22px; line-height: 1;
+  background: var(--primary-light); box-shadow: inset 0 0 0 1px var(--primary-bd); transform: rotate(-4deg); transition: transform .35s cubic-bezier(.3,1.5,.4,1); }
+.card:hover .a9-ib { transform: rotate(3deg) scale(1.08); }
+html body.a9soft.a9aura.a9shape .greeting { border-radius: 38px 38px 38px 10px; }
+
+/* ================= Tombol, chip, isian ================= */
+html body.a9soft.a9aura.a9shape .btn, html body.a9soft.a9aura.a9shape .chip, html body.a9soft.a9aura.a9shape .sj-tabs button, html body.a9soft.a9aura.a9shape .sjx-tabs button,
+html body.a9soft.a9aura.a9shape .sjx-chips button, html body.a9soft.a9aura.a9shape .sj-bloks button, html body.a9soft.a9aura.a9shape .sj-hints button, html body.a9soft.a9aura.a9shape .sjx-acts button { border-radius: var(--pill); }
+html body.a9soft.a9aura.a9shape .btn-sm { padding-left: 14px; padding-right: 14px; }
+html body.a9soft.a9aura.a9shape .modern-input { border-radius: 18px; }
+html body.a9soft.a9aura.a9shape select.modern-input { border-radius: var(--pill); }
+html body.a9soft.a9aura.a9shape .option-label { border-radius: 22px; }
+html body.a9soft.a9aura.a9shape .modal-content, html body.a9soft.a9aura.a9shape #preview-modal > div, html body.a9soft.a9aura.a9shape #admin-settings-modal > div, html body.a9soft.a9aura.a9shape .fd-modal, html body.a9soft.a9aura.a9shape .a9s-sheet { border-radius: 32px; }
+html body.a9soft.a9aura.a9shape .a9s-card { border-radius: 26px; }
+
+/* ================= Daftar berkas (Materi, Lab, Skills Lab, Tutorial) ================= */
+html body.a9soft.a9aura.a9shape .lb-top { display: flex; gap: 12px; align-items: center; }
+html body.a9soft.a9aura.a9shape .lb-top .fd-search { flex: 1; min-width: 0; height: 54px; padding: 0 22px; border-radius: var(--pill); font-size: 16px; background: var(--input-bg); border: 1px solid transparent; box-shadow: inset 0 0 0 1px var(--border-color); }
+html body.a9soft.a9aura.a9shape .lb-top .fd-search:focus { background: var(--bg-card); box-shadow: 0 0 0 4px var(--ring), inset 0 0 0 1px var(--primary); }
+html body.a9soft.a9aura.a9shape .fd-views { display: inline-flex; padding: 5px; gap: 4px; border-radius: var(--pill); background: var(--input-bg); box-shadow: inset 0 0 0 1px var(--border-color); border: 0; }
+html body.a9soft.a9aura.a9shape .fd-vbtn { width: 44px; height: 44px; border-radius: 50%; border: 0; background: transparent; color: var(--text-muted); font-size: 18px; cursor: pointer; transition: background-color .25s, transform .25s cubic-bezier(.3,1.5,.4,1), color .2s; }
+html body.a9soft.a9aura.a9shape .fd-vbtn.active { background: var(--bg-card); color: var(--primary-text); box-shadow: 0 6px 14px -6px rgba(20,24,40,.35); transform: scale(1.06); }
+html body.a9soft.a9aura.a9shape .lb-filters { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 6px; }
+html body.a9soft.a9aura.a9shape .lb-f { display: inline-flex; flex-direction: row; align-items: center; gap: 8px; margin: 0; padding: 2px 6px 2px 16px; border-radius: var(--pill); background: var(--input-bg); box-shadow: inset 0 0 0 1px var(--border-color); transition: box-shadow .25s; }
+html body.a9soft.a9aura.a9shape .lb-f:focus-within { box-shadow: 0 0 0 3px var(--ring), inset 0 0 0 1px var(--primary); }
+html body.a9soft.a9aura.a9shape .lb-f > span { font-size: 12px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
+html body.a9soft.a9aura.a9shape .lb-f select.modern-input { width: auto; min-width: 120px; max-width: 220px; border: 0; background-color: transparent; box-shadow: none; padding: 10px 8px; margin: 0; }
+html body.a9soft.a9aura.a9shape .lb-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0 6px; }
+html body.a9soft.a9aura.a9shape .lb-count { margin-right: auto; font-weight: 600; color: var(--text-muted); padding: 6px 14px; border-radius: var(--pill); background: var(--primary-light); color: var(--primary-text); }
+html body.a9soft.a9aura.a9shape .lb-bar .chip.active { background: var(--primary); color: var(--on-primary); border-color: transparent; }
+html body.a9soft.a9aura.a9shape .lb:not(.lb-list) .lb-grid { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 18px; }
+@media (min-width: 900px) { html body.a9soft.a9aura.a9shape .lb:not(.lb-list) .lb-grid > .lb-card:first-child { grid-column: span 2; } html body.a9soft.a9aura.a9shape .lb:not(.lb-list) .lb-grid > .lb-card:first-child .lb-thumb { aspect-ratio: 21 / 9; } }
+html body.a9soft.a9aura.a9shape .lb-card { border: 0; border-radius: 28px; overflow: hidden; background: var(--bg-card); box-shadow: 0 0 0 1px var(--border-color), 0 18px 36px -24px rgba(20,24,40,.35); }
+html body.a9soft.a9aura.a9shape .lb:not(.lb-list) .lb-thumb { margin: 8px 8px 0; border-radius: 22px; overflow: hidden; }
+html body.a9soft.a9aura.a9shape .lb:not(.lb-list) .lb-body { padding: 12px 18px 18px; }
+html body.a9soft.a9aura.a9shape .lb-title { font-weight: 650; letter-spacing: -.01em; }
+html body.a9soft.a9aura.a9shape .lb-tag { border-radius: var(--pill); padding: 3px 11px; }
+html body.a9soft.a9aura.a9shape .lb-kind { border-radius: var(--pill); }
+html body.a9soft.a9aura.a9shape .lb-fav, html body.a9soft.a9aura.a9shape .lb-more { border-radius: 50%; }
+html body.a9soft.a9aura.a9shape .lb-sec { display: inline-block; margin: 18px 0 10px; padding: 5px 14px; border-radius: var(--pill); background: var(--input-bg); font-weight: 700; font-size: 13px; }
+html body.a9soft.a9aura.a9shape .lb-empty { grid-column: 1 / -1; padding: 56px 20px; border: 2px dashed var(--border-strong); border-radius: 30px; background: color-mix(in srgb, var(--primary-light) 40%, transparent); color: var(--text-muted); text-align: center; }
+html body.a9soft.a9aura.a9shape .lb-empty::before { content: '\\1F5C2\\FE0F'; display: block; font-size: 46px; margin-bottom: 10px; animation: a9bob 3.4s ease-in-out infinite; }
+@keyframes a9bob { 50% { transform: translateY(-7px) rotate(-4deg); } }
+@media (max-width: 640px) { html body.a9soft.a9aura.a9shape .lb-f { flex: 1 1 100%; } html body.a9soft.a9aura.a9shape .lb-f select.modern-input { flex: 1; max-width: none; } }
+
+/* ================= Tutorial (Seven Jump) ================= */
+html body.a9soft.a9aura.a9shape .sj-card { border: 0; border-radius: 30px; box-shadow: 0 0 0 1px var(--border-color), 0 22px 44px -30px rgba(20,24,40,.3); }
+html body.a9soft.a9aura.a9shape .sj-card h4 { position: relative; padding-left: 16px; }
+html body.a9soft.a9aura.a9shape .sj-card h4::before { content: ''; position: absolute; left: 0; top: .18em; bottom: .18em; width: 6px; border-radius: 6px; background: var(--primary); background: linear-gradient(var(--primary), var(--accent2)); }
+html body.a9soft.a9aura.a9shape .sj-q { border-radius: 24px; transition: box-shadow .4s, background-color .4s; }
+.sj-q.a9-flash { animation: a9flash 1.2s ease; } @keyframes a9flash { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 30% { box-shadow: 0 0 0 6px var(--ring); } }
+.a9-grip { display: inline-grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 12px; font-size: 18px; line-height: 1; color: var(--text-muted); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; transition: background-color .2s, color .2s; }
+.a9-grip:hover { background: var(--primary-light); color: var(--primary-text); } .a9-grip:active { cursor: grabbing; }
+.sj-sumrow { display: flex; align-items: center; gap: 12px; padding: 8px 14px 8px 8px; margin-bottom: 8px; border-radius: 22px; background: var(--input-bg); box-shadow: inset 0 0 0 1px var(--border-color); cursor: pointer; transition: background-color .2s, box-shadow .25s, transform .25s; }
+.sj-sumrow:hover { background: var(--primary-light); }
+.sj-sumn { display: inline-grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 50%; font-weight: 700; font-size: 13px; background: var(--primary); color: var(--on-primary); }
+.sj-sumq { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 550; }
+.sj-sumc { flex: none; font-size: 12px; padding: 3px 10px; border-radius: 999px; background: var(--bg-card); color: var(--text-muted); box-shadow: inset 0 0 0 1px var(--border-color); }
+.a9-dragging { position: relative; z-index: 5; background: var(--bg-card) !important; transform: scale(1.025); box-shadow: 0 24px 48px -14px rgba(0,0,0,.45), 0 0 0 2px var(--primary) !important; cursor: grabbing; transition: none !important; }
+.a9-sorting { user-select: none; -webkit-user-select: none; }
+.sjx-item.a9-has-grip { position: relative; padding-left: 48px; }
+.sjx-item.a9-has-grip > .a9-grip { position: absolute; left: 10px; top: 10px; }
+html body.a9soft.a9aura.a9shape .sjx-item { border-radius: 22px; }
+
+/* ================= Halaman masuk ================= */
+html body.a9soft.a9aura.a9shape #login-page .card, html body.a9soft.a9aura.a9shape #login-page .login-card, html body.a9soft.a9aura.a9shape #login-page .login-box, html body.a9soft.a9aura.a9shape #login-page .login-container { border-radius: 40px; }
+html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9aura.a9shape #login-page .btn { border-radius: var(--pill); }
+@media (prefers-reduced-motion: reduce) { .a9-ib, .lb-empty::before { animation: none !important; transition: none !important; } }
+`;
+    document.head.appendChild(css);
+    document.body.classList.add('a9shape');
+
+    // ---------- Lencana ikon di judul (emoji di depan judul jadi kotak melengkung) ----------
+    const EM = /^\s*((?:\p{Extended_Pictographic}|\p{Emoji_Presentation})(?:\uFE0F|\u200D\p{Extended_Pictographic}|[\u{1F3FB}-\u{1F3FF}])*)\s*/u;
+    function badges() {
+        document.querySelectorAll('.card-title, .card-header > h1, .card-header > h2, .card-header > h3').forEach(el => {
+            const f = el.firstChild; if (!f) return;
+            if (f.nodeType === 1 && f.classList && f.classList.contains('a9-ib')) return;
+            if (f.nodeType !== 3) return;
+            const m = f.nodeValue.match(EM); if (!m) return;
+            const sp = document.createElement('span'); sp.className = 'a9-ib'; sp.setAttribute('aria-hidden', 'true'); sp.textContent = m[1];
+            f.nodeValue = f.nodeValue.slice(m[0].length);
+            el.insertBefore(sp, f);
+        });
+    }
+    try { badges(); setInterval(badges, 1500); } catch (e) { }
+})();
+
+// ==========================================================================
+// BAGIAN 26 - LOGIN CEPAT: FACE ID / SIDIK JARI / WINDOWS HELLO
+//   Cara kerja (jujur): setelah login normal, kamu bisa mengaktifkan login cepat di perangkat ini.
+//   - Perangkat membuat kunci WebAuthn (Face ID / sidik jari / PIN layar). Password TIDAK disimpan polos.
+//   - Password dienkripsi AES-GCM. Kuncinya diturunkan dari verifikasi biometrik (ekstensi PRF) bila didukung,
+//     atau disimpan sebagai kunci non-ekspor di IndexedDB perangkat ini (cadangan).
+//   - Saat "Masuk cepat": biometrik diverifikasi dulu, lalu password terbuka dan dipakai login resmi ke server
+//     seperti biasa (server tetap memeriksa password). Tidak ada server yang diubah.
+//   Wajib HTTPS. Satu akun per perangkat. Bisa dimatikan kapan saja di Pengaturan.
+// ==========================================================================
+(function () {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const KEY = 'a9_bio_v1', enc = new TextEncoder(), dec = new TextDecoder();
+    const rand = n => crypto.getRandomValues(new Uint8Array(n));
+    const b64u = buf => { const b = new Uint8Array(buf); let s = ''; b.forEach(x => { s += String.fromCharCode(x); }); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+    const unb64 = str => { str = String(str).replace(/-/g, '+').replace(/_/g, '/'); while (str.length % 4) str += '='; const s = atob(str), b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); return b; };
+    const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    // ---------- dukungan perangkat ----------
+    let supported = false;
+    const ready = (async () => {
+        try {
+            supported = !!(window.isSecureContext && window.PublicKeyCredential && navigator.credentials && window.crypto && crypto.subtle && window.indexedDB
+                && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());
+        } catch (e) { supported = false; }
+        return supported;
+    })();
+
+    // ---------- penyimpanan ----------
+    const getRec = () => { try { const r = JSON.parse(localStorage.getItem(KEY) || 'null'); return r && r.cid && r.ct ? r : null; } catch (e) { return null; } };
+    const idb = () => new Promise((res, rej) => { const q = indexedDB.open('a9bio', 1); q.onupgradeneeded = () => q.result.createObjectStore('k'); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
+    const idbGet = async k => { const db = await idb(); return new Promise((res, rej) => { const r = db.transaction('k').objectStore('k').get(k); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); };
+    const idbSet = async (k, v) => { const db = await idb(); return new Promise((res, rej) => { const t = db.transaction('k', 'readwrite'); t.objectStore('k').put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); };
+    const idbDel = async k => { try { const db = await idb(); await new Promise(res => { const t = db.transaction('k', 'readwrite'); t.objectStore('k').delete(k); t.oncomplete = res; t.onerror = res; }); } catch (e) { } };
+    async function clearRec() { try { localStorage.removeItem(KEY); } catch (e) { } await idbDel('aes'); }
+
+    const aes = (raw) => crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+    async function prfGet(rawId, salt) {
+        const asr = await navigator.credentials.get({ publicKey: { challenge: rand(32), allowCredentials: [{ type: 'public-key', id: rawId }], userVerification: 'required', timeout: 60000, extensions: { prf: { eval: { first: salt } } } } });
+        const x = asr && asr.getClientExtensionResults && asr.getClientExtensionResults();
+        return x && x.prf && x.prf.results && x.prf.results.first || null;
+    }
+
+    // ---------- aktifkan ----------
+    async function enable(nim, pw, nama) {
+        if (!(await ready)) throw new Error('tidak_didukung');
+        const salt = rand(32);
+        const mk = withExt => ({ publicKey: Object.assign({
+            rp: { name: 'Portal A9' }, user: { id: rand(16), name: nim, displayName: nama || nim }, challenge: rand(32),
+            pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+            authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' },
+            timeout: 60000, attestation: 'none' }, withExt ? { extensions: { prf: { eval: { first: salt } } } } : {}) });
+        let cred;
+        try { cred = await navigator.credentials.create(mk(true)); }
+        catch (e) { if (e && (e.name === 'NotAllowedError' || e.name === 'AbortError')) throw e; cred = await navigator.credentials.create(mk(false)); }   // browser lama: ulangi tanpa ekstensi
+        if (!cred) throw new Error('batal');
+        const ext = (cred.getClientExtensionResults && cred.getClientExtensionResults()) || {};
+        let first = ext.prf && ext.prf.results && ext.prf.results.first || null;
+        if (!first && ext.prf && ext.prf.enabled) { try { first = await prfGet(cred.rawId, salt); } catch (e) { first = null; } }
+        let mode, key;
+        if (first) { mode = 'prf'; key = await aes(first); }
+        else { mode = 'key'; key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']); await idbSet('aes', key); }
+        const iv = rand(12), ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(pw));
+        localStorage.setItem(KEY, JSON.stringify({ v: 1, nim, nama: nama || '', cid: b64u(cred.rawId), mode, salt: b64u(salt), iv: b64u(iv), ct: b64u(ct) }));
+        return mode;
+    }
+
+    // ---------- masuk cepat ----------
+    let viaBio = false, busy = false;
+    async function quickLogin() {
+        const rec = getRec(); if (!rec || busy) return;
+        busy = true; setBtn(true);
+        let pw = null;
+        try {
+            const pk = { challenge: rand(32), allowCredentials: [{ type: 'public-key', id: unb64(rec.cid) }], userVerification: 'required', timeout: 60000 };
+            if (rec.mode === 'prf') pk.extensions = { prf: { eval: { first: unb64(rec.salt) } } };
+            const asr = await navigator.credentials.get({ publicKey: pk });
+            let key;
+            if (rec.mode === 'prf') {
+                const x = asr.getClientExtensionResults && asr.getClientExtensionResults();
+                const first = x && x.prf && x.prf.results && x.prf.results.first; if (!first) throw new Error('prf');
+                key = await aes(first);
+            } else key = await idbGet('aes');
+            if (!key) throw new Error('kunci');
+            pw = dec.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(rec.iv) }, key, unb64(rec.ct)));
+        } catch (e) {
+            busy = false; setBtn(false);
+            if (e && (e.name === 'NotAllowedError' || e.name === 'AbortError')) return;   // dibatalkan
+            if (confirm('Login cepat di perangkat ini rusak atau tidak bisa dibuka. Hapus lalu atur ulang dari Pengaturan?')) { await clearRec(); refreshLoginBtn(); }
+            return;
+        }
+        try {
+            viaBio = true;
+            const r = await window.__a9BioLogin(rec.nim, pw);
+            if (r && r.ok === false && r.alasan === 'salah') {
+                if (confirm('Password yang tersimpan sudah tidak cocok (mungkin sudah diganti). Hapus login cepat di perangkat ini? Masuk manual lalu aktifkan lagi di Pengaturan.')) { await clearRec(); refreshLoginBtn(); }
+            }
+        } finally { viaBio = false; busy = false; setBtn(false); pw = null; }
+    }
+
+    // ---------- tombol di halaman masuk ----------
+    function setBtn(on) { const b = $('a9-bio-login'); if (b) b.classList.toggle('busy', !!on); }
+    function refreshLoginBtn() {
+        const lp = $('login-page'); if (!lp) return;
+        let box = $('a9-bio-login'); const rec = getRec();
+        if (!rec || !supported) { if (box) box.style.display = 'none'; return; }
+        if (!box) {
+            box = document.createElement('div'); box.id = 'a9-bio-login';
+            box.innerHTML = '<button type="button" class="a9-bio-btn" id="a9-bio-go"><span class="a9-bio-ic" aria-hidden="true">\uD83D\uDD10</span><span class="a9-bio-t"><b>Masuk cepat</b><small></small></span><span class="a9-bio-arr" aria-hidden="true">\u2192</span></button><button type="button" class="a9-bio-x" id="a9-bio-x">Lupakan perangkat ini</button>';
+            const anchor = $('a9-login-form') || $('guest-fields');
+            if (!anchor || !anchor.parentNode) return;
+            anchor.parentNode.insertBefore(box, anchor);
+            $('a9-bio-go').addEventListener('click', quickLogin);
+            $('a9-bio-x').addEventListener('click', async () => { if (confirm('Hapus login cepat (Face ID / sidik jari) dari perangkat ini?')) { await clearRec(); refreshLoginBtn(); } });
+        }
+        box.style.display = '';
+        box.querySelector('small').textContent = 'Face ID / sidik jari \u00b7 ' + (rec.nama || rec.nim);
+    }
+
+    // ---------- tawaran setelah login ----------
+    let pending = null, lastNim = '';
+    window.__a9OnLogin = function (nim, pw, r) {
+        lastNim = nim;
+        if (viaBio) { pending = null; return; }
+        pending = { nim, pw, nama: r && r.nama };
+        setTimeout(offer, 1800);
+    };
+    const noKey = nim => 'a9_bio_no_' + nim;
+    async function offer() {
+        if (!pending || !(await ready) || getRec() || $('a9-bio-card')) return;
+        try { if (localStorage.getItem(noKey(pending.nim))) return; } catch (e) { }
+        const c = document.createElement('div'); c.id = 'a9-bio-card'; c.setAttribute('role', 'dialog'); c.setAttribute('aria-label', 'Aktifkan login cepat');
+        c.innerHTML = '<div class="a9-bio-card-ic" aria-hidden="true">\u26A1</div><div class="a9-bio-card-b"><b>Masuk lebih cepat?</b><span>Aktifkan Face ID / sidik jari di perangkat ini. Lain kali cukup satu sentuhan.</span><div class="a9-bio-card-a"><button type="button" class="btn btn-primary btn-sm" data-a="on">Aktifkan</button><button type="button" class="btn btn-outline btn-sm" data-a="later">Nanti</button><button type="button" class="a9-bio-never" data-a="never">Jangan tanya lagi</button></div></div>';
+        document.body.appendChild(c);
+        c.addEventListener('click', async e => {
+            const a = e.target.closest('[data-a]'); if (!a) return;
+            const act = a.dataset.a;
+            if (act === 'on') {
+                a.disabled = true;
+                try { await enable(pending.nim, pending.pw, pending.nama); pending = null; c.remove(); toast('Login cepat aktif. Lain kali tekan \u201cMasuk cepat\u201d.'); }
+                catch (err) { a.disabled = false; if (!(err && (err.name === 'NotAllowedError' || err.name === 'AbortError'))) toast('Gagal mengaktifkan: perangkat ini belum mendukung.'); }
+            } else { if (act === 'never') { try { localStorage.setItem(noKey(pending.nim), '1'); } catch (x) { } } pending = null; c.remove(); }
+        });
+    }
+    function toast(t) {
+        const d = document.createElement('div'); d.className = 'a9-bio-toast'; d.textContent = t; document.body.appendChild(d);
+        setTimeout(() => d.classList.add('out'), 3200); setTimeout(() => d.remove(), 3700);
+    }
+
+    // ---------- bagian di Pengaturan ----------
+    function drawSettings(sec) {
+        const body = sec.querySelector('#a9s-bio-body'), msg = sec.querySelector('#a9s-bio-msg'); if (!body) return;
+        const rec = getRec(), say = (t, ok) => { msg.textContent = t || ''; msg.style.color = ok ? 'var(--primary-text)' : 'var(--danger)'; };
+        const nimNow = (typeof currentUser !== 'undefined' && currentUser && (currentUser.nim || (currentUser.role === 'admin' ? lastNim : ''))) || '';
+        if (!supported) { body.innerHTML = '<p class="a9s-hint">Perangkat atau browser ini belum mendukung. Syaratnya: alamat web memakai HTTPS, serta Face ID, sidik jari, atau PIN layar sudah diaktifkan di perangkat.</p>'; return; }
+        if (rec) {
+            body.innerHTML = '<div class="a9s-row"><span>Status</span><b>Aktif \u00b7 ' + esc(rec.nama || rec.nim) + '</b></div><p class="a9s-hint">Tombol \u201cMasuk cepat\u201d muncul di halaman masuk perangkat ini.</p><button type="button" class="btn btn-outline btn-sm" id="a9s-bio-off">Matikan di perangkat ini</button>';
+            body.querySelector('#a9s-bio-off').onclick = async () => { await clearRec(); drawSettings(sec); };
+            return;
+        }
+        if (!nimNow) { body.innerHTML = '<p class="a9s-hint">Keluar lalu masuk dengan password sekali, kemudian buka lagi menu ini untuk mengaktifkannya.</p>'; return; }
+        body.innerHTML = '<div class="form-group"><label for="a9s-bio-pw">Password sekarang (untuk memastikan ini kamu)</label><input type="password" id="a9s-bio-pw" class="modern-input" autocomplete="current-password"></div><button type="button" class="btn btn-primary btn-sm" id="a9s-bio-on">Aktifkan Face ID / sidik jari</button>';
+        body.querySelector('#a9s-bio-on').onclick = async () => {
+            const pw = $('a9s-bio-pw').value; if (!pw) { say('Isi password dulu.'); return; }
+            const b = $('a9s-bio-on'); b.disabled = true; say('Memeriksa password\u2026', true);
+            try {
+                const r = await window.__a9Rpc('a9_login', { p_nim: nimNow, p_pw: pw });
+                if (!r || !r.ok) { say('Password salah atau server tidak terjangkau.'); b.disabled = false; return; }
+                say('Ikuti perintah Face ID / sidik jari\u2026', true);
+                await enable(nimNow, pw, r.nama || (currentUser && (currentUser.fullName || currentUser.name)));
+                drawSettings(sec); say('Login cepat aktif di perangkat ini.', true);
+            } catch (e) { b.disabled = false; say(e && (e.name === 'NotAllowedError' || e.name === 'AbortError') ? 'Dibatalkan.' : 'Gagal mengaktifkan di perangkat ini.'); }
+        };
+    }
+    function injectSettings(ov) {
+        if (ov.querySelector('#a9s-bio')) return;
+        const secs = Array.prototype.slice.call(ov.querySelectorAll('section.a9s-card'));
+        const anchor = secs.find(s => /Tentang web/.test((s.querySelector('h4') || {}).textContent || '')) || secs[secs.length - 1]; if (!anchor) return;
+        const sec = document.createElement('section'); sec.className = 'a9s-card'; sec.id = 'a9s-bio';
+        sec.innerHTML = '<h4>Login cepat (Face ID / sidik jari)</h4><p class="a9s-hint">Password disimpan terenkripsi di perangkat ini dan hanya terbuka setelah verifikasi Face ID, sidik jari, atau PIN perangkat.</p><div id="a9s-bio-body"></div><div id="a9s-bio-msg" class="a9s-msg"></div>';
+        anchor.parentNode.insertBefore(sec, anchor);
+        ready.then(() => drawSettings(sec));
+    }
+    new MutationObserver(() => { const ov = $('a9-set'); if (ov) injectSettings(ov); }).observe(document.body, { childList: true, subtree: true });
+
+    // ---------- gaya ----------
+    const css = document.createElement('style'); css.id = 'a9-bio-css';
+    css.textContent = `
+#a9-bio-login { display: flex; flex-direction: column; align-items: stretch; gap: 6px; margin: 0 0 16px; }
+.a9-bio-btn { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 18px 12px 12px; border: 0; border-radius: 999px; cursor: pointer; text-align: left; font: inherit; color: var(--on-primary);
+  background: var(--primary); background: linear-gradient(135deg, var(--primary), var(--accent2, var(--primary))); box-shadow: 0 16px 30px -16px var(--primary); transition: transform .25s cubic-bezier(.3,1.4,.4,1), box-shadow .25s; }
+.a9-bio-btn:hover { transform: translateY(-2px); box-shadow: 0 22px 36px -16px var(--primary); } .a9-bio-btn:active { transform: scale(.97); }
+.a9-bio-ic { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; font-size: 22px; background: rgba(255,255,255,.22); flex: none; animation: a9pulse 2.6s ease-in-out infinite; }
+@keyframes a9pulse { 50% { box-shadow: 0 0 0 9px rgba(255,255,255,.12); } }
+.a9-bio-t { display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 1.25; } .a9-bio-t b { font-size: 16px; } .a9-bio-t small { opacity: .9; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.a9-bio-arr { font-size: 20px; opacity: .9; }
+#a9-bio-login.busy .a9-bio-btn { opacity: .7; pointer-events: none; }
+.a9-bio-x { align-self: center; border: 0; background: none; color: var(--text-muted); font-size: 12px; cursor: pointer; padding: 4px 10px; text-decoration: underline; }
+#a9-bio-card { position: fixed; z-index: 100001; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); width: min(440px, calc(100vw - 24px)); transform: translateX(-50%); display: flex; gap: 14px; padding: 16px 18px; border-radius: 28px;
+  background: var(--bg-card); color: var(--text-main); box-shadow: 0 0 0 1px var(--border-color), 0 30px 60px -20px rgba(0,0,0,.5); animation: a9cardin .55s cubic-bezier(.2,1.2,.3,1) both; }
+@keyframes a9cardin { from { opacity: 0; transform: translate(-50%, 30px) scale(.94); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+.a9-bio-card-ic { display: grid; place-items: center; flex: none; width: 48px; height: 48px; border-radius: 18px; font-size: 24px; background: var(--primary-light); box-shadow: inset 0 0 0 1px var(--primary-bd); }
+.a9-bio-card-b { display: flex; flex-direction: column; gap: 4px; min-width: 0; } .a9-bio-card-b span { font-size: 13.5px; color: var(--text-muted); }
+.a9-bio-card-a { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.a9-bio-never { border: 0; background: none; color: var(--text-muted); font-size: 12px; cursor: pointer; text-decoration: underline; padding: 4px; }
+.a9-bio-toast { position: fixed; z-index: 100002; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); transform: translateX(-50%); padding: 12px 20px; border-radius: 999px; background: var(--text-main); color: var(--bg-card); font-size: 14px; box-shadow: 0 20px 40px -14px rgba(0,0,0,.5); animation: a9cardin .4s ease both; transition: opacity .4s; max-width: calc(100vw - 24px); }
+.a9-bio-toast.out { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .a9-bio-ic, #a9-bio-card, .a9-bio-toast { animation: none !important; } }
+`;
+    document.head.appendChild(css);
+
+    // pasang tombol di halaman masuk (setelah form login siap)
+    ready.then(() => { refreshLoginBtn(); setTimeout(refreshLoginBtn, 500); setTimeout(refreshLoginBtn, 1500); });
 })();
