@@ -1171,7 +1171,7 @@ body { font-size: 16px; }
         { id: 'home', ico: '\ud83c\udfe0', label: 'Beranda', tabs: [['home', 'Beranda']] },
         { id: 'kuliah', ico: '\ud83d\udcc5', label: 'Kuliah', tabs: [['jadwal', 'Jadwal'], ['tugas', 'Tugas'], ['materi', 'Materi'], ['alat', 'Alat Belajar']] },
         { id: 'praktikum', ico: '\ud83d\udd2c', label: 'Praktikum', tabs: [['lab', 'Lab'], ['skills', 'Skills Lab'], ['checklist', 'Checklist'], ['tutorial', 'Tutorial']] },
-        { id: 'latihan', ico: '\u270d\ufe0f', label: 'Latihan', tabs: () => [['soal', 'Soal Latihan'], ['cbt', 'Simulasi CBT'], isAdmin() ? ['progres-admin', 'Progres Mahasiswa'] : ['progres', 'Progres Saya'], ['game', 'Game Santai']] },
+        { id: 'latihan', ico: '\u270d\ufe0f', label: 'Latihan', tabs: () => [['soal', 'Soal Latihan'], ['cbt', 'Simulasi CBT'], isAdmin() ? ['progres-admin', 'Progres Mahasiswa'] : ['progres', 'Progres Saya'], ['game', 'Game Santai']].concat(isAdmin() ? [['kelola-soal', 'Kelola Soal']] : []) },
         { id: 'bantuan', ico: '\ud83d\udcac', label: 'Bantuan', tabs: () => [['panduan', 'Panduan'], isAdmin() ? ['laporan-admin', 'Laporan Masuk'] : ['lapor', 'Lapor Masalah']] }
     ];
     const tabsOf = g => typeof g.tabs === 'function' ? g.tabs() : g.tabs;
@@ -7168,7 +7168,7 @@ body.cbt-locked #jb-ticker { display: none !important; }
         { id: 'lab', ico: '\ud83d\udd2c', label: 'Laboratorium', more: 1, tabs: () => [['lab', 'Lab']] },
         { id: 'skills', ico: '\ud83d\udc89', label: 'Skills', more: 1, tabs: () => [['checklist', 'Checklist'], ['skills', 'Skills Lab']] },
         { id: 'tutorial', ico: '\ud83d\udc65', label: 'Tutorial', more: 1, tabs: () => [['tutorial', 'Tutorial']] },
-        { id: 'latihan', ico: '\u270d\ufe0f', label: 'Latihan', tabs: () => [['soal', 'Soal Latihan'], ['cbt', 'Simulasi CBT'], isAdmin() ? ['progres-admin', 'Progres Mahasiswa'] : ['progres', 'Progres Saya'], ['game', 'Game Santai']] },
+        { id: 'latihan', ico: '\u270d\ufe0f', label: 'Latihan', tabs: () => [['soal', 'Soal Latihan'], ['cbt', 'Simulasi CBT'], isAdmin() ? ['progres-admin', 'Progres Mahasiswa'] : ['progres', 'Progres Saya'], ['game', 'Game Santai']].concat(isAdmin() ? [['kelola-soal', 'Kelola Soal']] : []) },
         { id: 'bantuan', ico: '\ud83d\udcac', label: 'Bantuan', more: 1, tabs: () => [['panduan', 'Panduan'], isAdmin() ? ['laporan-admin', 'Laporan Masuk'] : ['lapor', 'Lapor Masalah']] }
     ];
     const main = $('sn-main'), sub = $('sn-sub');
@@ -7606,7 +7606,7 @@ body.cbt-locked #a9-notif, body.cbt-locked #a9-quick, body.cbt-locked #a9-crumb 
     const PATH = {
         home: [], jadwal: ['Kuliah', 'Jadwal'], tugas: ['Kuliah', 'Tugas'], materi: ['Kuliah', 'Materi'], alat: ['Kuliah', 'Alat Belajar'],
         lab: ['Laboratorium'], checklist: ['Skills', 'Checklist'], skills: ['Skills', 'Skills Lab'], tutorial: ['Tutorial'],
-        soal: ['Latihan', 'Soal Latihan'], cbt: ['Latihan', 'Simulasi CBT'], progres: ['Latihan', 'Progres Saya'], 'progres-admin': ['Latihan', 'Progres Mahasiswa'], game: ['Latihan', 'Game Santai'],
+        soal: ['Latihan', 'Soal Latihan'], cbt: ['Latihan', 'Simulasi CBT'], progres: ['Latihan', 'Progres Saya'], 'progres-admin': ['Latihan', 'Progres Mahasiswa'], game: ['Latihan', 'Game Santai'], 'kelola-soal': ['Latihan', 'Kelola Soal'],
         panduan: ['Bantuan', 'Panduan'], lapor: ['Bantuan', 'Lapor Masalah'], 'laporan-admin': ['Bantuan', 'Laporan Masuk'], osce: ['OSCE']
     };
     const cr = document.createElement('div');
@@ -10005,4 +10005,472 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
 
     // pasang tombol di halaman masuk (setelah form login siap)
     ready.then(() => { refreshLoginBtn(); setTimeout(refreshLoginBtn, 500); setTimeout(refreshLoginBtn, 1500); });
+})();
+
+// ==========================================================================
+// BAGIAN 27 - KELOLA SOAL LATIHAN (khusus admin): Latihan > Kelola Soal
+//   Tambah / ubah / hapus / urutkan soal lewat formulir. Tidak perlu menyentuh database.
+//   Penyimpanan tetap memakai format paket yang sama (portal_db, key "paket:<nama>"),
+//   jadi Soal Latihan di sisi mahasiswa tidak perlu diubah sama sekali.
+//   Fitur: paket baru, ubah info paket, formulir soal (A-E + gambar + pembahasan), tempel banyak soal sekaligus,
+//   daftar soal dengan pencarian, edit, hapus, dan urutan (seret atau tombol).
+// ==========================================================================
+(function () {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const isAdm = () => typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin';
+    const L5 = ['A', 'B', 'C', 'D', 'E'];
+    const main = document.querySelector('.main-content');
+    if (!main || $('tab-kelola-soal')) return;
+    main.insertAdjacentHTML('beforeend', '<div id="tab-kelola-soal" class="tab-content" style="display:none;"><div id="ks-root"></div></div>');
+    const root = $('ks-root');
+
+    let rows = {};        // nama kunci (tanpa "paket:") -> isi paket
+    let cur = null;       // paket yang sedang dikerjakan
+    let editing = null;   // id soal yang sedang diubah
+    let loaded = false, busy = false;
+
+    // ---------- data ----------
+    const parseVal = v => { if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { return null; } } return v; };
+    function norm(v, key) {
+        const arr = Array.isArray(v);
+        const o = arr || !v || typeof v !== 'object' ? {} : v;
+        return {
+            nama: String(o.nama || key || ''), deskripsi: String(o.deskripsi || ''), mk: String(o.mk || o.mata_kuliah || 'Umum') || 'Umum',
+            urutan: Number.isFinite(+o.urutan) && o.urutan !== '' && o.urutan != null ? +o.urutan : 999, aktif: o.aktif !== false, nid: +o.nid || 0,
+            soal: Array.isArray(o.soal) ? o.soal : (arr ? v : [])
+        };
+    }
+    async function getRow(key) {
+        const r = await supabaseClient.from('portal_db').select('value').eq('key', 'paket:' + key).maybeSingle();
+        if (r.error) throw r.error;
+        return r.data ? norm(parseVal(r.data.value), key) : null;
+    }
+    async function putRow(key, v) {
+        const r = await supabaseClient.from('portal_db').upsert({ key: 'paket:' + key, value: v }, { onConflict: 'key' });
+        if (r.error) throw r.error;
+    }
+    async function loadAll() {
+        if (typeof supabaseClient === 'undefined' || !supabaseClient) throw new Error('offline');
+        const r = await supabaseClient.from('portal_db').select('key,value').like('key', 'paket:%');
+        if (r.error) throw r.error;
+        rows = {};
+        (r.data || []).forEach(d => { const k = String(d.key).replace(/^paket:/, ''); if (k) rows[k] = norm(parseVal(d.value), k); });
+        loaded = true;
+    }
+    // baca terbaru -> ubah -> tulis (supaya perubahan admin lain tidak tertimpa)
+    async function change(fn) {
+        if (!cur) throw new Error('Pilih paket dulu.');
+        const v = (await getRow(cur)) || norm(null, cur);
+        const res = fn(v);
+        const maxId = v.soal.reduce((m, x) => Math.max(m, +x.id || 0), 0);
+        v.nid = Math.max(v.nid || 0, maxId);
+        await putRow(cur, v); rows[cur] = v;
+        return res;
+    }
+    const nextId = v => { v.nid = Math.max(v.nid || 0, v.soal.reduce((m, x) => Math.max(m, +x.id || 0), 0)) + 1; return v.nid; };
+
+    // ---------- kerangka ----------
+    function say(t, ok) { const m = $('ks-msg'); if (!m) return; m.textContent = t || ''; m.className = 'ks-msg ' + (ok ? 'ok' : 'err'); if (t && ok) setTimeout(() => { if (m.textContent === t) m.textContent = ''; }, 3500); }
+    function shell() {
+        root.innerHTML = `<div class="card ks">
+  <div class="card-header"><h3 class="card-title">\uD83D\uDEE0\uFE0F Kelola Soal Latihan</h3></div>
+  <p class="ks-hint">Pilih paket, lalu isi formulir untuk menambah soal satu per satu. Soal langsung tersimpan dan muncul di <b>Latihan, Soal Latihan</b> setelah mahasiswa memuat ulang halaman.</p>
+  <div class="ks-bar">
+    <label class="ks-sel"><span>Paket</span><select id="ks-paket" class="modern-input"></select></label>
+    <button type="button" class="btn btn-primary btn-sm" id="ks-new">\uFF0B Paket baru</button>
+    <button type="button" class="btn btn-outline btn-sm" id="ks-info">Info paket</button>
+  </div>
+  <div id="ks-infobox" class="ks-panel" hidden></div>
+  <div id="ks-imp" class="ks-panel ks-imp">
+    <h4>\uD83D\uDCE5 Impor dari file</h4>
+    <p class="ks-hint">Punya soal buatan AI atau dari Excel? Pilih file <b>.json</b>, <b>.csv</b>, atau <b>.txt</b> (boleh juga seret filenya ke kotak ini). Kalau di dalam file ada <code>nama</code> paket, paketnya dibuat otomatis.</p>
+    <div class="ks-btns">
+      <label class="btn btn-primary btn-sm ks-filebtn">Pilih file\u2026<input type="file" id="ks-file" accept=".json,.csv,.tsv,.txt,.md,application/json,text/csv,text/plain" hidden></label>
+      <button type="button" class="btn btn-outline btn-sm" id="ks-copy-ai">Salin perintah untuk AI</button>
+      <button type="button" class="btn btn-outline btn-sm" id="ks-dl-json">Contoh JSON</button>
+      <button type="button" class="btn btn-outline btn-sm" id="ks-dl-csv">Contoh CSV</button>
+    </div>
+  </div>
+  <div id="ks-work"></div>
+  <div id="ks-msg" class="ks-msg" role="status"></div>
+</div>`;
+        $('ks-paket').onchange = e => { cur = e.target.value || null; editing = null; paintWork(); };
+        $('ks-new').onclick = () => infoBox(true);
+        $('ks-info').onclick = () => { if (!cur) { say('Pilih paket dulu, atau buat paket baru.'); return; } infoBox(false); };
+        bindImport(); paintSelect(); paintWork();
+    }
+    function paintSelect() {
+        const sel = $('ks-paket'); if (!sel) return;
+        const keys = Object.keys(rows).sort((a, b) => (rows[a].urutan - rows[b].urutan) || rows[a].nama.localeCompare(rows[b].nama, 'id'));
+        if (cur && !rows[cur]) cur = null;
+        if (!cur && keys.length) cur = keys[0];
+        sel.innerHTML = keys.length ? keys.map(k => `<option value="${esc(k)}"${k === cur ? ' selected' : ''}>${esc(rows[k].nama)} \u00b7 ${esc(rows[k].mk)} \u00b7 ${rows[k].soal.length} soal${rows[k].aktif ? '' : ' (disembunyikan)'}</option>`).join('') : '<option value="">(belum ada paket)</option>';
+    }
+
+    // ---------- info paket ----------
+    function infoBox(isNew) {
+        const b = $('ks-infobox'); if (!b) return;
+        if (!b.hidden && b.dataset.mode === (isNew ? 'new' : 'edit')) { b.hidden = true; return; }
+        const v = isNew ? { nama: '', mk: 'Umum', deskripsi: '', urutan: 1, aktif: true } : rows[cur];
+        const mks = Array.from(new Set(Object.keys(rows).map(k => rows[k].mk)));
+        b.dataset.mode = isNew ? 'new' : 'edit'; b.hidden = false;
+        b.innerHTML = `<h4>${isNew ? 'Paket baru' : 'Info paket'}</h4>
+<div class="ks-grid">
+  <label>Nama paket<input id="ks-in-nama" class="modern-input" value="${esc(v.nama)}" placeholder="mis. Termoregulasi Blok 1.3"></label>
+  <label>Mata kuliah<input id="ks-in-mk" class="modern-input" list="ks-mks" value="${esc(v.mk)}" placeholder="mis. Fisiologi"><datalist id="ks-mks">${mks.map(m => `<option value="${esc(m)}">`).join('')}</datalist></label>
+  <label>Urutan tampil<input id="ks-in-urut" type="number" class="modern-input" value="${esc(v.urutan)}"></label>
+</div>
+<label>Deskripsi (opsional)<input id="ks-in-desk" class="modern-input" value="${esc(v.deskripsi)}"></label>
+<label class="ks-chk"><input type="checkbox" id="ks-in-aktif"${v.aktif ? ' checked' : ''}> Tampilkan ke mahasiswa</label>
+<div class="ks-btns"><button type="button" class="btn btn-primary btn-sm" id="ks-in-save">Simpan</button><button type="button" class="btn btn-outline btn-sm" id="ks-in-cancel">Tutup</button>${isNew ? '' : '<button type="button" class="btn btn-outline btn-sm ks-danger" id="ks-in-del">Hapus paket</button>'}</div>`;
+        $('ks-in-cancel').onclick = () => { b.hidden = true; };
+        $('ks-in-save').onclick = async () => {
+            const nama = $('ks-in-nama').value.trim().replace(/[:\/\\]/g, '-'); if (!nama) { say('Nama paket wajib diisi.'); return; }
+            const key = isNew ? nama : cur;
+            if (isNew && rows[key]) { say('Paket dengan nama itu sudah ada.'); return; }
+            try {
+                const old = isNew ? norm(null, key) : ((await getRow(key)) || rows[key]);
+                const nv = Object.assign({}, old, { nama, mk: $('ks-in-mk').value.trim() || 'Umum', deskripsi: $('ks-in-desk').value.trim(), urutan: +$('ks-in-urut').value || 1, aktif: $('ks-in-aktif').checked });
+                await putRow(key, nv); rows[key] = nv; cur = key; b.hidden = true; editing = null;
+                paintSelect(); paintWork(); say(isNew ? 'Paket dibuat. Sekarang tambahkan soalnya di bawah.' : 'Info paket disimpan.', true);
+            } catch (e) { console.error(e); say('Gagal menyimpan. Periksa koneksi atau izin database.'); }
+        };
+        const del = $('ks-in-del');
+        if (del) del.onclick = async () => {
+            if (!confirm('Hapus paket "' + rows[cur].nama + '" beserta ' + rows[cur].soal.length + ' soal di dalamnya? Tidak bisa dibatalkan.')) return;
+            try {
+                const r = await supabaseClient.from('portal_db').delete().eq('key', 'paket:' + cur);
+                if (r.error) throw r.error;
+                delete rows[cur]; cur = null; b.hidden = true; paintSelect(); paintWork(); say('Paket dihapus.', true);
+            } catch (e) { console.error(e); say('Tidak bisa menghapus (mungkin tidak diizinkan database). Gunakan opsi \u201cTampilkan ke mahasiswa\u201d dimatikan untuk menyembunyikan.'); }
+        };
+    }
+
+    // ---------- area kerja ----------
+    let filter = '';
+    function paintWork() {
+        const w = $('ks-work'); if (!w) return;
+        if (!cur || !rows[cur]) { w.innerHTML = '<div class="ks-empty"><div>\uD83D\uDDC2\uFE0F</div><p>Belum ada paket. Klik <b>\uFF0B Paket baru</b> untuk mulai.</p></div>'; return; }
+        const topics = Array.from(new Set(rows[cur].soal.map(x => x.topic || x.category).filter(Boolean)));
+        w.innerHTML = `<div class="ks-form ks-panel" id="ks-form">
+  <h4 id="ks-ftitle">Tambah soal</h4>
+  <label>Topik<input id="ks-topic" class="modern-input" list="ks-topics" placeholder="mis. Termoregulasi"><datalist id="ks-topics">${topics.map(t => `<option value="${esc(t)}">`).join('')}</datalist></label>
+  <label>Pertanyaan<textarea id="ks-q" class="modern-input" rows="3" placeholder="Tulis soalnya di sini"></textarea></label>
+  <div class="ks-optlabel">Pilihan jawaban <small>(kosongkan yang tidak dipakai, minimal 2. Bulatan = jawaban benar)</small></div>
+  <div id="ks-opts">${L5.map((l, i) => `<div class="ks-opt"><label class="ks-ans" title="Jawaban benar: ${l}"><input type="radio" name="ks-a" value="${i}"><span>${l}</span></label><input class="modern-input" data-o="${i}" placeholder="Pilihan ${l}"></div>`).join('')}</div>
+  <label>Pembahasan <small>(opsional, tampil setelah jawaban diperiksa)</small><textarea id="ks-e" class="modern-input" rows="2"></textarea></label>
+  <label>Link gambar <small>(opsional)</small><input id="ks-img" class="modern-input" placeholder="https://..."></label>
+  <label class="ks-chk"><input type="checkbox" id="ks-fix"> Jangan acak urutan pilihan (untuk soal \u201csemua benar\u201d dsb.)</label>
+  <div class="ks-btns"><button type="button" class="btn btn-primary" id="ks-save">Simpan soal</button><button type="button" class="btn btn-outline" id="ks-cancel" hidden>Batal ubah</button></div>
+</div>
+<details class="ks-panel ks-bulk"><summary>Tempel banyak soal sekaligus</summary>
+  <p class="ks-hint">Pisahkan tiap soal dengan satu baris kosong. Contoh:</p>
+  <pre class="ks-pre">Topik: Termoregulasi
+1. Pusat pengatur suhu tubuh terletak di ...
+A. Talamus
+B. Hipotalamus
+C. Serebelum
+D. Medula oblongata
+Jawaban: B
+Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
+  <textarea id="ks-bulk" class="modern-input" rows="8" placeholder="Tempel soal di sini"></textarea>
+  <div class="ks-btns"><button type="button" class="btn btn-primary btn-sm" id="ks-bulk-go">Baca &amp; tambahkan</button></div>
+</details>
+<div class="ks-listhead"><h4>Daftar soal <span id="ks-count"></span></h4><input id="ks-search" class="modern-input" placeholder="Cari soal atau topik\u2026" value="${esc(filter)}"></div>
+<div id="ks-list"></div>`;
+        $('ks-save').onclick = saveForm;
+        $('ks-cancel').onclick = () => { editing = null; clearForm(); setFormMode(); };
+        $('ks-bulk-go').onclick = bulkAdd;
+        $('ks-search').oninput = e => { filter = e.target.value; paintList(); };
+        paintList(); setFormMode();
+    }
+    function setFormMode() {
+        const t = $('ks-ftitle'), c = $('ks-cancel'), s = $('ks-save'); if (!t) return;
+        t.textContent = editing != null ? 'Ubah soal' : 'Tambah soal'; c.hidden = editing == null; s.textContent = editing != null ? 'Simpan perubahan' : 'Simpan soal';
+    }
+    function clearForm(keepTopic) {
+        const topic = $('ks-topic').value;
+        $('ks-q').value = ''; $('ks-e').value = ''; $('ks-img').value = ''; $('ks-fix').checked = false;
+        document.querySelectorAll('#ks-opts [data-o]').forEach(i => { i.value = ''; });
+        document.querySelectorAll('#ks-opts input[type=radio]').forEach(r => { r.checked = false; });
+        $('ks-topic').value = keepTopic ? topic : '';
+    }
+    function readForm() {
+        const q = $('ks-q').value.trim(), topic = $('ks-topic').value.trim() || 'Umum';
+        const sel = document.querySelector('#ks-opts input[type=radio]:checked');
+        const opts = []; let ans = -1;
+        document.querySelectorAll('#ks-opts [data-o]').forEach(inp => {
+            const t = inp.value.trim(); if (!t) return;
+            if (sel && +sel.value === +inp.dataset.o) ans = opts.length;
+            opts.push(t);
+        });
+        if (!q) return { err: 'Pertanyaan belum diisi.' };
+        if (opts.length < 2) return { err: 'Isi minimal 2 pilihan jawaban.' };
+        if (new Set(opts.map(o => o.toLowerCase())).size !== opts.length) return { err: 'Ada dua pilihan yang sama.' };
+        if (!sel) return { err: 'Tandai jawaban yang benar (bulatan di kiri pilihan).' };
+        if (ans < 0) return { err: 'Pilihan yang ditandai benar masih kosong.' };
+        return { ok: { topic, question: q, options: opts, answer: ans, explanation: $('ks-e').value.trim(), image: $('ks-img').value.trim(), fixed_order: $('ks-fix').checked } };
+    }
+    async function saveForm() {
+        if (busy) return; const r = readForm(); if (r.err) { say(r.err); return; }
+        busy = true; $('ks-save').disabled = true;
+        try {
+            let n = 0;
+            await change(v => {
+                if (editing != null) { const i = v.soal.findIndex(x => String(x.id) === String(editing)); if (i < 0) throw new Error('Soal yang diubah sudah tidak ada.'); v.soal[i] = Object.assign({}, v.soal[i], r.ok); n = i + 1; }
+                else { v.soal.push(Object.assign({ id: nextId(v) }, r.ok)); n = v.soal.length; }
+            });
+            const wasEdit = editing != null; editing = null; clearForm(true); setFormMode(); paintSelect(); paintList();
+            say(wasEdit ? 'Perubahan disimpan.' : 'Soal nomor ' + n + ' tersimpan. Lanjut isi soal berikutnya.', true);
+            if (!wasEdit) $('ks-q').focus();
+        } catch (e) { console.error(e); say(e && e.message && /sudah tidak ada/.test(e.message) ? e.message : 'Gagal menyimpan. Periksa koneksi atau izin database.'); }
+        finally { busy = false; const b = $('ks-save'); if (b) b.disabled = false; }
+    }
+
+    // ---------- daftar ----------
+    function paintList() {
+        const box = $('ks-list'), v = rows[cur]; if (!box || !v) return;
+        const f = filter.trim().toLowerCase();
+        const all = v.soal.map((x, i) => ({ x, i }));
+        const show = f ? all.filter(o => (String(o.x.question || '') + ' ' + String(o.x.topic || o.x.category || '')).toLowerCase().indexOf(f) >= 0) : all;
+        const cut = show.slice(0, 300), canSort = !f && all.length <= 300;
+        $('ks-count').textContent = '(' + (f ? show.length + ' dari ' : '') + all.length + ')';
+        if (!cut.length) { box.innerHTML = '<p class="ks-hint">' + (all.length ? 'Tidak ada yang cocok.' : 'Belum ada soal di paket ini. Isi formulir di atas.') + '</p>'; return; }
+        box.innerHTML = cut.map(o => {
+            const x = o.x, opts = x.options || [], a = typeof x.answer === 'number' ? x.answer : opts.indexOf(x.answer);
+            return `<div class="ks-item" data-id="${esc(x.id)}">${canSort ? '<span class="a9-grip" role="button" aria-label="Seret untuk mengubah urutan" title="Seret untuk mengubah urutan">\u283f</span>' : ''}<span class="ks-n">${o.i + 1}</span>
+<div class="ks-body"><div class="ks-q">${esc(x.question)}</div><div class="ks-meta"><span class="ks-tag">${esc(x.topic || x.category || 'Umum')}</span><span class="ks-ok">Jawaban: ${a >= 0 ? L5[a] || (a + 1) : '?'}</span><span>${opts.length} pilihan</span>${x.image ? '<span>\uD83D\uDDBC\uFE0F gambar</span>' : ''}</div></div>
+<div class="ks-acts">${canSort ? '<button type="button" class="btn btn-outline btn-sm" data-ks="up" title="Naikkan">\u25B2</button><button type="button" class="btn btn-outline btn-sm" data-ks="down" title="Turunkan">\u25BC</button>' : ''}<button type="button" class="btn btn-outline btn-sm" data-ks="edit">Ubah</button><button type="button" class="btn btn-outline btn-sm ks-danger" data-ks="del">Hapus</button></div></div>`;
+        }).join('') + (show.length > cut.length ? '<p class="ks-hint">Menampilkan 300 pertama. Gunakan pencarian untuk yang lain.</p>' : '');
+        if (canSort && window.__a9Sortable) { box._ksdrop = dropOrder; window.__a9Sortable(box, '.ks-item', () => box._ksdrop && box._ksdrop()); }
+    }
+    async function dropOrder() {
+        const ids = Array.from(document.querySelectorAll('#ks-list > .ks-item')).map(e => e.dataset.id);
+        try { await change(v => { const m = {}; v.soal.forEach(x => { m[String(x.id)] = x; }); if (ids.length === v.soal.length && ids.every(i => m[i])) v.soal = ids.map(i => m[i]); }); say('Urutan disimpan.', true); }
+        catch (e) { console.error(e); say('Gagal menyimpan urutan.'); }
+        paintList();
+    }
+    root.addEventListener('click', async e => {
+        const b = e.target.closest('[data-ks]'); if (!b) return;
+        const it = b.closest('.ks-item'); if (!it) return;
+        const id = it.dataset.id, act = b.dataset.ks, v = rows[cur];
+        if (act === 'edit') {
+            const x = v.soal.find(s => String(s.id) === id); if (!x) return;
+            editing = x.id; setFormMode();
+            $('ks-topic').value = x.topic || x.category || ''; $('ks-q').value = x.question || ''; $('ks-e').value = x.explanation || ''; $('ks-img').value = x.image || x.image_path || ''; $('ks-fix').checked = !!x.fixed_order;
+            const opts = x.options || [], a = typeof x.answer === 'number' ? x.answer : opts.indexOf(x.answer);
+            document.querySelectorAll('#ks-opts [data-o]').forEach(inp => { inp.value = opts[+inp.dataset.o] || ''; });
+            document.querySelectorAll('#ks-opts input[type=radio]').forEach(r => { r.checked = (+r.value === a); });
+            $('ks-form').scrollIntoView({ behavior: 'smooth', block: 'start' }); $('ks-q').focus();
+        } else if (act === 'del') {
+            if (!confirm('Hapus soal ini?')) return;
+            try { await change(p => { p.soal = p.soal.filter(s => String(s.id) !== id); }); if (editing != null && String(editing) === id) { editing = null; clearForm(); setFormMode(); } paintSelect(); paintList(); say('Soal dihapus.', true); }
+            catch (err) { console.error(err); say('Gagal menghapus.'); }
+        } else if (act === 'up' || act === 'down') {
+            try { await change(p => { const i = p.soal.findIndex(s => String(s.id) === id), j = act === 'up' ? i - 1 : i + 1; if (i >= 0 && j >= 0 && j < p.soal.length) { const t = p.soal[i]; p.soal[i] = p.soal[j]; p.soal[j] = t; } }); paintList(); }
+            catch (err) { console.error(err); say('Gagal mengubah urutan.'); }
+        }
+    });
+
+    // ---------- tempel banyak soal ----------
+    function parseBulk(text, defTopic) {
+        const blocks = String(text).replace(/\r/g, '').split(/\n\s*\n+/).map(b => b.trim()).filter(Boolean), ok = [], bad = [];
+        blocks.forEach((b, bi) => {
+            let topic = defTopic, q = [], opts = [], ans = '', exp = '', img = '', mode = 'q', m;
+            b.split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
+                if ((m = l.match(/^(?:topik|kategori)\s*[:=]\s*(.+)$/i))) { topic = m[1].trim(); return; }
+                if ((m = l.match(/^(?:jawaban|kunci|answer)\s*[:=]\s*(.+)$/i))) { ans = m[1].trim(); mode = 'x'; return; }
+                if ((m = l.match(/^(?:pembahasan|penjelasan|explanation)\s*[:=]\s*(.*)$/i))) { exp = m[1].trim(); mode = 'e'; return; }
+                if ((m = l.match(/^(?:gambar|image)\s*[:=]\s*(.+)$/i))) { img = m[1].trim(); return; }
+                if ((m = l.match(/^\(?([A-Ea-e])[\.\)]\s+(.+)$/)) && (q.length || mode === 'q')) { opts.push({ k: m[1].toUpperCase(), t: m[2].trim() }); mode = 'o'; return; }
+                if (mode === 'o' && opts.length) opts[opts.length - 1].t += ' ' + l; else if (mode === 'e') exp += ' ' + l; else if (mode === 'q') q.push(l);
+            });
+            const qt = q.join(' ').replace(/^\s*(?:soal\s*)?\d+\s*[\.\):]\s*/i, '').trim(), no = 'Soal ke-' + (bi + 1);
+            if (!qt) { bad.push(no + ': pertanyaan tidak terbaca'); return; }
+            if (opts.length < 2) { bad.push(no + ': pilihan jawaban kurang dari 2'); return; }
+            let ai = -1; const letter = ans.replace(/[\.\)\s]/g, '').toUpperCase();
+            if (/^[A-E]$/.test(letter)) ai = opts.findIndex(o => o.k === letter);
+            if (ai < 0 && ans) ai = opts.findIndex(o => o.t.toLowerCase() === ans.toLowerCase());
+            if (ai < 0) { bad.push(no + ': jawaban benar tidak ditemukan'); return; }
+            ok.push({ topic: topic || 'Umum', question: qt, options: opts.map(o => o.t), answer: ai, explanation: exp.trim(), image: img, fixed_order: false });
+        });
+        return { ok, bad };
+    }
+    async function bulkAdd() {
+        if (busy) return; const txt = $('ks-bulk').value; if (!txt.trim()) { say('Tempel soalnya dulu.'); return; }
+        const r = parseBulk(txt, $('ks-topic').value.trim() || 'Umum');
+        if (!r.ok.length) { say(r.bad.length ? r.bad.slice(0, 4).join('; ') : 'Tidak ada soal yang terbaca.'); return; }
+        const note = r.bad.length ? '\n\n' + r.bad.length + ' soal dilewati:\n- ' + r.bad.slice(0, 6).join('\n- ') : '';
+        if (!confirm('Terbaca ' + r.ok.length + ' soal. Tambahkan ke paket "' + rows[cur].nama + '"?' + note)) return;
+        busy = true;
+        try { await change(v => { r.ok.forEach(s => v.soal.push(Object.assign({ id: nextId(v) }, s))); }); $('ks-bulk').value = ''; paintSelect(); paintList(); say(r.ok.length + ' soal ditambahkan.', true); }
+        catch (e) { console.error(e); say('Gagal menyimpan. Periksa koneksi atau izin database.'); }
+        finally { busy = false; }
+    }
+
+    // ---------- impor dari file (JSON / CSV / TXT) ----------
+    const KEYS = {
+        q: ['question', 'pertanyaan', 'soal', 'q'], opts: ['options', 'opsi', 'pilihan', 'choices'], ans: ['answer', 'jawaban', 'kunci', 'jawaban_benar', 'correct', 'kunci_jawaban'],
+        topic: ['topic', 'topik', 'kategori', 'category'], exp: ['explanation', 'pembahasan', 'penjelasan'], img: ['image', 'gambar', 'image_path', 'link_gambar'], fix: ['fixed_order', 'urutan_tetap', 'tetap']
+    };
+    function gk(x, list) { const lk = {}; Object.keys(x).forEach(k => { lk[String(k).trim().toLowerCase().replace(/\s+/g, '_')] = x[k]; }); for (const k of list) { const v = lk[k]; if (v != null && String(v).trim() !== '') return v; } return ''; }
+    function normItem(x, no, zeroBased) {
+        const bad = m => ({ bad: 'Soal ke-' + no + ': ' + m });
+        if (!x || typeof x !== 'object') return bad('bentuknya tidak dikenali');
+        const q = String(gk(x, KEYS.q)).trim(); if (!q) return bad('pertanyaan kosong');
+        let raw = gk(x, KEYS.opts), texts = [], letters = [];
+        if (Array.isArray(raw)) raw.forEach((t, i) => { const s = String(t == null ? '' : t).replace(/^\s*\(?[A-Ea-e][\.\)]\s+/, '').trim(); if (s) { texts.push(s); letters.push(L5[i]); } });
+        else if (raw && typeof raw === 'object') L5.forEach(l => { const s = String(raw[l] != null ? raw[l] : (raw[l.toLowerCase()] != null ? raw[l.toLowerCase()] : '')).trim(); if (s) { texts.push(s); letters.push(l); } });
+        else L5.forEach(l => { const s = String(gk(x, [l.toLowerCase(), 'opsi_' + l.toLowerCase(), 'pilihan_' + l.toLowerCase(), 'option_' + l.toLowerCase()])).trim(); if (s) { texts.push(s); letters.push(l); } });
+        if (texts.length < 2) return bad('pilihan jawaban kurang dari 2');
+        if (new Set(texts.map(t => t.toLowerCase())).size !== texts.length) return bad('ada dua pilihan yang sama');
+        const a = gk(x, KEYS.ans); let ai = -1;
+        if (typeof a === 'number' || /^\d+$/.test(String(a).trim())) { const n = +a, k = zeroBased ? n : n - 1; if (k >= 0 && k < texts.length) ai = k; }
+        else { const s = String(a).trim(), lt = s.replace(/[\.\)\s]/g, '').toUpperCase(); if (/^[A-E]$/.test(lt)) ai = letters.indexOf(lt); if (ai < 0 && s) ai = texts.findIndex(t => t.toLowerCase() === s.toLowerCase()); }
+        if (ai < 0) return bad('jawaban benar tidak ditemukan (tulis huruf A-E)');
+        const fx = String(gk(x, KEYS.fix)).trim().toLowerCase();
+        return { ok: { topic: String(gk(x, KEYS.topic)).trim() || 'Umum', question: q, options: texts, answer: ai, explanation: String(gk(x, KEYS.exp)).trim(), image: String(gk(x, KEYS.img)).trim(), fixed_order: fx === 'true' || fx === '1' || fx === 'ya' } };
+    }
+    function parseCSV(text) {
+        text = text.replace(/^\uFEFF/, '');
+        const first = text.split('\n')[0] || '', d = [';', '\t', ','].map(c => [c, first.split(c).length]).sort((a, b) => b[1] - a[1])[0][0];
+        const out = []; let row = [], f = '', q = false;
+        for (let i = 0; i < text.length; i++) {
+            const c = text[i];
+            if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+            else if (c === '"') q = true;
+            else if (c === d) { row.push(f); f = ''; }
+            else if (c === '\n') { row.push(f); out.push(row); row = []; f = ''; }
+            else if (c !== '\r') f += c;
+        }
+        row.push(f); out.push(row);
+        return out.filter(r => r.some(c => String(c).trim() !== ''));
+    }
+    function fromList(list, meta) {
+        const nums = list.map(x => x && typeof x === 'object' ? gk(x, KEYS.ans) : '');
+        const zero = nums.some(a => (typeof a === 'number' && a === 0) || String(a).trim() === '0');
+        const ok = [], bad = [];
+        list.forEach((x, i) => { const r = normItem(x, i + 1, zero); if (r.ok) ok.push(r.ok); else bad.push(r.bad); });
+        return { ok, bad, meta: meta || {} };
+    }
+    function readText(text, name) {
+        text = String(text).replace(/^\uFEFF/, '');
+        const ext = (String(name).split('.').pop() || '').toLowerCase(), t0 = text.trim()[0];
+        if (ext === 'json' || t0 === '{' || t0 === '[') {
+            let j; try { j = JSON.parse(text.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '')); } catch (e) { throw new Error('File JSON tidak valid (' + e.message + '). Pastikan AI mengeluarkan JSON saja, tanpa kalimat pembuka.'); }
+            if (Array.isArray(j)) return fromList(j, {});
+            const list = j.soal || j.questions || j.items || j.data;
+            if (!Array.isArray(list)) throw new Error('Daftar soal tidak ditemukan. Di JSON harus ada bagian "soal": [ ... ].');
+            return fromList(list, { nama: j.nama || j.name || '', mk: j.mk || j.mata_kuliah || '', deskripsi: j.deskripsi || '', urutan: j.urutan });
+        }
+        if (ext === 'csv' || ext === 'tsv') {
+            const rows2 = parseCSV(text); if (rows2.length < 2) throw new Error('CSV kosong atau tidak ada baris soal.');
+            const head = rows2[0].map(h => String(h).trim());
+            return fromList(rows2.slice(1).map(r => { const o = {}; head.forEach((h, i) => { o[h] = r[i]; }); return o; }), {});
+        }
+        const r = parseBulk(text, 'Umum');
+        return { ok: r.ok, bad: r.bad, meta: {} };
+    }
+    const normQ = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    async function importFile(file) {
+        if (busy || !file) return;
+        if (file.size > 2 * 1024 * 1024) { say('File terlalu besar (maksimal 2 MB).'); return; }
+        let r; try { r = readText(await file.text(), file.name); } catch (e) { say(e.message || 'File tidak bisa dibaca.'); return; }
+        if (!r.ok.length) { say(r.bad.length ? 'Tidak ada soal yang valid. ' + r.bad.slice(0, 3).join('; ') : 'Tidak ada soal yang terbaca di file ini.'); return; }
+        const nama = String(r.meta.nama || '').trim().replace(/[:\/\\]/g, '-');
+        const key = nama || cur; if (!key) { say('Pilih paket dulu, atau tulis "nama" paket di dalam file.'); return; }
+        busy = true;
+        try {
+            const exist = await getRow(key), isNew = !exist, v = exist || norm(null, key);
+            const have = new Set(v.soal.map(x => normQ(x.question))), fresh = [];
+            let dup = 0;
+            r.ok.forEach(s => { const k = normQ(s.question); if (have.has(k)) dup++; else { have.add(k); fresh.push(s); } });
+            if (!fresh.length) { say('Semua soal di file ini sudah ada di paket "' + v.nama + '".'); return; }
+            const s0 = fresh[0], note = (dup ? '\nDilewati karena sudah ada: ' + dup : '') + (r.bad.length ? '\nBermasalah (dilewati): ' + r.bad.length + '\n- ' + r.bad.slice(0, 5).join('\n- ') : '');
+            if (!confirm('Paket: "' + v.nama + '" (' + (isNew ? 'baru' : 'sudah ada, berisi ' + v.soal.length + ' soal') + ')\nAkan ditambahkan: ' + fresh.length + ' soal' + note
+                + '\n\nPeriksa contoh:\n"' + s0.question.slice(0, 90) + '"\nJawaban benar: ' + s0.options[s0.answer] + '\n\nLanjutkan?')) return;
+            if (isNew) { v.nama = nama || key; v.mk = String(r.meta.mk || '').trim() || 'Umum'; v.deskripsi = String(r.meta.deskripsi || '').trim(); v.urutan = Number.isFinite(+r.meta.urutan) && r.meta.urutan !== '' && r.meta.urutan != null ? +r.meta.urutan : (Object.keys(rows).length + 1); v.aktif = true; }
+            fresh.forEach(s => v.soal.push(Object.assign({ id: nextId(v) }, s)));
+            await putRow(key, v); rows[key] = v; cur = key; editing = null;
+            paintSelect(); paintWork(); say(fresh.length + ' soal berhasil diimpor ke "' + v.nama + '".', true);
+        } catch (e) { console.error(e); say('Gagal menyimpan. Periksa koneksi atau izin database.'); }
+        finally { busy = false; }
+    }
+    const SAMPLE = { nama: 'Contoh Paket Termoregulasi', mk: 'Fisiologi', deskripsi: 'Soal latihan blok 1.3', soal: [
+        { topik: 'Termoregulasi', pertanyaan: 'Pusat pengatur suhu tubuh terletak di ...', opsi: ['Talamus', 'Hipotalamus', 'Serebelum', 'Medula oblongata', 'Korteks serebri'], jawaban: 'B', pembahasan: 'Hipotalamus anterior dan posterior mengatur suhu tubuh.', gambar: '' },
+        { topik: 'Termoregulasi', pertanyaan: 'Mekanisme kehilangan panas tubuh melalui kontak langsung dengan benda dingin disebut ...', opsi: ['Konduksi', 'Konveksi', 'Radiasi', 'Evaporasi', 'Metabolisme'], jawaban: 'A', pembahasan: 'Konduksi adalah perpindahan panas melalui kontak langsung.', gambar: '' } ] };
+    const SAMPLE_CSV = '\uFEFFtopik,pertanyaan,A,B,C,D,E,jawaban,pembahasan,gambar\r\nTermoregulasi,Pusat pengatur suhu tubuh terletak di ...,Talamus,Hipotalamus,Serebelum,Medula oblongata,Korteks serebri,B,Hipotalamus mengatur suhu tubuh.,\r\nTermoregulasi,"Konduksi adalah perpindahan panas melalui ...",Kontak langsung,Aliran udara,Gelombang elektromagnetik,Penguapan,Metabolisme,A,,\r\n';
+    const AI_PROMPT = [
+        'Buatkan soal pilihan ganda dari materi yang saya lampirkan di bawah. Keluarkan HANYA JSON yang valid (tanpa kalimat pembuka, tanpa penjelasan, tanpa tanda ```), persis dengan bentuk ini:',
+        '', '{', '  "nama": "NAMA PAKET",', '  "mk": "MATA KULIAH",', '  "deskripsi": "satu kalimat singkat",', '  "soal": [', '    {', '      "topik": "nama topik singkat",', '      "pertanyaan": "teks soal",', '      "opsi": ["pilihan A", "pilihan B", "pilihan C", "pilihan D", "pilihan E"],', '      "jawaban": "B",', '      "pembahasan": "alasan jawaban benar, 1-3 kalimat"', '    }', '  ]', '}', '',
+        'Aturan:', '- Jumlah soal: GANTI_JUMLAH.', '- Tiap soal punya 5 pilihan (A sampai E). Teks pilihan JANGAN diawali huruf "A." atau "B.".', '- "jawaban" berupa satu huruf A sampai E saja.', '- Tiap soal wajib punya "topik" dan "pembahasan".', '- Jangan ada soal kembar. Sebarkan jawaban benar secara acak di A sampai E.', '- Gunakan Bahasa Indonesia, gaya soal ujian kedokteran.', '', 'MATERI:', '(tempel materi di sini)'
+    ].join('\n');
+    function download(name, text, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: type })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+    async function copyText(t) { try { await navigator.clipboard.writeText(t); return true; } catch (e) { try { const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (x) { return false; } } }
+    function bindImport() {
+        const inp = $('ks-file'), box = $('ks-imp'); if (!inp || !box) return;
+        inp.onchange = () => { const f = inp.files && inp.files[0]; inp.value = ''; if (f) importFile(f); };
+        $('ks-dl-json').onclick = () => download('contoh-soal.json', JSON.stringify(SAMPLE, null, 2), 'application/json');
+        $('ks-dl-csv').onclick = () => download('contoh-soal.csv', SAMPLE_CSV, 'text/csv');
+        $('ks-copy-ai').onclick = async () => { say((await copyText(AI_PROMPT)) ? 'Perintah untuk AI sudah disalin. Tempel ke ChatGPT / Claude / Gemini bersama materimu.' : 'Tidak bisa menyalin otomatis. Salin manual dari kotak di bawah.', true); };
+        ['dragenter', 'dragover'].forEach(ev => box.addEventListener(ev, e => { e.preventDefault(); box.classList.add('drag'); }));
+        ['dragleave', 'drop'].forEach(ev => box.addEventListener(ev, e => { e.preventDefault(); box.classList.remove('drag'); }));
+        box.addEventListener('drop', e => { const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if (f) importFile(f); });
+    }
+
+    // ---------- buka tab ----------
+    async function open() {
+        if (!isAdm()) { root.innerHTML = '<div class="card"><p>Halaman ini khusus admin.</p></div>'; return; }
+        if (!loaded) { root.innerHTML = '<div class="card"><p class="ks-hint">\u23F3 Memuat paket soal\u2026</p></div>'; try { await loadAll(); } catch (e) { root.innerHTML = '<div class="card"><p class="ks-hint">Gagal memuat. Periksa koneksi lalu buka ulang menu ini.</p></div>'; return; } }
+        shell();
+    }
+    const prev = window.switchTab;
+    window.switchTab = function (t) { const r = prev.apply(this, arguments); if (t === 'kelola-soal') { loaded = false; open(); } return r; };
+
+    // ---------- gaya ----------
+    const st = document.createElement('style');
+    st.textContent = `
+#ks-root .ks-hint { color: var(--text-muted); font-size: 14px; margin: 4px 0 12px; }
+#ks-root .ks-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-bottom: 12px; }
+#ks-root .ks-sel { display: flex; flex-direction: column; gap: 4px; flex: 1 1 260px; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; }
+#ks-root .ks-sel select { margin: 0; text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 15px; color: var(--text-main); }
+#ks-root .ks-panel { background: var(--input-bg); border-radius: 24px; padding: 18px; margin: 12px 0; box-shadow: inset 0 0 0 1px var(--border-color); }
+#ks-root .ks-panel[hidden] { display: none; }
+#ks-root .ks-panel h4, #ks-root .ks-listhead h4 { margin: 0 0 10px; }
+#ks-root label { display: block; font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 10px; }
+#ks-root label small { font-weight: 400; color: var(--text-muted); }
+#ks-root label .modern-input, #ks-root label textarea { display: block; width: 100%; box-sizing: border-box; margin-top: 5px; font-weight: 400; }
+#ks-root .ks-grid { display: grid; grid-template-columns: 2fr 1.2fr .8fr; gap: 10px; }
+#ks-root .ks-optlabel { font-size: 13px; font-weight: 600; margin: 4px 0 8px; } #ks-root .ks-optlabel small { font-weight: 400; color: var(--text-muted); }
+#ks-root .ks-opt { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+#ks-root .ks-opt .modern-input { margin: 0; flex: 1; width: auto; }
+#ks-root .ks-ans { position: relative; margin: 0; cursor: pointer; flex: none; }
+#ks-root .ks-ans input { position: absolute; opacity: 0; inset: 0; cursor: pointer; margin: 0; }
+#ks-root .ks-ans span { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; font-weight: 700; background: var(--bg-card); color: var(--text-muted); box-shadow: inset 0 0 0 2px var(--border-strong); transition: background-color .2s, color .2s, box-shadow .2s, transform .25s cubic-bezier(.3,1.5,.4,1); }
+#ks-root .ks-ans input:checked + span { background: var(--primary); color: var(--on-primary); box-shadow: 0 8px 18px -8px var(--primary); transform: scale(1.1); }
+#ks-root .ks-ans input:focus-visible + span { box-shadow: 0 0 0 4px var(--ring); }
+#ks-root .ks-chk { display: flex; align-items: center; gap: 8px; font-weight: 500; } #ks-root .ks-chk input { width: auto; margin: 0; }
+#ks-root .ks-imp.drag { box-shadow: 0 0 0 3px var(--primary), inset 0 0 0 1px var(--primary); background: var(--primary-light); }
+#ks-root .ks-imp code { background: var(--bg-card); padding: 1px 6px; border-radius: 8px; }
+#ks-root .ks-filebtn { cursor: pointer; margin: 0; display: inline-flex; align-items: center; color: var(--on-primary); font-weight: 600; }
+#ks-root .ks-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+#ks-root .ks-danger { color: var(--danger); border-color: var(--danger-bd); }
+#ks-root .ks-msg { min-height: 20px; margin-top: 10px; font-size: 14px; font-weight: 600; } #ks-root .ks-msg.ok { color: var(--primary-text); } #ks-root .ks-msg.err { color: var(--danger); }
+#ks-root .ks-bulk summary { cursor: pointer; font-weight: 700; } #ks-root .ks-bulk[open] summary { margin-bottom: 8px; }
+#ks-root .ks-pre { background: var(--bg-card); border-radius: 16px; padding: 12px 14px; font-size: 12.5px; line-height: 1.5; overflow-x: auto; margin: 0 0 10px; white-space: pre; }
+#ks-root .ks-listhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 20px 0 10px; } #ks-root .ks-listhead input { max-width: 280px; margin: 0; }
+#ks-root .ks-listhead span { color: var(--text-muted); font-weight: 500; font-size: 14px; }
+#ks-root .ks-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-bottom: 8px; border-radius: 20px; background: var(--bg-card); box-shadow: 0 0 0 1px var(--border-color); transition: box-shadow .25s; }
+#ks-root .ks-item:hover { box-shadow: 0 0 0 1px var(--primary-bd), 0 12px 24px -16px rgba(20,24,40,.3); }
+#ks-root .ks-n { flex: none; display: grid; place-items: center; min-width: 32px; height: 32px; padding: 0 6px; border-radius: 12px; font-weight: 700; font-size: 13px; background: var(--primary-light); color: var(--primary-text); }
+#ks-root .ks-body { flex: 1; min-width: 0; } #ks-root .ks-q { font-weight: 550; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#ks-root .ks-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 4px; font-size: 12px; color: var(--text-muted); }
+#ks-root .ks-tag { padding: 1px 10px; border-radius: 999px; background: var(--input-bg); box-shadow: inset 0 0 0 1px var(--border-color); } #ks-root .ks-ok { color: var(--primary-text); font-weight: 700; }
+#ks-root .ks-acts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; flex: none; max-width: 210px; }
+#ks-root .ks-empty { text-align: center; padding: 44px 16px; border: 2px dashed var(--border-strong); border-radius: 28px; color: var(--text-muted); } #ks-root .ks-empty > div { font-size: 44px; }
+@media (max-width: 640px) { #ks-root .ks-grid { grid-template-columns: 1fr; } #ks-root .ks-item { flex-wrap: wrap; } #ks-root .ks-acts { max-width: none; width: 100%; justify-content: flex-start; } }
+`;
+    document.head.appendChild(st);
 })();
