@@ -5032,7 +5032,7 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
         const gambar = v.gambar || [];
         const soal = v.soal && v.soal.length ? v.soal : [{ q: '', by: '', a: [{ t: '', by: '' }] }];
         const lap = v.laporan && v.laporan.length ? v.laporan : [blankLap()];
-        const sumCard = `<div class="sj-card sj-sum"><h4>\ud83e\udded Rangkuman pertanyaan</h4><p class="sj-sub">Semua masalah yang sudah ditulis, diringkas dalam satu daftar. Tahan <b>\u283f</b> lalu seret ke atas atau ke bawah untuk mengatur urutan. Ketuk barisnya untuk melompat ke masalah itu.</p>
+        const sumCard = `<div class="sj-card sj-sum"><h4>\ud83e\udded Rangkuman pertanyaan</h4><p class="sj-sub">Semua masalah yang sudah ditulis, diringkas dalam satu daftar. Seret barisnya ke atas atau bawah untuk mengatur urutan (di HP, tahan sebentar dulu). Ketuk barisnya untuk melompat ke masalah itu.</p>
   <div id="sj-sum">${(v.soal && v.soal.length ? v.soal : []).map((x, qi) => `<div class="sj-sumrow" data-qi="${qi}"><span class="a9-grip" role="button" aria-label="Seret untuk mengubah urutan" title="Seret untuk mengubah urutan">\u283f</span><span class="sj-sumn">${qi + 1}</span><span class="sj-sumq">${esc(x.q) || '(belum diisi)'}</span><span class="sj-sumc">${(x.a || []).filter(a => a && String(a.t || '').trim()).length} jawaban</span></div>`).join('') || '<p class="sj-sub" style="margin:0">Belum ada masalah. Tambahkan di Langkah 2\u20133 di bawah.</p>'}</div></div>`;
         const used = new Set(istilah.map(x => (x.t || '').trim().toLowerCase()));
         const dl = docs[b.key] || [];
@@ -10083,8 +10083,7 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
     <button type="button" class="btn btn-outline btn-sm" id="ks-info">Info paket</button>
   </div>
   <div id="ks-infobox" class="ks-panel" hidden></div>
-  <div id="ks-imp" class="ks-panel ks-imp">
-    <h4>\uD83D\uDCE5 Impor dari file</h4>
+  <details id="ks-imp" class="ks-panel ks-imp"><summary>\uD83D\uDCC2 Impor &amp; ekspor file</summary>
     <p class="ks-hint">Punya soal buatan AI atau dari Excel? Pilih file <b>.json</b>, <b>.csv</b>, atau <b>.txt</b> (boleh juga seret filenya ke kotak ini). Kalau di dalam file ada <code>nama</code> paket, paketnya dibuat otomatis.</p>
     <div class="ks-btns">
       <label class="btn btn-primary btn-sm ks-filebtn">Pilih file\u2026<input type="file" id="ks-file" accept=".json,.csv,.tsv,.txt,.md,application/json,text/csv,text/plain" hidden></label>
@@ -10092,7 +10091,11 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
       <button type="button" class="btn btn-outline btn-sm" id="ks-dl-json">Contoh JSON</button>
       <button type="button" class="btn btn-outline btn-sm" id="ks-dl-csv">Contoh CSV</button>
     </div>
-  </div>
+    <label class="ks-chk"><input type="checkbox" id="ks-upd" checked> Perbarui soal yang sudah ada (dicocokkan lewat kolom <code>id</code> atau teks pertanyaan)</label>
+    <h4 style="margin-top:14px">Ekspor, edit di luar, impor lagi</h4>
+    <p class="ks-hint">Unduh paket yang sedang dipilih, ubah di Excel atau editor teks, lalu impor kembali. Jangan ubah kolom <code>id</code>, supaya soal lama diperbarui dan tidak ditambah ganda.</p>
+    <div class="ks-btns"><button type="button" class="btn btn-outline btn-sm" id="ks-ex-json">Unduh paket (JSON)</button><button type="button" class="btn btn-outline btn-sm" id="ks-ex-csv">Unduh paket (CSV)</button></div>
+  </details>
   <div id="ks-work"></div>
   <div id="ks-msg" class="ks-msg" role="status"></div>
 </div>`;
@@ -10154,7 +10157,8 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
         const w = $('ks-work'); if (!w) return;
         if (!cur || !rows[cur]) { w.innerHTML = '<div class="ks-empty"><div>\uD83D\uDDC2\uFE0F</div><p>Belum ada paket. Klik <b>\uFF0B Paket baru</b> untuk mulai.</p></div>'; return; }
         const topics = Array.from(new Set(rows[cur].soal.map(x => x.topic || x.category).filter(Boolean)));
-        w.innerHTML = `<div class="ks-form ks-panel" id="ks-form">
+        w.innerHTML = `<div class="ks-stats" id="ks-stats"></div><div class="ks-seg" role="tablist"><button type="button" data-pane="list" class="on">Daftar soal</button><button type="button" data-pane="form">\uFF0B Tambah / ubah</button><button type="button" data-pane="bulk">Tempel banyak</button></div>
+<div class="ks-pane" data-p="form"><div class="ks-form ks-panel" id="ks-form">
   <h4 id="ks-ftitle">Tambah soal</h4>
   <label>Topik<input id="ks-topic" class="modern-input" list="ks-topics" placeholder="mis. Termoregulasi"><datalist id="ks-topics">${topics.map(t => `<option value="${esc(t)}">`).join('')}</datalist></label>
   <label>Pertanyaan<textarea id="ks-q" class="modern-input" rows="3" placeholder="Tulis soalnya di sini"></textarea></label>
@@ -10164,8 +10168,8 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
   <label>Link gambar <small>(opsional)</small><input id="ks-img" class="modern-input" placeholder="https://..."></label>
   <label class="ks-chk"><input type="checkbox" id="ks-fix"> Jangan acak urutan pilihan (untuk soal \u201csemua benar\u201d dsb.)</label>
   <div class="ks-btns"><button type="button" class="btn btn-primary" id="ks-save">Simpan soal</button><button type="button" class="btn btn-outline" id="ks-cancel" hidden>Batal ubah</button></div>
-</div>
-<details class="ks-panel ks-bulk"><summary>Tempel banyak soal sekaligus</summary>
+</div></div>
+<div class="ks-pane" data-p="bulk"><div class="ks-panel ks-bulk"><h4>Tempel banyak soal sekaligus</h4>
   <p class="ks-hint">Pisahkan tiap soal dengan satu baris kosong. Contoh:</p>
   <pre class="ks-pre">Topik: Termoregulasi
 1. Pusat pengatur suhu tubuh terletak di ...
@@ -10177,14 +10181,24 @@ Jawaban: B
 Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
   <textarea id="ks-bulk" class="modern-input" rows="8" placeholder="Tempel soal di sini"></textarea>
   <div class="ks-btns"><button type="button" class="btn btn-primary btn-sm" id="ks-bulk-go">Baca &amp; tambahkan</button></div>
-</details>
-<div class="ks-listhead"><h4>Daftar soal <span id="ks-count"></span></h4><input id="ks-search" class="modern-input" placeholder="Cari soal atau topik\u2026" value="${esc(filter)}"></div>
-<div id="ks-list"></div>`;
+</div></div>
+<div class="ks-pane on" data-p="list"><div class="ks-listhead"><h4>Daftar soal <span id="ks-count"></span></h4><input id="ks-search" class="modern-input" placeholder="Cari soal atau topik\u2026" value="${esc(filter)}"></div>
+<div id="ks-list"></div></div>`;
         $('ks-save').onclick = saveForm;
-        $('ks-cancel').onclick = () => { editing = null; clearForm(); setFormMode(); };
+        $('ks-cancel').onclick = () => { editing = null; clearForm(); setFormMode(); pane('list'); };
         $('ks-bulk-go').onclick = bulkAdd;
+        document.querySelectorAll('#ks-work .ks-seg button').forEach(b => { b.onclick = () => pane(b.dataset.pane); });
         $('ks-search').oninput = e => { filter = e.target.value; paintList(); };
-        paintList(); setFormMode();
+        paintList(); setFormMode(); pane(editing != null || !rows[cur].soal.length ? 'form' : 'list');
+    }
+    function pane(name) {
+        document.querySelectorAll('#ks-work .ks-pane').forEach(p => p.classList.toggle('on', p.dataset.p === name));
+        document.querySelectorAll('#ks-work .ks-seg button').forEach(b => b.classList.toggle('on', b.dataset.pane === name));
+    }
+    function paintStats(v) {
+        const el = $('ks-stats'); if (!el) return;
+        const tp = new Set(v.soal.map(x => x.topic || x.category || 'Umum'));
+        el.innerHTML = '<span><b>' + v.soal.length + '</b> soal</span><span><b>' + tp.size + '</b> topik</span><span>' + esc(v.mk) + '</span><span class="' + (v.aktif ? 'on' : 'off') + '">' + (v.aktif ? 'Tampil ke mahasiswa' : 'Disembunyikan') + '</span>';
     }
     function setFormMode() {
         const t = $('ks-ftitle'), c = $('ks-cancel'), s = $('ks-save'); if (!t) return;
@@ -10222,7 +10236,7 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
                 if (editing != null) { const i = v.soal.findIndex(x => String(x.id) === String(editing)); if (i < 0) throw new Error('Soal yang diubah sudah tidak ada.'); v.soal[i] = Object.assign({}, v.soal[i], r.ok); n = i + 1; }
                 else { v.soal.push(Object.assign({ id: nextId(v) }, r.ok)); n = v.soal.length; }
             });
-            const wasEdit = editing != null; editing = null; clearForm(true); setFormMode(); paintSelect(); paintList();
+            const wasEdit = editing != null; editing = null; clearForm(true); setFormMode(); paintSelect(); paintList(); if (wasEdit) pane('list');
             say(wasEdit ? 'Perubahan disimpan.' : 'Soal nomor ' + n + ' tersimpan. Lanjut isi soal berikutnya.', true);
             if (!wasEdit) $('ks-q').focus();
         } catch (e) { console.error(e); say(e && e.message && /sudah tidak ada/.test(e.message) ? e.message : 'Gagal menyimpan. Periksa koneksi atau izin database.'); }
@@ -10232,6 +10246,7 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
     // ---------- daftar ----------
     function paintList() {
         const box = $('ks-list'), v = rows[cur]; if (!box || !v) return;
+        paintStats(v);
         const f = filter.trim().toLowerCase();
         const all = v.soal.map((x, i) => ({ x, i }));
         const show = f ? all.filter(o => (String(o.x.question || '') + ' ' + String(o.x.topic || o.x.category || '')).toLowerCase().indexOf(f) >= 0) : all;
@@ -10241,8 +10256,8 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
         box.innerHTML = cut.map(o => {
             const x = o.x, opts = x.options || [], a = typeof x.answer === 'number' ? x.answer : opts.indexOf(x.answer);
             return `<div class="ks-item" data-id="${esc(x.id)}">${canSort ? '<span class="a9-grip" role="button" aria-label="Seret untuk mengubah urutan" title="Seret untuk mengubah urutan">\u283f</span>' : ''}<span class="ks-n">${o.i + 1}</span>
-<div class="ks-body"><div class="ks-q">${esc(x.question)}</div><div class="ks-meta"><span class="ks-tag">${esc(x.topic || x.category || 'Umum')}</span><span class="ks-ok">Jawaban: ${a >= 0 ? L5[a] || (a + 1) : '?'}</span><span>${opts.length} pilihan</span>${x.image ? '<span>\uD83D\uDDBC\uFE0F gambar</span>' : ''}</div></div>
-<div class="ks-acts">${canSort ? '<button type="button" class="btn btn-outline btn-sm" data-ks="up" title="Naikkan">\u25B2</button><button type="button" class="btn btn-outline btn-sm" data-ks="down" title="Turunkan">\u25BC</button>' : ''}<button type="button" class="btn btn-outline btn-sm" data-ks="edit">Ubah</button><button type="button" class="btn btn-outline btn-sm ks-danger" data-ks="del">Hapus</button></div></div>`;
+<div class="ks-body"><div class="ks-q">${esc(x.question)}</div><div class="ks-meta"><span class="ks-tag">${esc(x.topic || x.category || 'Umum')}</span><span class="ks-ok">Jawaban: ${a >= 0 ? L5[a] || (a + 1) : '?'}${a >= 0 && opts[a] ? ' - ' + esc(String(opts[a]).slice(0, 40)) : ''}</span><span>${opts.length} pilihan</span>${x.image ? '<span>\uD83D\uDDBC\uFE0F gambar</span>' : ''}</div></div>
+<div class="ks-acts">${canSort ? '<button type="button" class="btn btn-outline btn-sm" data-ks="up" title="Naikkan">\u25B2</button><button type="button" class="btn btn-outline btn-sm" data-ks="down" title="Turunkan">\u25BC</button>' : ''}<button type="button" class="btn btn-outline btn-sm" data-ks="dup" title="Gandakan soal ini">Salin</button><button type="button" class="btn btn-outline btn-sm" data-ks="edit">Ubah</button><button type="button" class="btn btn-outline btn-sm ks-danger" data-ks="del">Hapus</button></div></div>`;
         }).join('') + (show.length > cut.length ? '<p class="ks-hint">Menampilkan 300 pertama. Gunakan pencarian untuk yang lain.</p>' : '');
         if (canSort && window.__a9Sortable) { box._ksdrop = dropOrder; window.__a9Sortable(box, '.ks-item', () => box._ksdrop && box._ksdrop()); }
     }
@@ -10258,7 +10273,7 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
         const id = it.dataset.id, act = b.dataset.ks, v = rows[cur];
         if (act === 'edit') {
             const x = v.soal.find(s => String(s.id) === id); if (!x) return;
-            editing = x.id; setFormMode();
+            editing = x.id; setFormMode(); pane('form');
             $('ks-topic').value = x.topic || x.category || ''; $('ks-q').value = x.question || ''; $('ks-e').value = x.explanation || ''; $('ks-img').value = x.image || x.image_path || ''; $('ks-fix').checked = !!x.fixed_order;
             const opts = x.options || [], a = typeof x.answer === 'number' ? x.answer : opts.indexOf(x.answer);
             document.querySelectorAll('#ks-opts [data-o]').forEach(inp => { inp.value = opts[+inp.dataset.o] || ''; });
@@ -10268,6 +10283,9 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
             if (!confirm('Hapus soal ini?')) return;
             try { await change(p => { p.soal = p.soal.filter(s => String(s.id) !== id); }); if (editing != null && String(editing) === id) { editing = null; clearForm(); setFormMode(); } paintSelect(); paintList(); say('Soal dihapus.', true); }
             catch (err) { console.error(err); say('Gagal menghapus.'); }
+        } else if (act === 'dup') {
+            try { await change(p => { const i = p.soal.findIndex(s => String(s.id) === id); if (i >= 0) { const c = JSON.parse(JSON.stringify(p.soal[i])); c.id = nextId(p); p.soal.splice(i + 1, 0, c); } }); paintSelect(); paintList(); say('Soal digandakan tepat di bawahnya. Klik Ubah untuk mengeditnya.', true); }
+            catch (err) { console.error(err); say('Gagal menggandakan.'); }
         } else if (act === 'up' || act === 'down') {
             try { await change(p => { const i = p.soal.findIndex(s => String(s.id) === id), j = act === 'up' ? i - 1 : i + 1; if (i >= 0 && j >= 0 && j < p.soal.length) { const t = p.soal[i]; p.soal[i] = p.soal[j]; p.soal[j] = t; } }); paintList(); }
             catch (err) { console.error(err); say('Gagal mengubah urutan.'); }
@@ -10305,7 +10323,7 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
         const note = r.bad.length ? '\n\n' + r.bad.length + ' soal dilewati:\n- ' + r.bad.slice(0, 6).join('\n- ') : '';
         if (!confirm('Terbaca ' + r.ok.length + ' soal. Tambahkan ke paket "' + rows[cur].nama + '"?' + note)) return;
         busy = true;
-        try { await change(v => { r.ok.forEach(s => v.soal.push(Object.assign({ id: nextId(v) }, s))); }); $('ks-bulk').value = ''; paintSelect(); paintList(); say(r.ok.length + ' soal ditambahkan.', true); }
+        try { await change(v => { r.ok.forEach(s => v.soal.push(Object.assign({ id: nextId(v) }, s))); }); $('ks-bulk').value = ''; paintSelect(); paintList(); pane('list'); say(r.ok.length + ' soal ditambahkan.', true); }
         catch (e) { console.error(e); say('Gagal menyimpan. Periksa koneksi atau izin database.'); }
         finally { busy = false; }
     }
@@ -10331,7 +10349,7 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
         else { const s = String(a).trim(), lt = s.replace(/[\.\)\s]/g, '').toUpperCase(); if (/^[A-E]$/.test(lt)) ai = letters.indexOf(lt); if (ai < 0 && s) ai = texts.findIndex(t => t.toLowerCase() === s.toLowerCase()); }
         if (ai < 0) return bad('jawaban benar tidak ditemukan (tulis huruf A-E)');
         const fx = String(gk(x, KEYS.fix)).trim().toLowerCase();
-        return { ok: { topic: String(gk(x, KEYS.topic)).trim() || 'Umum', question: q, options: texts, answer: ai, explanation: String(gk(x, KEYS.exp)).trim(), image: String(gk(x, KEYS.img)).trim(), fixed_order: fx === 'true' || fx === '1' || fx === 'ya' } };
+        return { ok: { id: String(gk(x, ['id', 'kode'])).trim(), topic: String(gk(x, KEYS.topic)).trim() || 'Umum', question: q, options: texts, answer: ai, explanation: String(gk(x, KEYS.exp)).trim(), image: String(gk(x, KEYS.img)).trim(), fixed_order: fx === 'true' || fx === '1' || fx === 'ya' } };
     }
     function parseCSV(text) {
         text = text.replace(/^\uFEFF/, '');
@@ -10384,17 +10402,23 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
         busy = true;
         try {
             const exist = await getRow(key), isNew = !exist, v = exist || norm(null, key);
-            const have = new Set(v.soal.map(x => normQ(x.question))), fresh = [];
-            let dup = 0;
-            r.ok.forEach(s => { const k = normQ(s.question); if (have.has(k)) dup++; else { have.add(k); fresh.push(s); } });
-            if (!fresh.length) { say('Semua soal di file ini sudah ada di paket "' + v.nama + '".'); return; }
-            const s0 = fresh[0], note = (dup ? '\nDilewati karena sudah ada: ' + dup : '') + (r.bad.length ? '\nBermasalah (dilewati): ' + r.bad.length + '\n- ' + r.bad.slice(0, 5).join('\n- ') : '');
-            if (!confirm('Paket: "' + v.nama + '" (' + (isNew ? 'baru' : 'sudah ada, berisi ' + v.soal.length + ' soal') + ')\nAkan ditambahkan: ' + fresh.length + ' soal' + note
+            const upd = $('ks-upd') ? $('ks-upd').checked : true;
+            const byId = {}, byQ = {}; v.soal.forEach(x => { byId[String(x.id)] = x; byQ[normQ(x.question)] = x; });
+            const fresh = [], changed = []; let dup = 0;
+            r.ok.forEach(s => {
+                const hit = (s.id && byId[s.id]) || byQ[normQ(s.question)];
+                if (hit) { if (upd) changed.push([hit, s]); else dup++; }
+                else { const c = Object.assign({}, s); delete c.id; fresh.push(c); byQ[normQ(c.question)] = c; }
+            });
+            if (!fresh.length && !changed.length) { say('Semua soal di file ini sudah ada di paket "' + v.nama + '".'); return; }
+            const s0 = fresh[0] || changed[0][1], note = (dup ? '\nDilewati karena sudah ada: ' + dup : '') + (r.bad.length ? '\nBermasalah (dilewati): ' + r.bad.length + '\n- ' + r.bad.slice(0, 5).join('\n- ') : '');
+            if (!confirm('Paket: "' + v.nama + '" (' + (isNew ? 'baru' : 'sudah ada, berisi ' + v.soal.length + ' soal') + ')\nAkan ditambahkan: ' + fresh.length + ' soal' + (changed.length ? '\nAkan diperbarui: ' + changed.length + ' soal' : '') + note
                 + '\n\nPeriksa contoh:\n"' + s0.question.slice(0, 90) + '"\nJawaban benar: ' + s0.options[s0.answer] + '\n\nLanjutkan?')) return;
             if (isNew) { v.nama = nama || key; v.mk = String(r.meta.mk || '').trim() || 'Umum'; v.deskripsi = String(r.meta.deskripsi || '').trim(); v.urutan = Number.isFinite(+r.meta.urutan) && r.meta.urutan !== '' && r.meta.urutan != null ? +r.meta.urutan : (Object.keys(rows).length + 1); v.aktif = true; }
-            fresh.forEach(s => v.soal.push(Object.assign({ id: nextId(v) }, s)));
+            changed.forEach(pr => { const h = pr[0], s2 = pr[1]; Object.assign(h, { topic: s2.topic, question: s2.question, options: s2.options, answer: s2.answer, explanation: s2.explanation, image: s2.image, fixed_order: s2.fixed_order }); });
+            fresh.forEach(s => v.soal.push(Object.assign({}, s, { id: nextId(v) })));
             await putRow(key, v); rows[key] = v; cur = key; editing = null;
-            paintSelect(); paintWork(); say(fresh.length + ' soal berhasil diimpor ke "' + v.nama + '".', true);
+            paintSelect(); paintWork(); say(fresh.length + ' soal ditambah, ' + changed.length + ' diperbarui di "' + v.nama + '".', true);
         } catch (e) { console.error(e); say('Gagal menyimpan. Periksa koneksi atau izin database.'); }
         finally { busy = false; }
     }
@@ -10409,11 +10433,24 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
     ].join('\n');
     function download(name, text, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: type })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
     async function copyText(t) { try { await navigator.clipboard.writeText(t); return true; } catch (e) { try { const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (x) { return false; } } }
+    function exportRows(v) {
+        return v.soal.map(x => { const o = x.options || [], a = typeof x.answer === 'number' ? x.answer : o.indexOf(x.answer);
+            return { id: x.id, topik: x.topic || x.category || 'Umum', pertanyaan: x.question || '', opsi: o, jawaban: a >= 0 ? L5[a] || '' : '', pembahasan: x.explanation || '', gambar: x.image || x.image_path || '', urutan_tetap: x.fixed_order ? 'ya' : '' }; });
+    }
+    const csvCell = t => '"' + String(t == null ? '' : t).replace(/"/g, '""') + '"';
+    function csvOf(v) {
+        const lines = ['id,topik,pertanyaan,A,B,C,D,E,jawaban,pembahasan,gambar,urutan_tetap'];
+        exportRows(v).forEach(r => lines.push([r.id, r.topik, r.pertanyaan, r.opsi[0], r.opsi[1], r.opsi[2], r.opsi[3], r.opsi[4], r.jawaban, r.pembahasan, r.gambar, r.urutan_tetap].map(csvCell).join(',')));
+        return '\uFEFF' + lines.join('\r\n');
+    }
+    const fname = v => String(v.nama).replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'paket';
     function bindImport() {
         const inp = $('ks-file'), box = $('ks-imp'); if (!inp || !box) return;
         inp.onchange = () => { const f = inp.files && inp.files[0]; inp.value = ''; if (f) importFile(f); };
         $('ks-dl-json').onclick = () => download('contoh-soal.json', JSON.stringify(SAMPLE, null, 2), 'application/json');
         $('ks-dl-csv').onclick = () => download('contoh-soal.csv', SAMPLE_CSV, 'text/csv');
+        $('ks-ex-json').onclick = () => { const v = cur && rows[cur]; if (!v) { say('Pilih paket dulu.'); return; } download(fname(v) + '.json', JSON.stringify({ nama: v.nama, mk: v.mk, deskripsi: v.deskripsi, urutan: v.urutan, soal: exportRows(v) }, null, 2), 'application/json'); };
+        $('ks-ex-csv').onclick = () => { const v = cur && rows[cur]; if (!v) { say('Pilih paket dulu.'); return; } download(fname(v) + '.csv', csvOf(v), 'text/csv'); };
         $('ks-copy-ai').onclick = async () => { say((await copyText(AI_PROMPT)) ? 'Perintah untuk AI sudah disalin. Tempel ke ChatGPT / Claude / Gemini bersama materimu.' : 'Tidak bisa menyalin otomatis. Salin manual dari kotak di bawah.', true); };
         ['dragenter', 'dragover'].forEach(ev => box.addEventListener(ev, e => { e.preventDefault(); box.classList.add('drag'); }));
         ['dragleave', 'drop'].forEach(ev => box.addEventListener(ev, e => { e.preventDefault(); box.classList.remove('drag'); }));
@@ -10470,6 +10507,20 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
 #ks-root .ks-tag { padding: 1px 10px; border-radius: 999px; background: var(--input-bg); box-shadow: inset 0 0 0 1px var(--border-color); } #ks-root .ks-ok { color: var(--primary-text); font-weight: 700; }
 #ks-root .ks-acts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; flex: none; max-width: 210px; }
 #ks-root .ks-empty { text-align: center; padding: 44px 16px; border: 2px dashed var(--border-strong); border-radius: 28px; color: var(--text-muted); } #ks-root .ks-empty > div { font-size: 44px; }
+#ks-root details.ks-imp > summary { cursor: pointer; font-weight: 700; list-style: none; }
+#ks-root details.ks-imp > summary::-webkit-details-marker { display: none; }
+#ks-root details.ks-imp[open] > summary { margin-bottom: 10px; }
+#ks-root .ks-stats { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; }
+#ks-root .ks-stats span { padding: 5px 12px; border-radius: 999px; font-size: 13px; background: var(--input-bg); box-shadow: inset 0 0 0 1px var(--border-color); color: var(--text-muted); }
+#ks-root .ks-stats b { color: var(--text-main); font-size: 15px; }
+#ks-root .ks-stats .on { background: var(--primary-light); color: var(--primary-text); } #ks-root .ks-stats .off { color: var(--danger); }
+#ks-root .ks-seg { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--input-bg); box-shadow: inset 0 0 0 1px var(--border-color); margin: 0 0 14px; }
+#ks-root .ks-seg button { flex: 1; border: 0; background: transparent; color: var(--text-muted); font: inherit; font-weight: 600; font-size: 14px; padding: 9px 10px; border-radius: 999px; cursor: pointer; transition: background-color .2s, color .2s; }
+#ks-root .ks-seg button.on { background: var(--primary); color: var(--on-primary); box-shadow: 0 8px 18px -10px var(--primary); }
+#ks-root .ks-pane { display: none; } #ks-root .ks-pane.on { display: block; animation: ksfade .25s ease; }
+@keyframes ksfade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+#ks-root .ks-pane > .ks-panel:first-child { margin-top: 0; }
+@media (max-width: 640px) { #ks-root .ks-seg button { font-size: 13px; padding: 8px 4px; } }
 @media (max-width: 640px) { #ks-root .ks-grid { grid-template-columns: 1fr; } #ks-root .ks-item { flex-wrap: wrap; } #ks-root .ks-acts { max-width: none; width: 100%; justify-content: flex-start; } }
 `;
     document.head.appendChild(st);
