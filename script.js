@@ -10616,27 +10616,54 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
         });
     };
 
-    // ---------- Pasang aplikasi ----------
+    // ---------- Unduh / pasang aplikasi (pengguna memilih sendiri) ----------
+    const APK_URL = 'portal-a9.apk';   // taruh file APK di folder yang sama dengan index.html; kosongkan '' bila tidak ada
+    const PLAY_URL = '';               // tautan Google Play (opsional)
+    const WIN_URL = '', MAC_URL = '';  // file pemasang Windows / Mac (opsional, mis. 'portal-a9-setup.exe', 'portal-a9.dmg')
     const standalone = () => navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
     const onIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const onAndroid = () => /android/i.test(navigator.userAgent);
+    const onMacSafari = () => /Macintosh/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/Chrome|Chromium|Edg|OPR|Firefox/.test(navigator.userAgent) && !(navigator.maxTouchPoints > 1);
     const KEY = 'a9-install-off';
     let dip = null, pill = null;
     const off = () => { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } };
+    function sheet() {
+        if (document.getElementById('a9-dl')) return;
+        const box = document.createElement('div'); box.id = 'a9-dl';
+        box.innerHTML = '<div class="dl-card" role="dialog" aria-label="Unduh aplikasi"><div class="dl-h"><b>Unduh aplikasi Portal A9</b><button type="button" class="dl-x" aria-label="Tutup">\u2715</button></div><p class="dl-sub">Pilih cara yang kamu mau. Semuanya memakai akun dan data yang sama.</p><div class="dl-list"></div></div>';
+        document.body.appendChild(box);
+        const list = box.querySelector('.dl-list'), close = () => box.remove();
+        const add = (ico, title, sub, fn) => { const x = document.createElement('button'); x.type = 'button'; x.className = 'dl-opt'; x.innerHTML = '<span class="dl-ico">' + ico + '</span><span><b>' + title + '</b><small>' + sub + '</small></span>'; x.onclick = fn; list.appendChild(x); return x; };
+        box.querySelector('.dl-x').onclick = close; box.onclick = e => { if (e.target === box) close(); };
+        add('\uD83D\uDCF2', 'Pasang langsung', 'Tanpa mengunduh file, selalu versi terbaru (disarankan)', async () => {
+            if (dip) { dip.prompt(); try { await dip.userChoice; } catch (e) { } dip = null; close(); if (pill) { pill.remove(); pill = null; } }
+            else if (onIOS()) alert('Di Safari: ketuk tombol Bagikan (kotak dengan panah ke atas), lalu pilih "Tambah ke Layar Utama".');
+            else alert('Buka menu browser, lalu pilih "Instal aplikasi" atau "Tambahkan ke layar utama".');
+        });
+        if (PLAY_URL) add('\u25B6\uFE0F', 'Google Play', 'Dari toko aplikasi resmi', () => { window.open(PLAY_URL, '_blank', 'noopener'); });
+        add('\uD83C\uDF4E', 'iPhone / iPad', 'Lewat Safari: Bagikan, lalu Tambah ke Layar Utama', () => { alert('Buka portal ini di Safari, ketuk tombol Bagikan (kotak dengan panah ke atas), lalu pilih "Tambah ke Layar Utama".'); });
+        add('\uD83D\uDCBB', 'Windows / Mac', 'Chrome atau Edge: ikon pasang di kolom alamat. Safari Mac: Bagikan, lalu Tambahkan ke Dock', () => { alert('Chrome atau Edge: klik ikon Pasang di ujung kanan kolom alamat, lalu Pasang.\nSafari di Mac (macOS 14 ke atas): menu File > Tambahkan ke Dock.'); });
+        [[WIN_URL, '\uD83E\uDE9F', 'Unduh untuk Windows'], [MAC_URL, '\uD83C\uDF4F', 'Unduh untuk Mac']].forEach(a => {
+            if (!a[0]) return;
+            fetch(a[0], { method: 'HEAD', cache: 'no-store' }).then(r => { if (r.ok) add(a[1], a[2], 'File pemasang. Buka setelah selesai diunduh', () => { const l = document.createElement('a'); l.href = a[0]; l.download = ''; document.body.appendChild(l); l.click(); l.remove(); }); }).catch(() => { });
+        });
+        if (APK_URL) fetch(APK_URL, { method: 'HEAD', cache: 'no-store' }).then(r => {
+            if (!r.ok) return;
+            const x = add('\uD83E\uDD16', 'Unduh APK (Android)', 'File .apk. Izinkan "instal dari sumber tidak dikenal" bila diminta', () => { const l = document.createElement('a'); l.href = APK_URL; l.download = ''; document.body.appendChild(l); l.click(); l.remove(); });
+            list.insertBefore(x, list.children[1] || null);
+        }).catch(() => { });
+    }
     function show() {
         if (pill || standalone() || off()) return;
         pill = document.createElement('div'); pill.id = 'a9-install';
-        pill.innerHTML = '<button type="button" class="in-go">\uD83D\uDCF2 Pasang aplikasi</button><button type="button" class="in-x" aria-label="Tutup">\u2715</button>';
+        pill.innerHTML = '<button type="button" class="in-go">\uD83D\uDCF2 Unduh aplikasi</button><button type="button" class="in-x" aria-label="Tutup">\u2715</button>';
         document.body.appendChild(pill);
-        pill.querySelector('.in-go').onclick = async () => {
-            if (dip) { dip.prompt(); try { await dip.userChoice; } catch (e) { } dip = null; pill.remove(); pill = null; }
-            else if (onIOS()) alert('Di Safari: ketuk tombol Bagikan (kotak dengan panah ke atas), lalu pilih "Tambah ke Layar Utama".');
-            else alert('Buka menu browser, lalu pilih "Instal aplikasi" atau "Tambahkan ke layar utama".');
-        };
+        pill.querySelector('.in-go').onclick = sheet;
         pill.querySelector('.in-x').onclick = () => { try { localStorage.setItem(KEY, '1'); } catch (e) { } pill.remove(); pill = null; };
     }
     window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); dip = e; show(); });
     window.addEventListener('appinstalled', () => { if (pill) { pill.remove(); pill = null; } });
-    if (onIOS() && !standalone()) setTimeout(show, 3000);
+    if ((onIOS() || onAndroid() || onMacSafari()) && !standalone()) setTimeout(show, 3000);
 
     const st = document.createElement('style'); st.id = 'a9-b28';
     st.textContent = `
@@ -10647,7 +10674,15 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
 #a9-install button { border: 0; background: transparent; color: inherit; font: inherit; font-weight: 600; font-size: 13.5px; cursor: pointer; }
 #a9-install .in-go { padding: 10px 6px 10px 16px; } #a9-install .in-x { padding: 10px 14px 10px 8px; opacity: .8; }
 @media (min-width: 769px) { #a9-install { bottom: 20px; left: 20px; } }
-body.cbt-locked #a9-install { display: none !important; }
+body.cbt-locked #a9-install, body.cbt-locked #a9-dl { display: none !important; }
+#a9-dl { position: fixed; inset: 0; z-index: 900; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; }
+#a9-dl .dl-card { width: min(100%, 460px); background: var(--bg-card); color: var(--text-main); border-radius: 20px 20px 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); max-height: 85vh; overflow: auto; }
+#a9-dl .dl-h { display: flex; justify-content: space-between; align-items: center; font-size: 16px; }
+#a9-dl .dl-x { border: 0; background: transparent; color: var(--text-muted); font-size: 18px; padding: 6px; cursor: pointer; }
+#a9-dl .dl-sub { color: var(--text-muted); font-size: 13px; margin: 4px 0 10px; }
+#a9-dl .dl-opt { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; margin-top: 8px; padding: 12px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--bg-base); color: inherit; font: inherit; cursor: pointer; }
+#a9-dl .dl-ico { font-size: 24px; flex: none; } #a9-dl .dl-opt b { display: block; font-size: 14px; } #a9-dl .dl-opt small { display: block; color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+@media (min-width: 769px) { #a9-dl { align-items: center; } #a9-dl .dl-card { border-radius: 20px; } }
 @media (display-mode: standalone) { body { overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; } }
 `;
     document.head.appendChild(st);
