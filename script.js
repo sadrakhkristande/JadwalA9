@@ -1460,6 +1460,24 @@ body { font-size: 16px; }
         if (rem <= 0) { clearInterval(timer); timer = null; alert('\u23f0 Waktu habis! Jawaban dikumpulkan otomatis.'); finish(); }
     }
 
+    // Perbarui isi kontainer tanpa membongkar ulang semua elemen (mencegah layar berkedip & gambar dimuat ulang)
+    function morphInto(root, html) {
+        const t = document.createElement('div'); t.innerHTML = html;
+        (function sync(a, b) {
+            const ac = Array.from(a.childNodes), bc = Array.from(b.childNodes), max = Math.max(ac.length, bc.length);
+            for (let i = 0; i < max; i++) {
+                const x = ac[i], y = bc[i];
+                if (!y) { a.removeChild(x); continue; }
+                if (!x) { a.appendChild(y.cloneNode(true)); continue; }
+                if (x.nodeType !== y.nodeType || x.nodeName !== y.nodeName) { a.replaceChild(y.cloneNode(true), x); continue; }
+                if (x.nodeType === 3) { if (x.nodeValue !== y.nodeValue) x.nodeValue = y.nodeValue; continue; }
+                if (x.nodeType !== 1) continue;
+                Array.from(x.attributes).forEach(at => { if (!y.hasAttribute(at.name)) x.removeAttribute(at.name); });
+                Array.from(y.attributes).forEach(at => { if (x.getAttribute(at.name) !== at.value) x.setAttribute(at.name, at.value); });
+                sync(x, y);
+            }
+        })(root, t);
+    }
     function renderCbt() {
         const c = cbt, q = c.qs[c.idx], n = c.qs.length, ans = c.ans[q.id], rv = c.review, pr = c.mode === 'practice';
         // Mode latihan: jawaban disimpan dulu, benar/salah baru tampil setelah "Periksa jawaban"
@@ -1495,7 +1513,7 @@ body { font-size: 16px; }
         const acts = rv ? '<button class="btn btn-primary" data-act="back">\u2190 Kembali ke laporan</button>'
             : `<button class="btn btn-outline" data-act="blank">\u23ed Ke soal belum dijawab</button><button class="btn btn-primary" data-act="submit">${c.mode === 'exam' ? '\ud83d\udce4 Kumpulkan Jawaban' : '\u2705 Selesai Latihan'}</button>`;
 
-        $('cbt-question-container').innerHTML = `
+        const _cbtHtml = `
         <div class="cbtx">
           <div class="cbtx-main">
             <div class="cbtx-head">
@@ -1525,6 +1543,7 @@ body { font-size: 16px; }
             <div class="cx-side-acts">${acts}</div>
           </aside>
         </div>`;
+        morphInto($('cbt-question-container'), _cbtHtml);
     }
 
     function go(i) {
@@ -1533,7 +1552,8 @@ body { font-size: 16px; }
         if (window.innerWidth <= 900) cbt.side = false;   // di HP daftar soal menutup setelah memilih nomor
         renderCbt();
         const nx = cbt.qs[cbt.idx + 1]; if (nx && nx.image) { new Image().src = nx.image; }
-        $('cbt-question-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const _ce = $('cbt-question-container'), _top = _ce.getBoundingClientRect().top;
+        if (_top < 80 || _top > window.innerHeight * 0.6) _ce.scrollIntoView({ behavior: 'auto', block: 'start' });
     }
     // Memilih jawaban hanya menyimpannya (bisa diganti atau dibatalkan dengan klik lagi)
     function pick(i) {
@@ -10629,6 +10649,40 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
 @media (min-width: 769px) { #a9-install { bottom: 20px; left: 20px; } }
 body.cbt-locked #a9-install { display: none !important; }
 @media (display-mode: standalone) { body { overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; } }
+`;
+    document.head.appendChild(st);
+})();
+
+// ==========================================================================
+// BAGIAN 29 - HP LEBIH RINGKAS (ukuran huruf, kartu, tombol, jarak seragam)
+//   Kolom isian tetap 16px agar iPhone tidak memperbesar layar otomatis saat mengetik.
+// ==========================================================================
+(function () {
+    'use strict';
+    const st = document.createElement('style'); st.id = 'a9-b29';
+    st.textContent = `
+@media (max-width: 768px) {
+  html body:not(#z) { font-size: 14px; line-height: 1.45; }
+  body:not(#z) .main-content { padding-inline: 10px; margin: 8px auto; }
+  body:not(#z) .card { padding: 12px; margin-bottom: 10px; }
+  body:not(#z) .card > :first-child { margin-top: 0; } body:not(#z) .card > :last-child { margin-bottom: 0; }
+  body:not(#z) h1 { font-size: 21px; } body:not(#z) h2 { font-size: 17.5px; margin-bottom: 8px; }
+  body:not(#z) h3 { font-size: 15.5px; margin-bottom: 6px; } body:not(#z) h4 { font-size: 14px; margin-bottom: 6px; }
+  body:not(#z) .greeting h3 { font-size: 18px; } body:not(#z) .greeting .quote { font-size: 13px; margin-top: 4px; }
+  body:not(#z) .btn { padding: 8px 14px; font-size: 13.5px; min-height: 38px; }
+  body:not(#z) .btn-sm { padding: 6px 10px; font-size: 12.5px; min-height: 32px; }
+  body:not(#z) .modern-input { font-size: 16px; padding: 9px 12px; }
+  body:not(#z) .q-text { font-size: 14.5px; line-height: 1.5; }
+  body:not(#z) .option-label { padding: 10px 12px; font-size: 14px; min-height: 0; }
+  body:not(#z) .cbtx-title { font-size: 14.5px; } body:not(#z) .cbtx-head { margin-bottom: 8px; }
+  body:not(#z) .cbtx-nav { margin-top: 12px; padding: 8px 0; }
+  body:not(#z) .cx-btn { min-height: 34px; font-size: 12px; }
+  body:not(#z) .apres .big { font-size: 32px; } body:not(#z) .prog-stat b { font-size: 20px; }
+  body:not(#z) .lb-body { padding: 10px 12px; } body:not(#z) .vw-t b { font-size: 15px; }
+  body:not(#z) .sj-card { padding: 12px; }
+  body:not(#z) #ks-root .ks-panel { padding: 12px; }
+  body:not(#z) #ks-root .ks-seg button { font-size: 12.5px; padding: 7px 4px; }
+}
 `;
     document.head.appendChild(st);
 })();
