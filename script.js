@@ -10525,3 +10525,110 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
 `;
     document.head.appendChild(st);
 })();
+
+// ==========================================================================
+// BAGIAN 28 - GESER URUTAN LEBIH SIMPLE + TOMBOL PASANG APLIKASI
+//   1) Seret urutan (Tutorial: Rangkuman pertanyaan & Pertanyaan belum terjawab, juga Kelola Soal):
+//      cukup seret kartunya langsung. Di HP: tahan sebentar lalu geser. Pegangan titik-titik tetap bisa dipakai.
+//   2) Tombol "Pasang aplikasi" (Android/Chrome/Edge langsung, iPhone lewat petunjuk Safari).
+//      Aplikasi memakai alamat web yang sama, jadi login, data Supabase, dan notifikasi tetap satu.
+// ==========================================================================
+(function () {
+    'use strict';
+    const SKIP = 'button, a, input, textarea, select, label, summary, [contenteditable], .sjx-acts, .ks-acts';
+    window.__a9Sortable = function (list, itemSel, onDrop) {
+        if (!list || list.dataset.a9sort) return;
+        list.dataset.a9sort = '1';
+        const items = () => Array.prototype.filter.call(list.children, el => el.matches(itemSel));
+        let pressing = false;
+        list.addEventListener('contextmenu', e => { if (pressing) e.preventDefault(); });
+        list.addEventListener('pointerdown', e => {
+            if (e.button != null && e.button > 0) return;
+            const t = e.target; if (!t || !t.closest) return;
+            const grip = t.closest('.a9-grip'), item = t.closest(itemSel);
+            if (!item || item.parentNode !== list) return;
+            if (!grip && t.closest(SKIP)) return;
+            const touch = e.pointerType === 'touch' || e.pointerType === 'pen';
+            const x0 = e.clientX, y0 = e.clientY, group = item.dataset.n || '', before = items();
+            let on = false, timer = 0, lastY = y0, raf = 0;
+            const place = y => {
+                const sibs = items().filter(x => x !== item && (x.dataset.n || '') === group);
+                let tgt = null;
+                for (const s of sibs) { const r = s.getBoundingClientRect(); if (y < r.top + r.height / 2) { tgt = s; break; } }
+                if (tgt) { if (item.nextElementSibling !== tgt) list.insertBefore(item, tgt); }
+                else if (sibs.length) { const last = sibs[sibs.length - 1]; if (last.nextElementSibling !== item) last.after(item); }
+            };
+            const auto = () => {
+                raf = 0; const h = window.innerHeight, edge = 70; let dy = 0;
+                if (lastY < edge) dy = -Math.ceil((edge - lastY) / 5); else if (lastY > h - edge) dy = Math.ceil((lastY - (h - edge)) / 5);
+                if (dy) { window.scrollBy(0, dy); place(lastY); raf = requestAnimationFrame(auto); }
+            };
+            const block = ev => { if (on && ev.cancelable) ev.preventDefault(); };
+            const start = () => {
+                if (on) return; on = true; pressing = true;
+                item.classList.add('a9-dragging'); list.classList.add('a9-sorting');
+                if (navigator.vibrate) { try { navigator.vibrate(12); } catch (x) { } }
+                document.addEventListener('touchmove', block, { passive: false });
+            };
+            const move = ev => {
+                lastY = ev.clientY;
+                if (!on) {
+                    const d = Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0);
+                    if (touch && !grip) { if (d > 8) end(); return; }   // jari bergeser sebelum "tahan" selesai: biarkan layar menggulir
+                    if (d > 5) start(); else return;
+                }
+                place(lastY); if (!raf) raf = requestAnimationFrame(auto);
+            };
+            const end = () => {
+                clearTimeout(timer); cancelAnimationFrame(raf);
+                document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', end); document.removeEventListener('pointercancel', end);
+                document.removeEventListener('touchmove', block);
+                setTimeout(() => { pressing = false; }, 400);
+                if (!on) return;
+                item.classList.remove('a9-dragging'); list.classList.remove('a9-sorting');
+                const swallow = ev => { ev.stopPropagation(); ev.preventDefault(); };
+                window.addEventListener('click', swallow, true); setTimeout(() => window.removeEventListener('click', swallow, true), 60);
+                if (items().some((el, i) => el !== before[i])) { try { onDrop(); } catch (x) { console.error(x); } }
+            };
+            document.addEventListener('pointermove', move); document.addEventListener('pointerup', end); document.addEventListener('pointercancel', end);
+            if (grip) { e.preventDefault(); start(); }
+            else if (touch) { pressing = true; timer = setTimeout(start, 350); }
+        });
+    };
+
+    // ---------- Pasang aplikasi ----------
+    const standalone = () => navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    const onIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const KEY = 'a9-install-off';
+    let dip = null, pill = null;
+    const off = () => { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } };
+    function show() {
+        if (pill || standalone() || off()) return;
+        pill = document.createElement('div'); pill.id = 'a9-install';
+        pill.innerHTML = '<button type="button" class="in-go">\uD83D\uDCF2 Pasang aplikasi</button><button type="button" class="in-x" aria-label="Tutup">\u2715</button>';
+        document.body.appendChild(pill);
+        pill.querySelector('.in-go').onclick = async () => {
+            if (dip) { dip.prompt(); try { await dip.userChoice; } catch (e) { } dip = null; pill.remove(); pill = null; }
+            else if (onIOS()) alert('Di Safari: ketuk tombol Bagikan (kotak dengan panah ke atas), lalu pilih "Tambah ke Layar Utama".');
+            else alert('Buka menu browser, lalu pilih "Instal aplikasi" atau "Tambahkan ke layar utama".');
+        };
+        pill.querySelector('.in-x').onclick = () => { try { localStorage.setItem(KEY, '1'); } catch (e) { } pill.remove(); pill = null; };
+    }
+    window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); dip = e; show(); });
+    window.addEventListener('appinstalled', () => { if (pill) { pill.remove(); pill = null; } });
+    if (onIOS() && !standalone()) setTimeout(show, 3000);
+
+    const st = document.createElement('style'); st.id = 'a9-b28';
+    st.textContent = `
+.sjx-item.a9-has-grip, .sj-sumrow { cursor: grab; }
+.sjx-item.a9-has-grip .sjx-acts button { cursor: pointer; }
+@media (pointer: coarse) { .sjx-item.a9-has-grip, .sj-sumrow, .ks-item { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; } }
+#a9-install { position: fixed; left: 12px; bottom: calc(120px + env(safe-area-inset-bottom)); z-index: 40; display: flex; align-items: center; background: var(--primary); color: var(--on-primary); border-radius: 999px; box-shadow: 0 14px 30px -12px rgba(0,0,0,.45); }
+#a9-install button { border: 0; background: transparent; color: inherit; font: inherit; font-weight: 600; font-size: 13.5px; cursor: pointer; }
+#a9-install .in-go { padding: 10px 6px 10px 16px; } #a9-install .in-x { padding: 10px 14px 10px 8px; opacity: .8; }
+@media (min-width: 769px) { #a9-install { bottom: 20px; left: 20px; } }
+body.cbt-locked #a9-install { display: none !important; }
+@media (display-mode: standalone) { body { overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; } }
+`;
+    document.head.appendChild(st);
+})();
