@@ -565,7 +565,7 @@ function startClock() {
 // ==========================================================================
 let cbtTimeInSeconds = 0, cbtStarted = false;
 let cbtMode = 'practice';
-const EXAM_DURATION = 100 * 60; // 100 menit
+let EXAM_DURATION = 100 * 60; // bawaan 100 menit; diubah tiap sesi sesuai jumlah soal (1 menit per soal), lihat Bagian 20B
 
 function cbtFormatTime(total) {
     if (total < 0) total = 0;
@@ -1100,7 +1100,7 @@ body { font-size: 16px; }
         <details><summary>5. Soal Latihan</summary>
           <ol><li>Buka <strong>Latihan, Soal Latihan</strong>. Bank berisi 200 soal Fisiologi Blok 1.3 Termoregulasi (Pretest 2023 dan materi PPT).</li><li>Pilih jumlah soal <strong>10, 20, atau 30</strong>. Kalau mau, pilih juga topik atau sumber tertentu, misalnya Demam atau Pretest 2023.</li><li>Klik <strong>Mulai Latihan</strong>. Soal diacak dan diutamakan yang belum pernah kamu kerjakan. Pilih jawaban, lalu klik <strong>Periksa jawaban</strong> untuk melihat benar atau salah beserta pembahasan.</li><li>Klik <strong>Selesai Latihan</strong> untuk melihat nilai, rekomendasi topik yang perlu diperkuat, dan review semua pembahasan. Tombol A-E atau 1-5 memilih jawaban, panah kiri/kanan pindah soal.</li></ol></details>
         <details><summary>6. Simulasi CBT</summary>
-          <ul><li><strong>Tampilan:</strong> satu soal per halaman. Pakai tombol Sebelumnya/Berikutnya, atau klik nomor di <strong>Daftar Soal</strong> untuk memilih soal mana yang mau dikerjakan.</li><li><strong>Warna nomor:</strong> abu-abu = belum dikerjakan, hijau = sudah dijawab, titik oranye = ditandai ragu-ragu.</li><li><strong>Mode Latihan:</strong> tanpa waktu. Jawaban yang kamu pilih disimpan dulu dan bisa diganti. Tekan <em>Periksa jawaban</em> untuk melihat benar/salah dan pembahasan soal itu. Menu lain tetap bisa dibuka.</li><li><strong>Mode CBT:</strong> ada waktu 100 menit (timer merah di 10 menit terakhir). Jawaban boleh diubah sebelum dikumpulkan, dan <strong>menu lain terkunci</strong> sampai jawaban dikumpulkan. Pembahasan bisa dilihat setelah dikumpulkan lewat tombol <em>Review &amp; Pembahasan</em>.</li><li><strong>Ganti mode:</strong> tombol <em>Beranda CBT</em> membawamu kembali ke pilihan mode (latihan atau ujian yang sedang jalan dibatalkan).</li><li><strong>Tombol cepat:</strong> A-E atau 1-5 untuk memilih jawaban, panah kiri/kanan untuk pindah soal, F untuk tandai ragu.</li><li>Di akhir sesi kamu mendapat apresiasi, laporan nilai, dan rekomendasi topik belajar. Hasilnya otomatis tersimpan.</li></ul></details>
+          <ul><li><strong>Atur soal:</strong> sebelum mulai, pilih <strong>kategori</strong> (boleh lebih dari satu) dan <strong>jumlah soal</strong> sesuai keinginanmu: 10, 20, 30, 50, 100, semua, atau ketik angka sendiri. Soal diambil acak dari kategori yang dipilih.</li><li><strong>Tampilan:</strong> satu soal per halaman. Pakai tombol Sebelumnya/Berikutnya, atau klik nomor di <strong>Daftar Soal</strong> untuk memilih soal mana yang mau dikerjakan.</li><li><strong>Warna nomor:</strong> abu-abu = belum dikerjakan, hijau = sudah dijawab, titik oranye = ditandai ragu-ragu.</li><li><strong>Mode Latihan:</strong> tanpa waktu. Jawaban yang kamu pilih disimpan dulu dan bisa diganti. Tekan <em>Periksa jawaban</em> untuk melihat benar/salah dan pembahasan soal itu. Menu lain tetap bisa dibuka.</li><li><strong>Mode CBT:</strong> waktu menyesuaikan jumlah soal, yaitu 1 menit per soal (100 soal = 100 menit; timer merah di 10 menit terakhir). Jawaban boleh diubah sebelum dikumpulkan, dan <strong>menu lain terkunci</strong> sampai jawaban dikumpulkan. Pembahasan bisa dilihat setelah dikumpulkan lewat tombol <em>Review &amp; Pembahasan</em>.</li><li><strong>Ganti mode:</strong> tombol <em>Beranda CBT</em> membawamu kembali ke pilihan mode (latihan atau ujian yang sedang jalan dibatalkan).</li><li><strong>Tombol cepat:</strong> A-E atau 1-5 untuk memilih jawaban, panah kiri/kanan untuk pindah soal, F untuk tandai ragu.</li><li>Di akhir sesi kamu mendapat apresiasi, laporan nilai, dan rekomendasi topik belajar. Hasilnya otomatis tersimpan.</li></ul></details>
         <details class="guest-guide"><summary>\ud83d\udcc8 Progres dan hasil belajar</summary>
           <ol><li>Setiap selesai CBT atau Soal Latihan, nilaimu tersimpan otomatis di akunmu (NIM), jadi bisa dilihat dari HP atau laptop mana pun.</li><li>Buka <strong>Latihan, Progres Saya</strong> untuk melihat grafik nilai, rata-rata, nilai terbaik, dan apakah kamu meningkat dibanding pengerjaan sebelumnya.</li><li>Bagian <em>Topik yang perlu diperkuat</em> menunjukkan topik yang paling sering salah, sebagai panduan belajar.</li></ol></details>
         <details class="guest-guide"><summary>7. Melapor masalah dan melihat perkembangannya</summary>
@@ -1441,7 +1441,7 @@ body { font-size: 16px; }
         if (!bank.length) { alert('Soal CBT belum tersedia di database (key: cbt_soal).'); return; }
         const qs = bank.slice();
         for (let i = qs.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [qs[i], qs[j]] = [qs[j], qs[i]]; }
-        cbt = { mode, qs: qs.slice(0, 100), idx: 0, ans: {}, flag: {}, chk: {}, leaves: 0, away: false, review: false, side: false, startedAt: Date.now(), endAt: mode === 'exam' ? Date.now() + EXAM_DURATION * 1000 : 0 };
+        cbt = { mode, qs: qs.slice(0, 300), idx: 0, ans: {}, flag: {}, chk: {}, leaves: 0, away: false, review: false, side: false, startedAt: Date.now(), endAt: mode === 'exam' ? Date.now() + EXAM_DURATION * 1000 : 0 };
         cbtStarted = true; cbtMode = mode; cbtTimeInSeconds = mode === 'exam' ? EXAM_DURATION : 0;
         const tm = $('cbt-timer'); tm.style.display = mode === 'exam' ? '' : 'none'; tm.textContent = cbtFormatTime(cbtTimeInSeconds);
         $('cbt-start-card').style.display = 'none'; $('cbt-result-card').style.display = 'none'; $('cbt-active-area').style.display = 'block';
@@ -5868,7 +5868,7 @@ html body.a9soft #login-page h1::after, html body.a9soft #login-page h2::after, 
     function openPicker(btn) {
         if (panel) { closePicker(); return; }
         const cur = stored();
-        const row = (id, nama, ket, sw) => `<button type="button" data-th="${id}" class="${cur === id ? 'on' : ''}"><span class="sw" style="background:${sw[0]}"><i style="background:${sw[1]}"></i></span><span><b>${nama}</b><small>${ket}</small></span>${cur === id ? '<span class="ck">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“</span>' : ''}</button>`;
+        const row = (id, nama, ket, sw) => `<button type="button" data-th="${id}" class="${cur === id ? 'on' : ''}"><span class="sw" style="background:${sw[0]}"><i style="background:${sw[1]}"></i></span><span><b>${nama}</b><small>${ket}</small></span>${cur === id ? '<span class="ck">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬ ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ</span>' : ''}</button>`;
         panel = document.createElement('div'); panel.className = 'a9-thm'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Pilih tema');
         panel.innerHTML = '<h4>Pilih tema tampilan</h4>' + THEMES.map(t => row(t.id, t.nama, t.ket, t.sw)).join('') +
             row('auto', 'Otomatis', 'Ikut mode terang / gelap perangkat', ['#f4f6f4', '#2f3a40']);
@@ -7357,7 +7357,7 @@ body.cbt-locked #jb-ticker { display: none !important; }
 
     function paint() {
         build('quiz-start-card', 'pk-wrap-isian', 'pk-sel-isian', dbData.soal, 'isian', '');
-        build('cbt-start-card', 'pk-wrap-cbt', 'pk-sel-cbt', dbData.cbt_soal, 'cbt', ' (diacak, maksimal 100)');
+        // pemilihan kategori + jumlah soal CBT sekarang ada di Bagian 20B
         addBack();
     }
 
@@ -7376,18 +7376,193 @@ body.cbt-locked #jb-ticker { display: none !important; }
     };
     window.submitQuiz = function () { return withSoal(origSubmit, this, arguments); };
 
-    // --- Simulasi CBT ---
-    const origCbt = window.startCBT;
-    window.startCBT = function () {
-        const full = dbData.cbt_soal || [], f = pick(full, sel.cbt);
-        if (full.length && !f.length) { alert('Paket ini belum berisi soal.'); return; }
-        dbData.cbt_soal = f;
-        try { return origCbt.apply(this, arguments); } finally { dbData.cbt_soal = full; }
-    };
+    // --- Simulasi CBT: dipindah ke Bagian 20B (kategori + jumlah soal pilihan mahasiswa) ---
 
     const prevRender = window.renderAll;
     window.renderAll = function () { const r = prevRender.apply(this, arguments); try { paint(); } catch (e) { console.error(e); } return r; };
     paint();
+})();
+
+// ==========================================================================
+// BAGIAN 20B - SIMULASI CBT: MAHASISWA MEMILIH KATEGORI + JUMLAH SOAL
+//   Soal CBT berasal dari dua sumber yang digabung otomatis:
+//     1) Bank CBT lama (dbData.cbt_soal), dikelompokkan lewat field paket / blok / category / topic.
+//     2) Kategori CBT baru buatan admin di Latihan > Kelola Soal > Soal CBT
+//        (tabel portal_db, key "paket:cbt~<nama>", jenis "cbt").
+//   Mahasiswa memilih satu atau beberapa kategori (kosong = semua) dan jumlah soal
+//   (10 / 20 / 30 / 50 / 100 / Semua, atau angka sendiri). Soal diambil acak.
+//   Waktu Mode CBT menyesuaikan jumlah soal: 1 menit per soal (minimal 5 menit).
+// ==========================================================================
+(function () {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const ls = {
+        get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+        set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } }
+    };
+    const CFG_KEY = 'a9_cbt_cfg_v1', KAT_CACHE = 'a9_cbt_kat_v1';
+    const COUNTS = [10, 20, 30, 50, 100], MAXQ = 300, ALLC = '__all__';
+    const cfg = Object.assign({ cats: [], n: 20 }, ls.get(CFG_KEY, {}));
+    if (!Array.isArray(cfg.cats)) cfg.cats = [];
+    if (!Number.isFinite(+cfg.n) || +cfg.n < 0) cfg.n = 20;
+    let katRows = ls.get(KAT_CACHE, []), memo = null;
+
+    const parseVal = v => { if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { return null; } } return v; };
+    const labelOf = q => String((q && (q.paket || q.blok || q.category || q.topic)) || 'Umum').trim() || 'Umum';
+    const nice = s => s.charAt(0).toUpperCase() + s.slice(1);
+    const shuffle = a => { const r = a.slice(); for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
+    const durMin = n => Math.max(5, n);
+
+    // ---------- soal dari kategori CBT baru ----------
+    function toCbt(x, key, nama, i) {
+        if (!x || !Array.isArray(x.options) || x.options.length < 2 || !x.question) return null;
+        const o = x.options.map(v => String(v));
+        let a = -1;
+        if (typeof x.answer === 'number') a = x.answer;
+        else {
+            a = o.indexOf(String(x.answer));
+            if (a < 0 && /^[A-Ea-e]$/.test(String(x.answer).trim())) a = 'ABCDE'.indexOf(String(x.answer).trim().toUpperCase());
+        }
+        if (a < 0 || a >= o.length) return null;
+        return { id: key + '#' + (x.id != null ? x.id : i), question: String(x.question), options: o, answer: o[a], explanation: String(x.explanation || ''), topic: String(x.topic || x.category || nama), image: String(x.image || x.image_path || '').trim(), paket: nama };
+    }
+    function katItems() {
+        if (memo) return memo;
+        const out = [];
+        (katRows || []).forEach(r => {
+            const v = parseVal(r && r.value);
+            if (!v || Array.isArray(v) || v.jenis !== 'cbt' || v.aktif === false) return;
+            const key = String(r.key || '').replace(/^paket:/, ''), nama = String(v.nama || key.replace(/^cbt~/, '') || 'Umum').trim() || 'Umum';
+            (Array.isArray(v.soal) ? v.soal : []).forEach((x, i) => { const q = toCbt(x, key, nama, i); if (q) out.push(q); });
+        });
+        memo = out; return out;
+    }
+    const pool = () => (Array.isArray(dbData.cbt_soal) ? dbData.cbt_soal : []).concat(katItems());
+
+    function groups(list) {
+        const m = {};
+        list.forEach(q => { const k = labelOf(q); m[k] = (m[k] || 0) + 1; });
+        return Object.keys(m).sort((a, b) => a.localeCompare(b, 'id', { numeric: true })).map(k => ({ k, n: m[k] }));
+    }
+    function selection(list) {
+        const names = groups(list).map(x => x.k);
+        cfg.cats = cfg.cats.filter(c => names.indexOf(c) >= 0);
+        const sel = cfg.cats.length ? list.filter(q => cfg.cats.indexOf(labelOf(q)) >= 0) : list;
+        const total = sel.length;
+        const n = Math.max(0, Math.min(+cfg.n === 0 ? total : +cfg.n, total, MAXQ));
+        return { list: sel, total, n };
+    }
+    const infoHtml = s => !s.total ? 'Belum ada soal pada pilihan ini.'
+        : `<strong>${s.n}</strong> soal akan dikerjakan, dipilih acak dari ${s.total} soal${(+cfg.n > s.total || (+cfg.n === 0 && s.total > MAXQ) || +cfg.n > MAXQ) ? ' (jumlah yang diminta melebihi soal yang tersedia)' : ''}.<br>Mode CBT: <strong>${durMin(s.n)} menit</strong> (1 menit per soal). Mode Latihan: tanpa batas waktu.`;
+    const save = () => ls.set(CFG_KEY, cfg);
+
+    const st = document.createElement('style');
+    st.textContent = `
+    .cs-wrap { margin: 14px 0; padding: 16px; border: 1px solid var(--border-color); border-radius: 18px; background: var(--bg-base); text-align: left; }
+    .cs-row + .cs-row { margin-top: 16px; }
+    .cs-row > label { display: block; font-weight: 700; margin-bottom: 8px; }
+    .cs-row > label small { font-weight: 400; color: var(--text-muted); }
+    .cs-chips, .cs-pills { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .cs-chips { max-height: 190px; overflow-y: auto; padding: 2px; }
+    .cs-chip, .cs-pill { border: 2px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font: inherit; font-weight: 600; font-size: 14px; padding: 8px 14px; border-radius: 999px; cursor: pointer; transition: border-color .15s ease, background .15s ease; }
+    .cs-chip small { margin-left: 4px; font-weight: 500; color: var(--text-muted); }
+    .cs-pill { min-width: 54px; font-weight: 800; font-size: 16px; padding: 9px 14px; }
+    .cs-chip:hover, .cs-pill:hover { border-color: var(--primary); }
+    .cs-chip.on, .cs-pill.on { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+    .cs-chip.on small { color: var(--primary); }
+    .cs-wrap input.cs-custom { width: 130px; margin: 0; }
+    .cs-info { margin-top: 14px; padding: 10px 14px; border-radius: 14px; background: var(--bg-card); box-shadow: inset 0 0 0 1px var(--border-color); font-size: 13.5px; line-height: 1.5; color: var(--text-muted); }
+    .cs-info strong { color: var(--text-main); }
+    `;
+    document.head.appendChild(st);
+
+    // ---------- tampilan pengaturan di kartu awal CBT ----------
+    const sigOf = (full, g) => [cfg.n, cfg.cats.join('|'), g.map(x => x.k + ':' + x.n).join(',')].join('#');
+    function paint() {
+        const card = $('cbt-start-card'); if (!card) return;
+        let wrap = $('cs-wrap');
+        if (!wrap) {
+            wrap = document.createElement('div'); wrap.id = 'cs-wrap'; wrap.className = 'cs-wrap';
+            let anchor = card.querySelector('button');
+            while (anchor && anchor.parentElement !== card) anchor = anchor.parentElement;
+            if (anchor) card.insertBefore(wrap, anchor); else card.appendChild(wrap);
+            wrap.addEventListener('click', e => {
+                const c = e.target.closest('[data-cs]'), n = e.target.closest('[data-cn]');
+                if (c) {
+                    const k = c.dataset.cs;
+                    if (k === ALLC) cfg.cats = []; else { const i = cfg.cats.indexOf(k); if (i >= 0) cfg.cats.splice(i, 1); else cfg.cats.push(k); }
+                    save(); paint();
+                } else if (n) { cfg.n = +n.dataset.cn; save(); paint(); }
+            });
+            wrap.addEventListener('input', e => {
+                if (!e.target.classList.contains('cs-custom')) return;
+                const v = parseInt(e.target.value, 10);
+                if (!(v >= 1)) return;
+                cfg.n = Math.min(v, MAXQ); save();
+                const full = pool(); wrap.dataset.sig = sigOf(full, groups(full));
+                wrap.querySelectorAll('.cs-pill').forEach(b => b.classList.remove('on'));
+                const info = wrap.querySelector('.cs-info'); if (info) info.innerHTML = infoHtml(selection(full));
+            });
+        }
+        const full = pool(), g = groups(full), s = selection(full), sig = sigOf(full, g);
+        if (wrap.dataset.sig === sig) return;
+        wrap.dataset.sig = sig;
+        const custom = (+cfg.n > 0 && COUNTS.indexOf(+cfg.n) < 0) ? +cfg.n : '';
+        wrap.innerHTML = `
+          <div class="cs-row"><label>\uD83D\uDCDA Kategori soal <small>(boleh pilih lebih dari satu, kosong = semua)</small></label>
+            <div class="cs-chips">
+              <button type="button" class="cs-chip${cfg.cats.length ? '' : ' on'}" data-cs="${ALLC}">Semua kategori <small>${full.length}</small></button>
+              ${g.map(x => `<button type="button" class="cs-chip${cfg.cats.indexOf(x.k) >= 0 ? ' on' : ''}" data-cs="${esc(x.k)}">${esc(nice(x.k))} <small>${x.n}</small></button>`).join('')}
+            </div></div>
+          <div class="cs-row"><label>\uD83D\uDD22 Jumlah soal <small>(pilih cepat atau ketik angka sendiri)</small></label>
+            <div class="cs-pills">
+              ${COUNTS.map(c => `<button type="button" class="cs-pill${+cfg.n === c ? ' on' : ''}" data-cn="${c}">${c}</button>`).join('')}
+              <button type="button" class="cs-pill${+cfg.n === 0 ? ' on' : ''}" data-cn="0">Semua</button>
+              <input type="number" class="modern-input cs-custom" min="1" max="${Math.min(MAXQ, Math.max(1, s.total))}" placeholder="Angka lain" value="${custom}" aria-label="Jumlah soal">
+            </div></div>
+          <div class="cs-info">${infoHtml(s)}</div>`;
+    }
+
+    // ---------- mulai CBT dengan soal terpilih ----------
+    const origCbt = window.startCBT;
+    window.startCBT = function () {
+        if (typeof cbtStarted !== 'undefined' && cbtStarted) return;
+        const legacy = Array.isArray(dbData.cbt_soal) ? dbData.cbt_soal : [];
+        const full = pool();
+        if (!full.length) { alert('Soal CBT belum tersedia. Hubungi admin untuk menambahkan soal.'); return; }
+        const s = selection(full);
+        if (!s.list.length || !s.n) { alert('Kategori yang dipilih belum berisi soal.'); return; }
+        const picks = shuffle(s.list).slice(0, s.n);
+        EXAM_DURATION = durMin(picks.length) * 60;      // waktu Mode CBT menyesuaikan jumlah soal
+        dbData.cbt_soal = picks;
+        try { return origCbt.apply(this, arguments); } finally { dbData.cbt_soal = legacy; }
+    };
+
+    async function loadKat() {
+        if (typeof supabaseClient === 'undefined' || !supabaseClient) return false;
+        try {
+            const { data, error } = await supabaseClient.from('portal_db').select('key,value').like('key', 'paket:cbt~%');
+            if (error || !Array.isArray(data)) return false;
+            katRows = data.filter(r => { const v = parseVal(r.value); return v && !Array.isArray(v) && v.jenis === 'cbt'; });
+            memo = null; ls.set(KAT_CACHE, katRows);
+            return true;
+        } catch (e) { console.error('kategori CBT:', e); return false; }
+    }
+
+    function init() {
+        try { paint(); } catch (e) { console.error(e); }
+        Promise.resolve(typeof dbReady !== 'undefined' ? dbReady : null).then(() => loadKat()).then(ok => { if (ok) paint(); }).catch(() => { });
+        const prevR = window.renderAll;
+        window.renderAll = function () { const r = prevR.apply(this, arguments); try { paint(); } catch (e) { console.error(e); } return r; };
+        const prevS = window.switchTab;
+        window.switchTab = function (t) {
+            const r = prevS.apply(this, arguments);
+            try { if (t === 'cbt') { paint(); loadKat().then(ok => { if (ok) paint(); }); } } catch (e) { }
+            return r;
+        };
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
 
 // ==========================================================================
@@ -8059,6 +8234,7 @@ let LATIHAN_BANK = [];
         (paketRows || []).forEach(r => {
             const v = parseVal(r && r.value); if (!v) return;
             const key = String(r.key || '').replace(/^paket:/, ''); if (!key) return;
+            if (/^cbt~/.test(key) || (v && !Array.isArray(v) && v.jenis === 'cbt')) return;   // kategori CBT dikelola di Bagian 20B
             const isArr = Array.isArray(v);
             if (!isArr && v.aktif === false) return;   // aktif:false = disembunyikan dari mahasiswa
             const pk = makePaket(key, (!isArr && v.nama) || key, (!isArr && v.deskripsi) || '', (!isArr && +v.urutan) || 999, isArr ? v : v.soal, !isArr && (v.mk || v.mata_kuliah));
@@ -10028,12 +10204,16 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
 })();
 
 // ==========================================================================
-// BAGIAN 27 - KELOLA SOAL LATIHAN (khusus admin): Latihan > Kelola Soal
-//   Tambah / ubah / hapus / urutkan soal lewat formulir. Tidak perlu menyentuh database.
-//   Penyimpanan tetap memakai format paket yang sama (portal_db, key "paket:<nama>"),
-//   jadi Soal Latihan di sisi mahasiswa tidak perlu diubah sama sekali.
-//   Fitur: paket baru, ubah info paket, formulir soal (A-E + gambar + pembahasan), tempel banyak soal sekaligus,
-//   daftar soal dengan pencarian, edit, hapus, dan urutan (seret atau tombol).
+// BAGIAN 27 - KELOLA SOAL (khusus admin): Latihan > Kelola Soal
+//   Satu tempat untuk dua jenis soal:
+//     1) Soal Latihan  -> dikelompokkan per PAKET (tampil di Latihan > Soal Latihan)
+//     2) Soal CBT      -> dikelompokkan per KATEGORI (tampil di Latihan > Simulasi CBT;
+//                         mahasiswa memilih kategori dan jumlah soalnya sendiri)
+//   Penyimpanan memakai tabel portal_db, key "paket:<nama>" (latihan) dan "paket:cbt~<nama>" (CBT).
+//   Fitur: kartu paket/kategori, formulir soal (A-E + gambar + pembahasan), tempel banyak soal,
+//   impor/ekspor JSON-CSV-TXT, daftar soal dengan pencarian + filter topik + filter tanpa pembahasan,
+//   pratinjau soal (klik barisnya), edit, salin, hapus, urutan (seret atau tombol),
+//   dan AKSI MASSAL: pilih banyak soal lalu pindahkan / salin ke paket lain, ganti topik, atau hapus.
 // ==========================================================================
 (function () {
     'use strict';
@@ -10046,18 +10226,33 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
     main.insertAdjacentHTML('beforeend', '<div id="tab-kelola-soal" class="tab-content" style="display:none;"><div id="ks-root"></div></div>');
     const root = $('ks-root');
 
-    let rows = {};        // nama kunci (tanpa "paket:") -> isi paket
-    let cur = null;       // paket yang sedang dikerjakan
-    let editing = null;   // id soal yang sedang diubah
+    const MODES = {
+        latihan: { label: 'Soal Latihan', ico: '\u270D\uFE0F', unit: 'paket', Unit: 'Paket', pre: '', eg: 'mis. Termoregulasi Blok 1.3' },
+        cbt: { label: 'Soal CBT', ico: '\uD83D\uDDA5\uFE0F', unit: 'kategori', Unit: 'Kategori', pre: 'cbt~', eg: 'mis. Anatomi Blok 1.3' }
+    };
+    let mode = 'latihan', cur = null;           // jenis yang sedang dibuka dan paket/kategori yang dipilih
+    const curBy = { latihan: null, cbt: null };
+    let rows = {};                              // key (tanpa "paket:") -> isi paket/kategori
+    let editing = null;                         // id soal yang sedang diubah
     let loaded = false, busy = false;
+    let filter = '', fTopic = '', fNoExp = false;
+    const picked = new Set(), opened = new Set();
+
+    const U = () => MODES[mode];
+    const keyFor = nama => U().pre + nama;
+    const normQ = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    const topicOf = x => String((x && (x.topic || x.category)) || 'Umum');
+    const ansIdx = x => { const o = (x && x.options) || []; return typeof x.answer === 'number' ? x.answer : o.indexOf(x.answer); };
 
     // ---------- data ----------
     const parseVal = v => { if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { return null; } } return v; };
     function norm(v, key) {
         const arr = Array.isArray(v);
         const o = arr || !v || typeof v !== 'object' ? {} : v;
+        const k = String(key || '');
         return {
-            nama: String(o.nama || key || ''), deskripsi: String(o.deskripsi || ''), mk: String(o.mk || o.mata_kuliah || 'Umum') || 'Umum',
+            jenis: (o.jenis === 'cbt' || /^cbt~/.test(k)) ? 'cbt' : 'latihan',
+            nama: String(o.nama || k.replace(/^cbt~/, '')), deskripsi: String(o.deskripsi || ''), mk: String(o.mk || o.mata_kuliah || 'Umum') || 'Umum',
             urutan: Number.isFinite(+o.urutan) && o.urutan !== '' && o.urutan != null ? +o.urutan : 999, aktif: o.aktif !== false, nid: +o.nid || 0,
             soal: Array.isArray(o.soal) ? o.soal : (arr ? v : [])
         };
@@ -10081,7 +10276,7 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
     }
     // baca terbaru -> ubah -> tulis (supaya perubahan admin lain tidak tertimpa)
     async function change(fn) {
-        if (!cur) throw new Error('Pilih paket dulu.');
+        if (!cur) throw new Error('Pilih ' + U().unit + ' dulu.');
         const v = (await getRow(cur)) || norm(null, cur);
         const res = fn(v);
         const maxId = v.soal.reduce((m, x) => Math.max(m, +x.id || 0), 0);
@@ -10090,21 +10285,19 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
         return res;
     }
     const nextId = v => { v.nid = Math.max(v.nid || 0, v.soal.reduce((m, x) => Math.max(m, +x.id || 0), 0)) + 1; return v.nid; };
+    const keysOf = m => Object.keys(rows).filter(k => rows[k].jenis === m).sort((a, b) => (rows[a].urutan - rows[b].urutan) || rows[a].nama.localeCompare(rows[b].nama, 'id'));
 
     // ---------- kerangka ----------
     function say(t, ok) { const m = $('ks-msg'); if (!m) return; m.textContent = t || ''; m.className = 'ks-msg ' + (ok ? 'ok' : 'err'); if (t && ok) setTimeout(() => { if (m.textContent === t) m.textContent = ''; }, 3500); }
     function shell() {
-        root.innerHTML = `<div class="card ks">
-  <div class="card-header"><h3 class="card-title">\uD83D\uDEE0\uFE0F Kelola Soal Latihan</h3></div>
-  <p class="ks-hint">Pilih paket, lalu isi formulir untuk menambah soal satu per satu. Soal langsung tersimpan dan muncul di <b>Latihan, Soal Latihan</b> setelah mahasiswa memuat ulang halaman.</p>
-  <div class="ks-bar">
-    <label class="ks-sel"><span>Paket</span><select id="ks-paket" class="modern-input"></select></label>
-    <button type="button" class="btn btn-primary btn-sm" id="ks-new">\uFF0B Paket baru</button>
-    <button type="button" class="btn btn-outline btn-sm" id="ks-info">Info paket</button>
-  </div>
+        root.innerHTML = `<div class="card ks-card">
+  <div class="card-header"><h3 class="card-title">\uD83D\uDEE0\uFE0F Kelola Soal</h3></div>
+  <div class="ks-seg ks-mode" id="ks-mode" role="tablist"></div>
+  <p class="ks-hint" id="ks-modehint"></p>
+  <div class="ks-cats" id="ks-cats"></div>
   <div id="ks-infobox" class="ks-panel" hidden></div>
   <details id="ks-imp" class="ks-panel ks-imp"><summary>\uD83D\uDCC2 Impor &amp; ekspor file</summary>
-    <p class="ks-hint">Punya soal buatan AI atau dari Excel? Pilih file <b>.json</b>, <b>.csv</b>, atau <b>.txt</b> (boleh juga seret filenya ke kotak ini). Kalau di dalam file ada <code>nama</code> paket, paketnya dibuat otomatis.</p>
+    <p class="ks-hint">Punya soal buatan AI atau dari Excel? Pilih file <b>.json</b>, <b>.csv</b>, atau <b>.txt</b> (boleh juga seret filenya ke kotak ini). Kalau di dalam file ada <code>nama</code>, soal masuk ke paket/kategori dengan nama itu (dibuat baru kalau belum ada). Kalau tidak ada, soal masuk ke yang sedang dipilih.</p>
     <div class="ks-btns">
       <label class="btn btn-primary btn-sm ks-filebtn">Pilih file\u2026<input type="file" id="ks-file" accept=".json,.csv,.tsv,.txt,.md,application/json,text/csv,text/plain" hidden></label>
       <button type="button" class="btn btn-outline btn-sm" id="ks-copy-ai">Salin perintah untuk AI</button>
@@ -10112,72 +10305,100 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
       <button type="button" class="btn btn-outline btn-sm" id="ks-dl-csv">Contoh CSV</button>
     </div>
     <label class="ks-chk"><input type="checkbox" id="ks-upd" checked> Perbarui soal yang sudah ada (dicocokkan lewat kolom <code>id</code> atau teks pertanyaan)</label>
-    <h4 style="margin-top:14px">Ekspor, edit di luar, impor lagi</h4>
-    <p class="ks-hint">Unduh paket yang sedang dipilih, ubah di Excel atau editor teks, lalu impor kembali. Jangan ubah kolom <code>id</code>, supaya soal lama diperbarui dan tidak ditambah ganda.</p>
-    <div class="ks-btns"><button type="button" class="btn btn-outline btn-sm" id="ks-ex-json">Unduh paket (JSON)</button><button type="button" class="btn btn-outline btn-sm" id="ks-ex-csv">Unduh paket (CSV)</button></div>
+    <h4 style="margin-top:14px;">Ekspor untuk diedit</h4>
+    <p class="ks-hint">Unduh paket/kategori yang sedang dipilih, ubah di Excel atau editor teks, lalu impor kembali. Jangan ubah kolom <code>id</code>, supaya soal lama diperbarui dan tidak ditambah ganda.</p>
+    <div class="ks-btns"><button type="button" class="btn btn-outline btn-sm" id="ks-ex-json">Unduh (JSON)</button><button type="button" class="btn btn-outline btn-sm" id="ks-ex-csv">Unduh (CSV)</button></div>
   </details>
   <div id="ks-work"></div>
   <div id="ks-msg" class="ks-msg" role="status"></div>
 </div>`;
-        $('ks-paket').onchange = e => { cur = e.target.value || null; editing = null; paintWork(); };
-        $('ks-new').onclick = () => infoBox(true);
-        $('ks-info').onclick = () => { if (!cur) { say('Pilih paket dulu, atau buat paket baru.'); return; } infoBox(false); };
-        bindImport(); paintSelect(); paintWork();
+        bindImport(); paintAll();
     }
-    function paintSelect() {
-        const sel = $('ks-paket'); if (!sel) return;
-        const keys = Object.keys(rows).sort((a, b) => (rows[a].urutan - rows[b].urutan) || rows[a].nama.localeCompare(rows[b].nama, 'id'));
+    function paintAll() { paintMode(); paintCats(); paintWork(); }
+    function refresh() { paintMode(); paintCats(); paintList(); }
+
+    function paintMode() {
+        const el = $('ks-mode'); if (!el) return;
+        el.innerHTML = Object.keys(MODES).map(m => {
+            const ks = keysOf(m), n = ks.reduce((s, k) => s + rows[k].soal.length, 0);
+            return `<button type="button" data-mode="${m}" class="${m === mode ? 'on' : ''}">${MODES[m].ico} ${MODES[m].label}<small>${ks.length} ${MODES[m].unit} \u00b7 ${n} soal</small></button>`;
+        }).join('');
+        const h = $('ks-modehint'); if (h) h.innerHTML = mode === 'cbt'
+            ? 'Soal CBT dikelompokkan per <b>kategori</b>. Di <b>Latihan, Simulasi CBT</b>, mahasiswa memilih kategori dan jumlah soal sendiri. Bank CBT lama tetap dipakai dan digabung otomatis.'
+            : 'Soal latihan dikelompokkan per <b>paket</b> dalam mata kuliah. Soal langsung tersimpan dan muncul di <b>Latihan, Soal Latihan</b> setelah mahasiswa memuat ulang halaman.';
+    }
+    function paintCats() {
+        const el = $('ks-cats'); if (!el) return;
+        const ks = keysOf(mode);
         if (cur && !rows[cur]) cur = null;
-        if (!cur && keys.length) cur = keys[0];
-        sel.innerHTML = keys.length ? keys.map(k => `<option value="${esc(k)}"${k === cur ? ' selected' : ''}>${esc(rows[k].nama)} \u00b7 ${esc(rows[k].mk)} \u00b7 ${rows[k].soal.length} soal${rows[k].aktif ? '' : ' (disembunyikan)'}</option>`).join('') : '<option value="">(belum ada paket)</option>';
+        if (!cur && ks.length) cur = ks[0];
+        curBy[mode] = cur;
+        el.innerHTML = ks.map(k => {
+            const v = rows[k];
+            return `<button type="button" class="ks-cat${k === cur ? ' on' : ''}" data-cat="${esc(k)}"><b>${esc(v.nama)}</b><span>${esc(v.mk)} \u00b7 ${v.soal.length} soal</span>${v.aktif ? '' : '<em>Disembunyikan</em>'}</button>`;
+        }).join('') + `<button type="button" class="ks-cat ks-cat-new" data-new="1"><b>\uFF0B ${U().Unit} baru</b><span>${esc(U().eg)}</span></button>`;
+    }
+    function resetView() { editing = null; filter = ''; fTopic = ''; fNoExp = false; picked.clear(); opened.clear(); const b = $('ks-infobox'); if (b) b.hidden = true; }
+    function switchMode(m) {
+        if (!MODES[m] || m === mode) return;
+        curBy[mode] = cur; mode = m; cur = curBy[m]; resetView(); paintAll();
+    }
+    function pickCat(k) {
+        if (!rows[k]) return;
+        cur = k; curBy[mode] = k; resetView(); paintCats(); paintWork();
     }
 
-    // ---------- info paket ----------
+    // ---------- info paket / kategori ----------
     function infoBox(isNew) {
         const b = $('ks-infobox'); if (!b) return;
         if (!b.hidden && b.dataset.mode === (isNew ? 'new' : 'edit')) { b.hidden = true; return; }
-        const v = isNew ? { nama: '', mk: 'Umum', deskripsi: '', urutan: 1, aktif: true } : rows[cur];
+        if (!isNew && (!cur || !rows[cur])) { say('Pilih ' + U().unit + ' dulu, atau buat yang baru.'); return; }
+        const v = isNew ? { nama: '', mk: 'Umum', deskripsi: '', urutan: keysOf(mode).length + 1, aktif: true } : rows[cur];
         const mks = Array.from(new Set(Object.keys(rows).map(k => rows[k].mk)));
         b.dataset.mode = isNew ? 'new' : 'edit'; b.hidden = false;
-        b.innerHTML = `<h4>${isNew ? 'Paket baru' : 'Info paket'}</h4>
+        b.innerHTML = `<h4>${isNew ? U().Unit + ' baru' : 'Info ' + U().unit}</h4>
 <div class="ks-grid">
-  <label>Nama paket<input id="ks-in-nama" class="modern-input" value="${esc(v.nama)}" placeholder="mis. Termoregulasi Blok 1.3"></label>
+  <label>Nama ${U().unit}<input id="ks-in-nama" class="modern-input" value="${esc(v.nama)}" placeholder="${esc(U().eg)}"></label>
   <label>Mata kuliah<input id="ks-in-mk" class="modern-input" list="ks-mks" value="${esc(v.mk)}" placeholder="mis. Fisiologi"><datalist id="ks-mks">${mks.map(m => `<option value="${esc(m)}">`).join('')}</datalist></label>
   <label>Urutan tampil<input id="ks-in-urut" type="number" class="modern-input" value="${esc(v.urutan)}"></label>
 </div>
 <label>Deskripsi (opsional)<input id="ks-in-desk" class="modern-input" value="${esc(v.deskripsi)}"></label>
 <label class="ks-chk"><input type="checkbox" id="ks-in-aktif"${v.aktif ? ' checked' : ''}> Tampilkan ke mahasiswa</label>
-<div class="ks-btns"><button type="button" class="btn btn-primary btn-sm" id="ks-in-save">Simpan</button><button type="button" class="btn btn-outline btn-sm" id="ks-in-cancel">Tutup</button>${isNew ? '' : '<button type="button" class="btn btn-outline btn-sm ks-danger" id="ks-in-del">Hapus paket</button>'}</div>`;
+<div class="ks-btns"><button type="button" class="btn btn-primary btn-sm" id="ks-in-save">Simpan</button><button type="button" class="btn btn-outline btn-sm" id="ks-in-cancel">Tutup</button>${isNew ? '' : '<button type="button" class="btn btn-outline btn-sm ks-danger" id="ks-in-del">Hapus ' + U().unit + '</button>'}</div>`;
         $('ks-in-cancel').onclick = () => { b.hidden = true; };
         $('ks-in-save').onclick = async () => {
-            const nama = $('ks-in-nama').value.trim().replace(/[:\/\\]/g, '-'); if (!nama) { say('Nama paket wajib diisi.'); return; }
-            const key = isNew ? nama : cur;
-            if (isNew && rows[key]) { say('Paket dengan nama itu sudah ada.'); return; }
+            const nama = $('ks-in-nama').value.trim().replace(/[:\/\\]/g, '-'); if (!nama) { say('Nama ' + U().unit + ' wajib diisi.'); return; }
+            let key = isNew ? keyFor(nama) : cur;
+            if (isNew && mode === 'latihan') key = key.replace(/^cbt~/i, 'cbt-');
+            if (isNew && rows[key]) { say('Nama itu sudah dipakai.'); return; }
             try {
                 const old = isNew ? norm(null, key) : ((await getRow(key)) || rows[key]);
-                const nv = Object.assign({}, old, { nama, mk: $('ks-in-mk').value.trim() || 'Umum', deskripsi: $('ks-in-desk').value.trim(), urutan: +$('ks-in-urut').value || 1, aktif: $('ks-in-aktif').checked });
-                await putRow(key, nv); rows[key] = nv; cur = key; b.hidden = true; editing = null;
-                paintSelect(); paintWork(); say(isNew ? 'Paket dibuat. Sekarang tambahkan soalnya di bawah.' : 'Info paket disimpan.', true);
+                const nv = Object.assign({}, old, { jenis: mode, nama, mk: $('ks-in-mk').value.trim() || 'Umum', deskripsi: $('ks-in-desk').value.trim(), urutan: +$('ks-in-urut').value || 1, aktif: $('ks-in-aktif').checked });
+                await putRow(key, nv); rows[key] = nv; cur = key; curBy[mode] = key; b.hidden = true; resetView();
+                paintMode(); paintCats(); paintWork();
+                say(isNew ? U().Unit + ' dibuat. Sekarang tambahkan soalnya di bawah.' : 'Info ' + U().unit + ' disimpan.', true);
+                if (isNew) pane('form');
             } catch (e) { console.error(e); say('Gagal menyimpan. Periksa koneksi atau izin database.'); }
         };
         const del = $('ks-in-del');
         if (del) del.onclick = async () => {
-            if (!confirm('Hapus paket "' + rows[cur].nama + '" beserta ' + rows[cur].soal.length + ' soal di dalamnya? Tidak bisa dibatalkan.')) return;
+            if (!confirm('Hapus ' + U().unit + ' "' + rows[cur].nama + '" beserta ' + rows[cur].soal.length + ' soal di dalamnya? Tidak bisa dibatalkan.')) return;
             try {
                 const r = await supabaseClient.from('portal_db').delete().eq('key', 'paket:' + cur);
                 if (r.error) throw r.error;
-                delete rows[cur]; cur = null; b.hidden = true; paintSelect(); paintWork(); say('Paket dihapus.', true);
-            } catch (e) { console.error(e); say('Tidak bisa menghapus (mungkin tidak diizinkan database). Gunakan opsi \u201cTampilkan ke mahasiswa\u201d dimatikan untuk menyembunyikan.'); }
+                delete rows[cur]; cur = null; curBy[mode] = null; b.hidden = true; resetView(); paintAll(); say(U().Unit + ' dihapus.', true);
+            } catch (e) { console.error(e); say('Tidak bisa menghapus (mungkin tidak diizinkan database). Matikan opsi \u201cTampilkan ke mahasiswa\u201d untuk menyembunyikannya.'); }
         };
     }
 
     // ---------- area kerja ----------
-    let filter = '';
     function paintWork() {
         const w = $('ks-work'); if (!w) return;
-        if (!cur || !rows[cur]) { w.innerHTML = '<div class="ks-empty"><div>\uD83D\uDDC2\uFE0F</div><p>Belum ada paket. Klik <b>\uFF0B Paket baru</b> untuk mulai.</p></div>'; return; }
-        const topics = Array.from(new Set(rows[cur].soal.map(x => x.topic || x.category).filter(Boolean)));
-        w.innerHTML = `<div class="ks-stats" id="ks-stats"></div><div class="ks-seg" role="tablist"><button type="button" data-pane="list" class="on">Daftar soal</button><button type="button" data-pane="form">\uFF0B Tambah / ubah</button><button type="button" data-pane="bulk">Tempel banyak</button></div>
+        if (!cur || !rows[cur]) { w.innerHTML = `<div class="ks-empty"><div>\uD83D\uDDC2\uFE0F</div><p>Belum ada ${U().unit}. Klik <b>\uFF0B ${U().Unit} baru</b> untuk mulai.</p></div>`; return; }
+        const v = rows[cur];
+        const topics = Array.from(new Set(v.soal.map(x => x.topic || x.category).filter(Boolean)));
+        w.innerHTML = `<div class="ks-wh"><div class="ks-wh-t"><h4>${esc(v.nama)}</h4><div class="ks-stats" id="ks-stats"></div></div><button type="button" class="btn btn-outline btn-sm" id="ks-info">\u2699\uFE0F Info ${U().unit}</button></div>
+<div class="ks-seg" role="tablist"><button type="button" data-pane="list" class="on">Daftar soal</button><button type="button" data-pane="form">\uFF0B Tambah / ubah</button><button type="button" data-pane="bulk">Tempel banyak</button></div>
 <div class="ks-pane" data-p="form"><div class="ks-form ks-panel" id="ks-form">
   <h4 id="ks-ftitle">Tambah soal</h4>
   <label>Topik<input id="ks-topic" class="modern-input" list="ks-topics" placeholder="mis. Termoregulasi"><datalist id="ks-topics">${topics.map(t => `<option value="${esc(t)}">`).join('')}</datalist></label>
@@ -10188,28 +10409,53 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
   <label>Link gambar <small>(opsional)</small><input id="ks-img" class="modern-input" placeholder="https://..."></label>
   <label class="ks-chk"><input type="checkbox" id="ks-fix"> Jangan acak urutan pilihan (untuk soal \u201csemua benar\u201d dsb.)</label>
   <div class="ks-btns"><button type="button" class="btn btn-primary" id="ks-save">Simpan soal</button><button type="button" class="btn btn-outline" id="ks-cancel" hidden>Batal ubah</button></div>
+  <p class="ks-hint" style="margin:8px 0 0;">Tips: tekan <b>Ctrl + Enter</b> untuk menyimpan cepat. Topik terakhir tetap terisi supaya input soal berikutnya lebih cepat.</p>
 </div></div>
 <div class="ks-pane" data-p="bulk"><div class="ks-panel ks-bulk"><h4>Tempel banyak soal sekaligus</h4>
-  <p class="ks-hint">Pisahkan tiap soal dengan satu baris kosong. Contoh:</p>
+  <p class="ks-hint">Pisahkan tiap soal dengan satu baris kosong. Soal yang pertanyaannya sudah ada otomatis dilewati. Contoh:</p>
   <pre class="ks-pre">Topik: Termoregulasi
-1. Pusat pengatur suhu tubuh terletak di ...
+Pusat pengatur suhu tubuh terletak di ...
 A. Talamus
 B. Hipotalamus
 C. Serebelum
 D. Medula oblongata
+E. Korteks serebri
 Jawaban: B
-Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
+Pembahasan: Hipotalamus anterior dan posterior mengatur suhu tubuh.</pre>
   <textarea id="ks-bulk" class="modern-input" rows="8" placeholder="Tempel soal di sini"></textarea>
   <div class="ks-btns"><button type="button" class="btn btn-primary btn-sm" id="ks-bulk-go">Baca &amp; tambahkan</button></div>
 </div></div>
-<div class="ks-pane on" data-p="list"><div class="ks-listhead"><h4>Daftar soal <span id="ks-count"></span></h4><input id="ks-search" class="modern-input" placeholder="Cari soal atau topik\u2026" value="${esc(filter)}"></div>
-<div id="ks-list"></div></div>`;
+<div class="ks-pane on" data-p="list">
+  <div class="ks-listhead"><h4>Daftar soal <span id="ks-count"></span></h4></div>
+  <div class="ks-tools">
+    <input id="ks-search" class="modern-input" placeholder="Cari soal atau topik\u2026" value="${esc(filter)}">
+    <select id="ks-ftopic" class="modern-input" aria-label="Filter topik"></select>
+    <label class="ks-chk"><input type="checkbox" id="ks-fnoexp"${fNoExp ? ' checked' : ''}> Tanpa pembahasan</label>
+    <label class="ks-chk"><input type="checkbox" id="ks-pickall"> Pilih semua yang tampil</label>
+  </div>
+  <div class="ks-selbar" id="ks-selbar" hidden>
+    <b id="ks-selcount"></b>
+    <span class="ks-selrow"><select id="ks-target" class="modern-input" aria-label="Tujuan"></select>
+      <button type="button" class="btn btn-outline btn-sm" data-bulk="move">Pindahkan</button><button type="button" class="btn btn-outline btn-sm" data-bulk="copy">Salin</button></span>
+    <span class="ks-selrow"><input id="ks-newtopic" class="modern-input" list="ks-topics" placeholder="Topik baru"><button type="button" class="btn btn-outline btn-sm" data-bulk="topic">Ubah topik</button></span>
+    <span class="ks-selrow"><button type="button" class="btn btn-outline btn-sm ks-danger" data-bulk="del">Hapus</button><button type="button" class="btn btn-outline btn-sm" data-bulk="clear">Batal pilih</button></span>
+  </div>
+  <div id="ks-list"></div>
+</div>`;
         $('ks-save').onclick = saveForm;
         $('ks-cancel').onclick = () => { editing = null; clearForm(); setFormMode(); pane('list'); };
         $('ks-bulk-go').onclick = bulkAdd;
+        $('ks-info').onclick = () => infoBox(false);
+        $('ks-form').addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); saveForm(); } });
         document.querySelectorAll('#ks-work .ks-seg button').forEach(b => { b.onclick = () => pane(b.dataset.pane); });
         $('ks-search').oninput = e => { filter = e.target.value; paintList(); };
-        paintList(); setFormMode(); pane(editing != null || !rows[cur].soal.length ? 'form' : 'list');
+        $('ks-ftopic').onchange = e => { fTopic = e.target.value; paintList(); };
+        $('ks-fnoexp').onchange = e => { fNoExp = e.target.checked; paintList(); };
+        $('ks-pickall').onchange = e => {
+            view(rows[cur]).show.forEach(o => { const id = String(o.x.id); if (e.target.checked) picked.add(id); else picked.delete(id); });
+            paintList();
+        };
+        paintList();
     }
     function pane(name) {
         document.querySelectorAll('#ks-work .ks-pane').forEach(p => p.classList.toggle('on', p.dataset.p === name));
@@ -10217,8 +10463,10 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
     }
     function paintStats(v) {
         const el = $('ks-stats'); if (!el) return;
-        const tp = new Set(v.soal.map(x => x.topic || x.category || 'Umum'));
-        el.innerHTML = '<span><b>' + v.soal.length + '</b> soal</span><span><b>' + tp.size + '</b> topik</span><span>' + esc(v.mk) + '</span><span class="' + (v.aktif ? 'on' : 'off') + '">' + (v.aktif ? 'Tampil ke mahasiswa' : 'Disembunyikan') + '</span>';
+        const tp = new Set(v.soal.map(topicOf)), noExp = v.soal.filter(x => !String(x.explanation || '').trim()).length;
+        el.innerHTML = '<span><b>' + v.soal.length + '</b> soal</span><span><b>' + tp.size + '</b> topik</span>'
+            + (noExp ? '<span class="warn"><b>' + noExp + '</b> tanpa pembahasan</span>' : '<span class="on">Semua ada pembahasan</span>')
+            + '<span>' + esc(v.mk) + '</span><span class="' + (v.aktif ? 'on' : 'off') + '">' + (v.aktif ? 'Tampil ke mahasiswa' : 'Disembunyikan') + '</span>';
     }
     function setFormMode() {
         const t = $('ks-ftitle'), c = $('ks-cancel'), s = $('ks-save'); if (!t) return;
@@ -10249,6 +10497,10 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
     }
     async function saveForm() {
         if (busy) return; const r = readForm(); if (r.err) { say(r.err); return; }
+        if (editing == null) {
+            const nq = normQ(r.ok.question);
+            if (rows[cur].soal.some(x => normQ(x.question) === nq) && !confirm('Soal dengan pertanyaan yang sama sudah ada di ' + U().unit + ' ini. Tetap tambahkan?')) return;
+        }
         busy = true; $('ks-save').disabled = true;
         try {
             let n = 0;
@@ -10256,7 +10508,7 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
                 if (editing != null) { const i = v.soal.findIndex(x => String(x.id) === String(editing)); if (i < 0) throw new Error('Soal yang diubah sudah tidak ada.'); v.soal[i] = Object.assign({}, v.soal[i], r.ok); n = i + 1; }
                 else { v.soal.push(Object.assign({ id: nextId(v) }, r.ok)); n = v.soal.length; }
             });
-            const wasEdit = editing != null; editing = null; clearForm(true); setFormMode(); paintSelect(); paintList(); if (wasEdit) pane('list');
+            const wasEdit = editing != null; editing = null; clearForm(true); setFormMode(); refresh(); if (wasEdit) pane('list');
             say(wasEdit ? 'Perubahan disimpan.' : 'Soal nomor ' + n + ' tersimpan. Lanjut isi soal berikutnya.', true);
             if (!wasEdit) $('ks-q').focus();
         } catch (e) { console.error(e); say(e && e.message && /sudah tidak ada/.test(e.message) ? e.message : 'Gagal menyimpan. Periksa koneksi atau izin database.'); }
@@ -10264,22 +10516,54 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
     }
 
     // ---------- daftar ----------
-    function paintList() {
-        const box = $('ks-list'), v = rows[cur]; if (!box || !v) return;
-        paintStats(v);
+    function view(v) {
         const f = filter.trim().toLowerCase();
         const all = v.soal.map((x, i) => ({ x, i }));
-        const show = f ? all.filter(o => (String(o.x.question || '') + ' ' + String(o.x.topic || o.x.category || '')).toLowerCase().indexOf(f) >= 0) : all;
-        const cut = show.slice(0, 300), canSort = !f && all.length <= 300;
-        $('ks-count').textContent = '(' + (f ? show.length + ' dari ' : '') + all.length + ')';
-        if (!cut.length) { box.innerHTML = '<p class="ks-hint">' + (all.length ? 'Tidak ada yang cocok.' : 'Belum ada soal di paket ini. Isi formulir di atas.') + '</p>'; return; }
+        const show = all.filter(o => {
+            const x = o.x;
+            if (f && (String(x.question || '') + ' ' + topicOf(x)).toLowerCase().indexOf(f) < 0) return false;
+            if (fTopic && topicOf(x) !== fTopic) return false;
+            if (fNoExp && String(x.explanation || '').trim()) return false;
+            return true;
+        });
+        return { all, show, filtered: !!(f || fTopic || fNoExp) };
+    }
+    function paintTopicFilter(v) {
+        const s = $('ks-ftopic'); if (!s) return;
+        const tp = {}; v.soal.forEach(x => { const t = topicOf(x); tp[t] = (tp[t] || 0) + 1; });
+        if (fTopic && !tp[fTopic]) fTopic = '';
+        s.innerHTML = '<option value="">Semua topik (' + v.soal.length + ')</option>' + Object.keys(tp).sort((a, b) => a.localeCompare(b, 'id')).map(t => `<option value="${esc(t)}"${t === fTopic ? ' selected' : ''}>${esc(t)} (${tp[t]})</option>`).join('');
+    }
+    function paintList() {
+        const box = $('ks-list'), v = rows[cur]; if (!box || !v) return;
+        paintStats(v); paintTopicFilter(v);
+        const w = view(v), cut = w.show.slice(0, 300), canSort = !w.filtered && w.all.length <= 300;
+        $('ks-count').textContent = '(' + (w.filtered ? w.show.length + ' dari ' : '') + w.all.length + ')';
+        const pa = $('ks-pickall'); if (pa) pa.checked = w.show.length > 0 && w.show.every(o => picked.has(String(o.x.id)));
+        if (!cut.length) {
+            box.innerHTML = '<p class="ks-hint">' + (w.all.length ? 'Tidak ada soal yang cocok dengan pencarian atau filter.' : 'Belum ada soal. Buka tab <b>\uFF0B Tambah / ubah</b>, <b>Tempel banyak</b>, atau impor file.') + '</p>';
+            paintSelbar(); return;
+        }
         box.innerHTML = cut.map(o => {
-            const x = o.x, opts = x.options || [], a = typeof x.answer === 'number' ? x.answer : opts.indexOf(x.answer);
-            return `<div class="ks-item" data-id="${esc(x.id)}">${canSort ? '<span class="a9-grip" role="button" aria-label="Seret untuk mengubah urutan" title="Seret untuk mengubah urutan">\u283f</span>' : ''}<span class="ks-n">${o.i + 1}</span>
-<div class="ks-body"><div class="ks-q">${esc(x.question)}</div><div class="ks-meta"><span class="ks-tag">${esc(x.topic || x.category || 'Umum')}</span><span class="ks-ok">Jawaban: ${a >= 0 ? L5[a] || (a + 1) : '?'}${a >= 0 && opts[a] ? ' - ' + esc(String(opts[a]).slice(0, 40)) : ''}</span><span>${opts.length} pilihan</span>${x.image ? '<span>\uD83D\uDDBC\uFE0F gambar</span>' : ''}</div></div>
-<div class="ks-acts">${canSort ? '<button type="button" class="btn btn-outline btn-sm" data-ks="up" title="Naikkan">\u25B2</button><button type="button" class="btn btn-outline btn-sm" data-ks="down" title="Turunkan">\u25BC</button>' : ''}<button type="button" class="btn btn-outline btn-sm" data-ks="dup" title="Gandakan soal ini">Salin</button><button type="button" class="btn btn-outline btn-sm" data-ks="edit">Ubah</button><button type="button" class="btn btn-outline btn-sm ks-danger" data-ks="del">Hapus</button></div></div>`;
-        }).join('') + (show.length > cut.length ? '<p class="ks-hint">Menampilkan 300 pertama. Gunakan pencarian untuk yang lain.</p>' : '');
+            const x = o.x, opts = x.options || [], a = ansIdx(x), id = String(x.id), isOpen = opened.has(id), isPick = picked.has(id);
+            const noExp = !String(x.explanation || '').trim();
+            return `<div class="ks-item${isPick ? ' picked' : ''}${isOpen ? ' open' : ''}" data-id="${esc(id)}">${canSort ? '<span class="a9-grip" role="button" aria-label="Seret untuk mengubah urutan" title="Seret untuk mengubah urutan">\u283f</span>' : ''}<label class="ks-pick" title="Pilih soal ini"><input type="checkbox" data-pick="1"${isPick ? ' checked' : ''}></label><span class="ks-n">${o.i + 1}</span>
+<div class="ks-body" data-ks="toggle" role="button" tabindex="0" title="Klik untuk melihat pilihan dan pembahasan"><div class="ks-q">${esc(x.question)}</div><div class="ks-meta"><span class="ks-tag">${esc(topicOf(x))}</span><span class="ks-ok">Jawaban: ${a >= 0 ? L5[a] || (a + 1) : '?'}${a >= 0 && opts[a] ? ' - ' + esc(String(opts[a]).slice(0, 40)) : ''}</span><span>${opts.length} pilihan</span>${x.image ? '<span>\uD83D\uDDBC Gambar</span>' : ''}${noExp ? '<span class="ks-warn">tanpa pembahasan</span>' : ''}</div></div>
+<div class="ks-acts">${canSort ? '<button type="button" class="btn btn-outline btn-sm" data-ks="up" title="Naikkan">\u25B2</button><button type="button" class="btn btn-outline btn-sm" data-ks="down" title="Turunkan">\u25BC</button>' : ''}<button type="button" class="btn btn-outline btn-sm" data-ks="edit">Ubah</button><button type="button" class="btn btn-outline btn-sm" data-ks="dup" title="Gandakan soal ini">Salin</button><button type="button" class="btn btn-outline btn-sm ks-danger" data-ks="del">Hapus</button></div>
+<div class="ks-detail"${isOpen ? '' : ' hidden'}><ol class="ks-opts">${opts.map((t, i) => `<li class="${i === a ? 'ok' : ''}"><b>${L5[i]}.</b> ${esc(t)}${i === a ? ' <em>\u2713 benar</em>' : ''}</li>`).join('')}</ol>${noExp ? '<div class="ks-exp none">Belum ada pembahasan.</div>' : '<div class="ks-exp"><b>Pembahasan:</b> ' + esc(x.explanation) + '</div>'}${x.fixed_order ? '<div class="ks-exp none">Urutan pilihan tidak diacak.</div>' : ''}${x.image ? '<div class="ks-img"><img src="' + esc(x.image) + '" alt="Gambar soal" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'"></div>' : ''}</div></div>`;
+        }).join('') + (w.show.length > cut.length ? '<p class="ks-hint">Menampilkan 300 pertama. Gunakan pencarian atau filter untuk yang lain.</p>' : '');
+        paintSelbar();
         if (canSort && window.__a9Sortable) { box._ksdrop = dropOrder; window.__a9Sortable(box, '.ks-item', () => box._ksdrop && box._ksdrop()); }
+    }
+    function paintSelbar() {
+        const bar = $('ks-selbar'); if (!bar) return;
+        const n = picked.size; bar.hidden = n === 0; if (!n) return;
+        $('ks-selcount').textContent = n + ' soal dipilih';
+        const targets = keysOf(mode).filter(k => k !== cur), sig = targets.join('|');
+        if (bar.dataset.sig !== sig) {
+            bar.dataset.sig = sig;
+            $('ks-target').innerHTML = targets.length ? targets.map(k => `<option value="${esc(k)}">${esc(rows[k].nama)} (${rows[k].soal.length})</option>`).join('') : '<option value="">(belum ada ' + U().unit + ' lain)</option>';
+        }
     }
     async function dropOrder() {
         const ids = Array.from(document.querySelectorAll('#ks-list > .ks-item')).map(e => e.dataset.id);
@@ -10287,29 +10571,80 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
         catch (e) { console.error(e); say('Gagal menyimpan urutan.'); }
         paintList();
     }
+
+    // ---------- aksi massal ----------
+    async function bulk(act) {
+        if (busy) return;
+        if (act === 'clear') { picked.clear(); paintList(); return; }
+        if (!picked.size || !cur) return;
+        const ids = Array.from(picked), n = ids.length, has = s => ids.indexOf(String(s.id)) >= 0;
+        let msg = '';
+        try {
+            if (act === 'del') {
+                if (!confirm('Hapus ' + n + ' soal terpilih? Tidak bisa dibatalkan.')) return;
+                busy = true; await change(p => { p.soal = p.soal.filter(s => !has(s)); }); msg = n + ' soal dihapus.';
+            } else if (act === 'topic') {
+                const nt = ($('ks-newtopic').value || '').trim(); if (!nt) { say('Tulis nama topik barunya dulu.'); return; }
+                busy = true; await change(p => { p.soal.forEach(s => { if (has(s)) s.topic = nt; }); }); msg = 'Topik ' + n + ' soal diganti menjadi "' + nt + '".';
+            } else if (act === 'move' || act === 'copy') {
+                const tk = $('ks-target').value; if (!tk || !rows[tk]) { say('Pilih ' + U().unit + ' tujuan dulu.'); return; }
+                if (!confirm((act === 'move' ? 'Pindahkan ' : 'Salin ') + n + ' soal ke "' + rows[tk].nama + '"?')) return;
+                busy = true;
+                const src = (await getRow(cur)) || rows[cur], dst = (await getRow(tk)) || rows[tk];
+                const items = src.soal.filter(has);
+                if (!items.length) { say('Soal yang dipilih sudah tidak ada.'); return; }
+                items.forEach(s => { const c = JSON.parse(JSON.stringify(s)); c.id = nextId(dst); dst.soal.push(c); });
+                await putRow(tk, dst); rows[tk] = dst;                       // tulis tujuan dulu supaya soal tidak hilang kalau gagal
+                if (act === 'move') { src.soal = src.soal.filter(s => !has(s)); await putRow(cur, src); rows[cur] = src; }
+                msg = items.length + ' soal ' + (act === 'move' ? 'dipindahkan' : 'disalin') + ' ke "' + dst.nama + '".';
+            }
+            picked.clear(); opened.clear(); refresh(); say(msg, true);
+        } catch (e) { console.error(e); say('Gagal memproses. Periksa koneksi atau izin database.'); }
+        finally { busy = false; }
+    }
+
     root.addEventListener('click', async e => {
-        const b = e.target.closest('[data-ks]'); if (!b) return;
+        const t = e.target; if (!t || !t.closest) return;
+        let el;
+        if ((el = t.closest('[data-mode]'))) { switchMode(el.dataset.mode); return; }
+        if ((el = t.closest('[data-cat]'))) { pickCat(el.dataset.cat); return; }
+        if (t.closest('[data-new]')) { infoBox(true); return; }
+        if ((el = t.closest('[data-bulk]'))) { bulk(el.dataset.bulk); return; }
+        const b = t.closest('[data-ks]'); if (!b) return;
         const it = b.closest('.ks-item'); if (!it) return;
         const id = it.dataset.id, act = b.dataset.ks, v = rows[cur];
-        if (act === 'edit') {
+        if (act === 'toggle') {
+            if (opened.has(id)) opened.delete(id); else opened.add(id);
+            it.classList.toggle('open', opened.has(id)); const d = it.querySelector('.ks-detail'); if (d) d.hidden = !opened.has(id);
+        } else if (act === 'edit') {
             const x = v.soal.find(s => String(s.id) === id); if (!x) return;
             editing = x.id; setFormMode(); pane('form');
             $('ks-topic').value = x.topic || x.category || ''; $('ks-q').value = x.question || ''; $('ks-e').value = x.explanation || ''; $('ks-img').value = x.image || x.image_path || ''; $('ks-fix').checked = !!x.fixed_order;
-            const opts = x.options || [], a = typeof x.answer === 'number' ? x.answer : opts.indexOf(x.answer);
+            const opts = x.options || [], a = ansIdx(x);
             document.querySelectorAll('#ks-opts [data-o]').forEach(inp => { inp.value = opts[+inp.dataset.o] || ''; });
             document.querySelectorAll('#ks-opts input[type=radio]').forEach(r => { r.checked = (+r.value === a); });
             $('ks-form').scrollIntoView({ behavior: 'smooth', block: 'start' }); $('ks-q').focus();
         } else if (act === 'del') {
             if (!confirm('Hapus soal ini?')) return;
-            try { await change(p => { p.soal = p.soal.filter(s => String(s.id) !== id); }); if (editing != null && String(editing) === id) { editing = null; clearForm(); setFormMode(); } paintSelect(); paintList(); say('Soal dihapus.', true); }
+            try { await change(p => { p.soal = p.soal.filter(s => String(s.id) !== id); }); picked.delete(id); opened.delete(id); if (editing != null && String(editing) === id) { editing = null; clearForm(); setFormMode(); } refresh(); say('Soal dihapus.', true); }
             catch (err) { console.error(err); say('Gagal menghapus.'); }
         } else if (act === 'dup') {
-            try { await change(p => { const i = p.soal.findIndex(s => String(s.id) === id); if (i >= 0) { const c = JSON.parse(JSON.stringify(p.soal[i])); c.id = nextId(p); p.soal.splice(i + 1, 0, c); } }); paintSelect(); paintList(); say('Soal digandakan tepat di bawahnya. Klik Ubah untuk mengeditnya.', true); }
+            try { await change(p => { const i = p.soal.findIndex(s => String(s.id) === id); if (i >= 0) { const c = JSON.parse(JSON.stringify(p.soal[i])); c.id = nextId(p); p.soal.splice(i + 1, 0, c); } }); refresh(); say('Soal digandakan tepat di bawahnya. Klik Ubah untuk mengeditnya.', true); }
             catch (err) { console.error(err); say('Gagal menggandakan.'); }
         } else if (act === 'up' || act === 'down') {
-            try { await change(p => { const i = p.soal.findIndex(s => String(s.id) === id), j = act === 'up' ? i - 1 : i + 1; if (i >= 0 && j >= 0 && j < p.soal.length) { const t = p.soal[i]; p.soal[i] = p.soal[j]; p.soal[j] = t; } }); paintList(); }
+            try { await change(p => { const i = p.soal.findIndex(s => String(s.id) === id), j = act === 'up' ? i - 1 : i + 1; if (i >= 0 && j >= 0 && j < p.soal.length) { const t2 = p.soal[i]; p.soal[i] = p.soal[j]; p.soal[j] = t2; } }); paintList(); }
             catch (err) { console.error(err); say('Gagal mengubah urutan.'); }
         }
+    });
+    root.addEventListener('keydown', e => {
+        if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.matches && e.target.matches('.ks-body[data-ks="toggle"]')) { e.preventDefault(); e.target.click(); }
+    });
+    root.addEventListener('change', e => {
+        const c = e.target; if (!c || !c.matches || !c.matches('[data-pick]')) return;
+        const it = c.closest('.ks-item'); if (!it) return;
+        const id = it.dataset.id; if (c.checked) picked.add(id); else picked.delete(id);
+        it.classList.toggle('picked', c.checked); paintSelbar();
+        const pa = $('ks-pickall'); if (pa && !c.checked) pa.checked = false;
     });
 
     // ---------- tempel banyak soal ----------
@@ -10338,16 +10673,21 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
     }
     async function bulkAdd() {
         if (busy) return; const txt = $('ks-bulk').value; if (!txt.trim()) { say('Tempel soalnya dulu.'); return; }
-        const r = parseBulk(txt, $('ks-topic').value.trim() || 'Umum');
+        const r = parseBulk(txt, ($('ks-topic') && $('ks-topic').value.trim()) || 'Umum');
         if (!r.ok.length) { say(r.bad.length ? r.bad.slice(0, 4).join('; ') : 'Tidak ada soal yang terbaca.'); return; }
-        const note = r.bad.length ? '\n\n' + r.bad.length + ' soal dilewati:\n- ' + r.bad.slice(0, 6).join('\n- ') : '';
-        if (!confirm('Terbaca ' + r.ok.length + ' soal. Tambahkan ke paket "' + rows[cur].nama + '"?' + note)) return;
+        const have = new Set(rows[cur].soal.map(x => normQ(x.question)));
+        const fresh = r.ok.filter(s => { const k = normQ(s.question); if (have.has(k)) return false; have.add(k); return true; });
+        const dup = r.ok.length - fresh.length;
+        if (!fresh.length) { say('Semua soal yang ditempel sudah ada di ' + U().unit + ' ini.'); return; }
+        const note = (dup ? '\n\n' + dup + ' soal dilewati karena pertanyaannya sudah ada.' : '') + (r.bad.length ? '\n\n' + r.bad.length + ' soal tidak terbaca:\n- ' + r.bad.slice(0, 6).join('\n- ') : '');
+        if (!confirm('Terbaca ' + fresh.length + ' soal baru. Tambahkan ke ' + U().unit + ' "' + rows[cur].nama + '"?' + note)) return;
         busy = true;
-        try { await change(v => { r.ok.forEach(s => v.soal.push(Object.assign({ id: nextId(v) }, s))); }); $('ks-bulk').value = ''; paintSelect(); paintList(); pane('list'); say(r.ok.length + ' soal ditambahkan.', true); }
+        try { await change(v => { fresh.forEach(s => v.soal.push(Object.assign({ id: nextId(v) }, s))); }); $('ks-bulk').value = ''; refresh(); pane('list'); say(fresh.length + ' soal ditambahkan.', true); }
         catch (e) { console.error(e); say('Gagal menyimpan. Periksa koneksi atau izin database.'); }
         finally { busy = false; }
     }
 
+    // ---------- impor dari file (JSON / CSV / TXT) ----------
     // ---------- impor dari file (JSON / CSV / TXT) ----------
     const KEYS = {
         q: ['question', 'pertanyaan', 'soal', 'q'], opts: ['options', 'opsi', 'pilihan', 'choices'], ans: ['answer', 'jawaban', 'kunci', 'jawaban_benar', 'correct', 'kunci_jawaban'],
@@ -10411,14 +10751,15 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
         const r = parseBulk(text, 'Umum');
         return { ok: r.ok, bad: r.bad, meta: {} };
     }
-    const normQ = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
     async function importFile(file) {
         if (busy || !file) return;
         if (file.size > 2 * 1024 * 1024) { say('File terlalu besar (maksimal 2 MB).'); return; }
         let r; try { r = readText(await file.text(), file.name); } catch (e) { say(e.message || 'File tidak bisa dibaca.'); return; }
         if (!r.ok.length) { say(r.bad.length ? 'Tidak ada soal yang valid. ' + r.bad.slice(0, 3).join('; ') : 'Tidak ada soal yang terbaca di file ini.'); return; }
         const nama = String(r.meta.nama || '').trim().replace(/[:\/\\]/g, '-');
-        const key = nama || cur; if (!key) { say('Pilih paket dulu, atau tulis "nama" paket di dalam file.'); return; }
+        let key = nama ? keyFor(nama) : cur;
+        if (nama && mode === 'latihan') key = key.replace(/^cbt~/i, 'cbt-');
+        if (!key) { say('Pilih ' + U().unit + ' dulu, atau tulis "nama" di dalam file.'); return; }
         busy = true;
         try {
             const exist = await getRow(key), isNew = !exist, v = exist || norm(null, key);
@@ -10430,15 +10771,18 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
                 if (hit) { if (upd) changed.push([hit, s]); else dup++; }
                 else { const c = Object.assign({}, s); delete c.id; fresh.push(c); byQ[normQ(c.question)] = c; }
             });
-            if (!fresh.length && !changed.length) { say('Semua soal di file ini sudah ada di paket "' + v.nama + '".'); return; }
+            if (!fresh.length && !changed.length) { say('Semua soal di file ini sudah ada di ' + U().unit + ' "' + v.nama + '".'); return; }
             const s0 = fresh[0] || changed[0][1], note = (dup ? '\nDilewati karena sudah ada: ' + dup : '') + (r.bad.length ? '\nBermasalah (dilewati): ' + r.bad.length + '\n- ' + r.bad.slice(0, 5).join('\n- ') : '');
-            if (!confirm('Paket: "' + v.nama + '" (' + (isNew ? 'baru' : 'sudah ada, berisi ' + v.soal.length + ' soal') + ')\nAkan ditambahkan: ' + fresh.length + ' soal' + (changed.length ? '\nAkan diperbarui: ' + changed.length + ' soal' : '') + note
+            if (!confirm(U().Unit + ': "' + v.nama + '" (' + (isNew ? 'baru' : 'sudah ada, berisi ' + v.soal.length + ' soal') + ')\nAkan ditambahkan: ' + fresh.length + ' soal' + (changed.length ? '\nAkan diperbarui: ' + changed.length + ' soal' : '') + note
                 + '\n\nPeriksa contoh:\n"' + s0.question.slice(0, 90) + '"\nJawaban benar: ' + s0.options[s0.answer] + '\n\nLanjutkan?')) return;
-            if (isNew) { v.nama = nama || key; v.mk = String(r.meta.mk || '').trim() || 'Umum'; v.deskripsi = String(r.meta.deskripsi || '').trim(); v.urutan = Number.isFinite(+r.meta.urutan) && r.meta.urutan !== '' && r.meta.urutan != null ? +r.meta.urutan : (Object.keys(rows).length + 1); v.aktif = true; }
+            if (isNew) {
+                v.jenis = mode; v.nama = nama || String(key).replace(/^cbt~/, ''); v.mk = String(r.meta.mk || '').trim() || 'Umum'; v.deskripsi = String(r.meta.deskripsi || '').trim();
+                v.urutan = Number.isFinite(+r.meta.urutan) && r.meta.urutan !== '' && r.meta.urutan != null ? +r.meta.urutan : keysOf(mode).length + 1;
+            }
             changed.forEach(pr => { const h = pr[0], s2 = pr[1]; Object.assign(h, { topic: s2.topic, question: s2.question, options: s2.options, answer: s2.answer, explanation: s2.explanation, image: s2.image, fixed_order: s2.fixed_order }); });
             fresh.forEach(s => v.soal.push(Object.assign({}, s, { id: nextId(v) })));
-            await putRow(key, v); rows[key] = v; cur = key; editing = null;
-            paintSelect(); paintWork(); say(fresh.length + ' soal ditambah, ' + changed.length + ' diperbarui di "' + v.nama + '".', true);
+            await putRow(key, v); rows[key] = v; cur = key; curBy[mode] = key; resetView();
+            paintAll(); say(fresh.length + ' soal ditambah, ' + changed.length + ' diperbarui di "' + v.nama + '".', true);
         } catch (e) { console.error(e); say('Gagal menyimpan. Periksa koneksi atau izin database.'); }
         finally { busy = false; }
     }
@@ -10469,9 +10813,9 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
         inp.onchange = () => { const f = inp.files && inp.files[0]; inp.value = ''; if (f) importFile(f); };
         $('ks-dl-json').onclick = () => download('contoh-soal.json', JSON.stringify(SAMPLE, null, 2), 'application/json');
         $('ks-dl-csv').onclick = () => download('contoh-soal.csv', SAMPLE_CSV, 'text/csv');
-        $('ks-ex-json').onclick = () => { const v = cur && rows[cur]; if (!v) { say('Pilih paket dulu.'); return; } download(fname(v) + '.json', JSON.stringify({ nama: v.nama, mk: v.mk, deskripsi: v.deskripsi, urutan: v.urutan, soal: exportRows(v) }, null, 2), 'application/json'); };
-        $('ks-ex-csv').onclick = () => { const v = cur && rows[cur]; if (!v) { say('Pilih paket dulu.'); return; } download(fname(v) + '.csv', csvOf(v), 'text/csv'); };
-        $('ks-copy-ai').onclick = async () => { say((await copyText(AI_PROMPT)) ? 'Perintah untuk AI sudah disalin. Tempel ke ChatGPT / Claude / Gemini bersama materimu.' : 'Tidak bisa menyalin otomatis. Salin manual dari kotak di bawah.', true); };
+        $('ks-ex-json').onclick = () => { const v = cur && rows[cur]; if (!v) { say('Pilih ' + U().unit + ' dulu.'); return; } download(fname(v) + '.json', JSON.stringify({ nama: v.nama, mk: v.mk, deskripsi: v.deskripsi, urutan: v.urutan, soal: exportRows(v) }, null, 2), 'application/json'); };
+        $('ks-ex-csv').onclick = () => { const v = cur && rows[cur]; if (!v) { say('Pilih ' + U().unit + ' dulu.'); return; } download(fname(v) + '.csv', csvOf(v), 'text/csv'); };
+        $('ks-copy-ai').onclick = async () => { say((await copyText(AI_PROMPT.replace('NAMA PAKET', mode === 'cbt' ? 'NAMA KATEGORI' : 'NAMA PAKET'))) ? 'Perintah untuk AI sudah disalin. Tempel ke ChatGPT / Claude / Gemini bersama materimu.' : 'Tidak bisa menyalin otomatis. Coba lagi lewat tombol Contoh JSON.', true); };
         ['dragenter', 'dragover'].forEach(ev => box.addEventListener(ev, e => { e.preventDefault(); box.classList.add('drag'); }));
         ['dragleave', 'drop'].forEach(ev => box.addEventListener(ev, e => { e.preventDefault(); box.classList.remove('drag'); }));
         box.addEventListener('drop', e => { const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if (f) importFile(f); });
@@ -10480,7 +10824,7 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
     // ---------- buka tab ----------
     async function open() {
         if (!isAdm()) { root.innerHTML = '<div class="card"><p>Halaman ini khusus admin.</p></div>'; return; }
-        if (!loaded) { root.innerHTML = '<div class="card"><p class="ks-hint">\u23F3 Memuat paket soal\u2026</p></div>'; try { await loadAll(); } catch (e) { root.innerHTML = '<div class="card"><p class="ks-hint">Gagal memuat. Periksa koneksi lalu buka ulang menu ini.</p></div>'; return; } }
+        if (!loaded) { root.innerHTML = '<div class="card"><p class="ks-hint">\u23F3 Memuat soal\u2026</p></div>'; try { await loadAll(); } catch (e) { root.innerHTML = '<div class="card"><p class="ks-hint">Gagal memuat. Periksa koneksi lalu buka ulang menu ini.</p></div>'; return; } }
         shell();
     }
     const prev = window.switchTab;
@@ -10542,6 +10886,51 @@ Pembahasan: Hipotalamus mengatur suhu tubuh.</pre>
 #ks-root .ks-pane > .ks-panel:first-child { margin-top: 0; }
 @media (max-width: 640px) { #ks-root .ks-seg button { font-size: 13px; padding: 8px 4px; } }
 @media (max-width: 640px) { #ks-root .ks-grid { grid-template-columns: 1fr; } #ks-root .ks-item { flex-wrap: wrap; } #ks-root .ks-acts { max-width: none; width: 100%; justify-content: flex-start; } }
+
+#ks-root .ks-card > .ks-seg.ks-mode { margin-top: 2px; }
+#ks-root .ks-mode button { display: flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.25; }
+#ks-root .ks-mode button small { font-weight: 500; font-size: 11.5px; opacity: .85; }
+#ks-root .ks-cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin: 6px 0 14px; }
+#ks-root .ks-cat { text-align: left; display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border: 0; border-radius: 20px; background: var(--bg-card); color: var(--text-main); font: inherit; cursor: pointer; box-shadow: 0 0 0 1px var(--border-color); transition: box-shadow .15s ease, background .15s ease, transform .15s ease; }
+#ks-root .ks-cat b { font-size: 14.5px; overflow-wrap: anywhere; }
+#ks-root .ks-cat span { font-size: 12px; color: var(--text-muted); }
+#ks-root .ks-cat em { font-style: normal; font-size: 11px; font-weight: 700; color: var(--danger); }
+#ks-root .ks-cat:hover { box-shadow: 0 0 0 1px var(--primary-bd), 0 12px 24px -16px rgba(20,24,40,.3); transform: translateY(-1px); }
+#ks-root .ks-cat.on { background: var(--primary-light); box-shadow: 0 0 0 2px var(--primary); }
+#ks-root .ks-cat-new { background: transparent; box-shadow: none; border: 2px dashed var(--border-strong); color: var(--primary-text); justify-content: center; }
+#ks-root .ks-wh { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px; margin: 4px 0 4px; }
+#ks-root .ks-wh-t { flex: 1 1 260px; min-width: 0; } #ks-root .ks-wh-t h4 { margin: 0 0 6px; font-size: 17px; overflow-wrap: anywhere; }
+#ks-root .ks-stats .warn { color: var(--danger); } #ks-root .ks-stats .warn b { color: var(--danger); }
+#ks-root .ks-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0 0 10px; }
+#ks-root .ks-tools .modern-input { margin: 0; flex: 1 1 200px; max-width: 320px; }
+#ks-root .ks-tools .ks-chk { margin: 0; font-size: 13px; white-space: nowrap; }
+#ks-root .ks-selbar { position: sticky; top: 8px; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 14px; margin: 0 0 12px; border-radius: 20px; background: var(--primary-light); box-shadow: 0 0 0 2px var(--primary), 0 14px 28px -18px rgba(20,24,40,.45); }
+#ks-root .ks-selbar[hidden] { display: none; }
+#ks-root .ks-selbar > b { color: var(--primary-text); }
+#ks-root .ks-selrow { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+#ks-root .ks-selrow .modern-input { margin: 0; width: auto; min-width: 140px; max-width: 220px; }
+#ks-root .ks-item { flex-wrap: wrap; }
+#ks-root .ks-item.picked { box-shadow: 0 0 0 2px var(--primary); background: var(--primary-light); }
+#ks-root .ks-pick { margin: 0; flex: none; display: grid; place-items: center; width: 28px; height: 28px; cursor: pointer; }
+#ks-root .ks-pick input { width: 18px; height: 18px; margin: 0; cursor: pointer; accent-color: var(--primary); }
+#ks-root .ks-body { cursor: pointer; }
+#ks-root .ks-item.open .ks-q { -webkit-line-clamp: unset; display: block; }
+#ks-root .ks-warn { color: var(--danger); font-weight: 600; }
+#ks-root .ks-detail { flex: 0 0 100%; margin: 4px 0 2px; padding: 12px 14px; border-radius: 16px; background: var(--input-bg); box-shadow: inset 0 0 0 1px var(--border-color); }
+#ks-root .ks-detail[hidden] { display: none; }
+#ks-root .ks-opts { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
+#ks-root .ks-opts li { padding: 7px 12px; border-radius: 12px; background: var(--bg-card); box-shadow: inset 0 0 0 1px var(--border-color); font-size: 14px; overflow-wrap: anywhere; }
+#ks-root .ks-opts li.ok { background: #ecfdf5; box-shadow: inset 0 0 0 2px #10b981; color: #065f46; }
+#ks-root .ks-opts li em { font-style: normal; font-weight: 700; font-size: 12px; }
+#ks-root .ks-exp { font-size: 13.5px; line-height: 1.5; } #ks-root .ks-exp.none { color: var(--text-muted); font-style: italic; }
+#ks-root .ks-img img { display: block; max-width: 100%; max-height: 220px; margin-top: 8px; border-radius: 12px; border: 1px solid var(--border-color); background: #fff; }
+@media (max-width: 640px) {
+  #ks-root .ks-cats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  #ks-root .ks-tools .modern-input { max-width: none; flex-basis: 100%; }
+  #ks-root .ks-selbar { top: 4px; padding: 8px 10px; }
+  #ks-root .ks-selrow { width: 100%; } #ks-root .ks-selrow .modern-input { flex: 1; max-width: none; }
+  #ks-root .ks-mode button small { font-size: 10.5px; }
+}
 `;
     document.head.appendChild(st);
 })();
