@@ -13,7 +13,8 @@ const allowedUsers = {
     "21105032610089": "FATIKHATUNNISA ALYA FAHIRA", "21105032610125": "KEYSHA AURELL ANINDIKAZZAHRA",
     "21105032610149": "MUHAMMAD FIKRI HIDAYATULLOH", "21105032610171": "NATHANIA MENGDA JAMIPUTRI",
     "21105032610201": "RAFIDA HAMIDAH PUTRI", "21105032610227": "SADRAKH KRISTANDE GWIHARTO",
-    "21105032610239": "SHERILLA AUDREY NASYWA", "21105032610191": "KAORI"
+    "21105032610239": "SHERILLA AUDREY NASYWA", "21105032610191": "KAORI",
+    "21105032610225": "KHAKIM"
 };
 
 let currentUser = null;
@@ -7385,10 +7386,8 @@ body.cbt-locked #jb-ticker { display: none !important; }
 
 // ==========================================================================
 // BAGIAN 20B - SIMULASI CBT: MAHASISWA MEMILIH KATEGORI + JUMLAH SOAL
-//   Soal CBT berasal dari dua sumber yang digabung otomatis:
-//     1) Bank CBT lama (dbData.cbt_soal), dikelompokkan lewat field paket / blok / category / topic.
-//     2) Kategori CBT baru buatan admin di Latihan > Kelola Soal > Soal CBT
-//        (tabel portal_db, key "paket:cbt~<nama>", jenis "cbt").
+//   Soal CBT hanya berasal dari kategori CBT buatan admin di Latihan > Kelola Soal > Soal CBT
+//   (tabel portal_db, key "paket:cbt~<nama>", jenis "cbt"). Bank CBT lama (key "cbt_soal") tidak dipakai lagi.
 //   Mahasiswa memilih satu atau beberapa kategori (kosong = semua) dan jumlah soal
 //   (10 / 20 / 30 / 50 / 100 / Semua, atau angka sendiri). Soal diambil acak.
 //   Waktu Mode CBT menyesuaikan jumlah soal: 1 menit per soal (minimal 5 menit).
@@ -7438,7 +7437,8 @@ body.cbt-locked #jb-ticker { display: none !important; }
         });
         memo = out; return out;
     }
-    const pool = () => (Array.isArray(dbData.cbt_soal) ? dbData.cbt_soal : []).concat(katItems());
+    // Bank CBT lama (dbData.cbt_soal) sengaja TIDAK dipakai lagi: hanya kategori CBT baru buatan admin.
+    const pool = () => katItems();
 
     function groups(list) {
         const m = {};
