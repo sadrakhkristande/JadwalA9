@@ -1525,7 +1525,7 @@ body { font-size: 16px; }
                 ${rv ? '' : `<button class="btn btn-outline btn-sm" data-act="flag">${c.flag[q.id] ? '\ud83d\udea9 Ragu-ragu (klik untuk batal)' : '\ud83c\udff3\ufe0f Tandai ragu-ragu'}</button>`}
               </span>
             </div>
-            <div class="q-text">${q.text}</div>
+            <div class="q-text">${q.text != null ? q.text : esc(q.question)}</div>
             ${img}
             <ul class="options">${opts}</ul>
             ${fb}
