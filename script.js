@@ -4737,7 +4737,7 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
     const TRK = k => 'a9_sjT_srv_' + k;
 
     const blank = () => ({ istilah: [{ t: '', d: '' }], soal: [], lo: '', belajar: '', sumber: '', laporan: [], gambar: [], by: '', ts: 0 });
-    const blankLap = () => ({ by: '', kat: '', a: '', src: '' });
+    const blankLap = () => ({ by: '', kat: '', a: '', src: '', gambar: [] });
     const KATS = ['Menjawab soal', 'Menambah informasi', 'Meluruskan / koreksi', 'Menjelaskan istilah', 'Kesimpulan'];
     const me = () => (currentUser && (currentUser.name || currentUser.nim)) || 'Anonim';
     const AUTOSAVE_MS = 5000;
@@ -4751,7 +4751,7 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
     let srv, draft, base, conflict, docs;
     function useMode() { const o = MODES[trial ? 'trial' : 'real']; srv = o.srv; draft = o.draft; base = o.base; conflict = o.conflict; docs = o.docs; }
 
-    let curB = 0, cur = 1, lastDoc = null;
+    let curB = 0, cur = 1, lastDoc = null, lapTarget = 0;
     let lastFetch = 0, fetching = false, timer = null, saving = false, booted = false;
     const curKey = () => skey(BLOK[curB], cur);
     window.__sjxCtx = () => ({ b: BLOK[curB], n: cur, k: curKey(), trial });
@@ -4783,12 +4783,13 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
     const mark = (b, n) => { const k = skey(b, n); return draft[k] ? ' \u2022' : (srv[k] && srv[k].ts ? ' \u2713' : ''); };
     const blokDirty = b => b.skenario.some(s => draft[skey(b, s.n)]);
 
+    const cleanImgs = a => (Array.isArray(a) ? a : []).filter(g => g && g.url).map(g => ({ url: String(g.url), id: String(g.id || ''), cap: String(g.cap || '').trim() }));
     const cleanData = d => ({
         istilah: (d.istilah || []).map(x => ({ t: String(x.t || '').trim(), d: String(x.d || '').trim() })).filter(x => x.t || x.d),
         soal: (d.soal || []).map(x => ({ q: String(x.q || '').trim(), by: String(x.by || '').trim(), a: (x.a || []).map(a => ({ t: String(a.t || '').trim(), by: String(a.by || '').trim() })).filter(a => a.t) })).filter(x => x.q || x.a.length),
         lo: String(d.lo || '').trim(),
         belajar: String(d.belajar || '').trim(), sumber: String(d.sumber || '').trim(),
-        laporan: (d.laporan || []).map(x => ({ by: String(x.by || '').trim(), kat: String(x.kat || '').trim(), a: String(x.a || '').trim(), src: String(x.src || '').trim() })).filter(x => x.a || x.src),
+        laporan: (d.laporan || []).map(x => ({ by: String(x.by || '').trim(), kat: String(x.kat || '').trim(), a: String(x.a || '').trim(), src: String(x.src || '').trim(), gambar: cleanImgs(x.gambar) })).filter(x => x.a || x.src || x.gambar.length),
         gambar: (d.gambar || []).filter(g => g && g.url).map(g => ({ url: String(g.url), id: String(g.id || ''), cap: String(g.cap || '').trim() }))
     });
     const same = (a, b) => JSON.stringify(cleanData(a || blank())) === JSON.stringify(cleanData(b || blank()));
@@ -4838,7 +4839,18 @@ function a9MoveSesi(list, tglLama, idx, tglBaru, jamBaru, ket) {
 .sj-qhead, .sj-a { display:grid; grid-template-columns:1fr 170px auto; gap:8px; align-items:start; margin-bottom:8px; }
 .sj-qn { font-weight:700; color:var(--text-main); font-size:13px; margin-bottom:4px; display:flex; align-items:center; gap:8px; }
 .sj-mv { display:inline-flex; gap:4px; } .sj-mv button { padding:1px 8px; line-height:1.4; } .sj-mv button:disabled { opacity:.35; cursor:default; }
-.sj-laphead, .sj-lapr { display:grid; grid-template-columns:140px 160px 1fr 1fr auto; gap:8px; align-items:start; margin-bottom:8px; }
+.sj-lapr { border:1px solid var(--border-color); border-radius:12px; padding:12px; margin-bottom:12px; }
+.sj-laptop { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+.sj-lapn { font-weight:700; font-size:13px; color:var(--text-main); }
+.sj-lapids { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+.sj-lapr > textarea { display:block; margin-bottom:8px; }
+.sj-limgs { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px; margin:4px 0 8px; }
+.sj-limgs:empty { display:none; }
+.sj-limg { border:1px solid var(--border-color); border-radius:10px; padding:8px; display:flex; flex-direction:column; gap:6px; }
+.sj-limg img { width:100%; max-height:320px; object-fit:contain; border-radius:6px; background:rgba(128,128,128,.12); cursor:zoom-in; }
+.sj-limg input { width:100%; box-sizing:border-box; }
+.sj-laphead { font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:4px; }
+@media (max-width:640px) { .sj-lapids { grid-template-columns:1fr; } }
 .sj-laphead { font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:4px; }
 .sj-lapr input, .sj-lapr textarea { width:100%; box-sizing:border-box; min-height:0; } .sj-lapr textarea { min-height:56px; }
 .sj-ans { margin-left:14px; padding-left:10px; border-left:3px solid var(--border-color); }
@@ -5076,11 +5088,17 @@ ${sumCard}
     <button type="button" class="btn btn-outline btn-sm" data-adda="${qi}">+ Tambah jawaban</button></div></div>`).join('')}</div>
   <div class="sj-acts"><button type="button" class="btn btn-outline btn-sm" data-addq>+ Tambah masalah</button></div></div>
 <div class="sj-card"><h4>Langkah 5 \u2013 Learning Objectives (LO)</h4><p class="sj-sub">Satu LO per baris.</p><textarea class="modern-input" data-f="lo" placeholder="Mahasiswa mampu menjelaskan ...">${esc(v.lo)}</textarea></div>
-<div class="sj-card"><h4>Langkah 7 \u2013 Laporan hasil belajar mandiri (Pertemuan 2)</h4><p class="sj-sub">Isi per baris: siapa yang melapor, kategorinya (misalnya menjawab soal), jawabannya, dan sumbernya. Kolom nama dikosongkan dulu, isi sendiri bila perlu.</p>
+<div class="sj-card"><h4>Langkah 7 \u2013 Laporan hasil belajar mandiri (Pertemuan 2)</h4><p class="sj-sub">Satu kartu untuk tiap laporan: nama, kategori (misalnya menjawab soal), jawaban, sumber, dan gambar pendukungnya sendiri bila perlu. Kolom nama dikosongkan dulu, isi sendiri bila perlu.</p>
   <datalist id="sj-kats">${KATS.map(x => `<option value="${esc(x)}">`).join('')}</datalist>
-  <div class="sj-laphead"><span>Nama</span><span>Kategori</span><span>Jawaban</span><span>Sumber</span><span></span></div>
-  <div id="sj-lap">${lap.map((x, li) => `<div class="sj-lapr" data-li="${li}"><input class="modern-input" data-lby list="sj-names" placeholder="Nama" value="${esc(x.by)}"><input class="modern-input" data-lkat list="sj-kats" placeholder="Kategori (mis. menjawab soal)" value="${esc(x.kat)}"><textarea class="modern-input" data-la placeholder="Jawaban / informasi yang didapat">${esc(x.a)}</textarea><textarea class="modern-input" data-lsrc placeholder="Sumber (judul | link)">${esc(x.src)}</textarea><button type="button" class="btn btn-outline btn-sm" data-dellap="${li}" title="Hapus baris">\u2715</button></div>`).join('')}</div>
-  <div class="sj-acts"><button type="button" class="btn btn-outline btn-sm" data-addlap>+ Tambah baris</button></div>
+  <div id="sj-lap">${lap.map((x, li) => `<div class="sj-lapr" data-li="${li}">
+    <div class="sj-laptop"><span class="sj-lapn">Laporan ${li + 1}${x.by ? ' \u00b7 ' + esc(x.by) : ''}</span><button type="button" class="btn btn-outline btn-sm" data-dellap="${li}" title="Hapus laporan ini">\u2715 Hapus</button></div>
+    <div class="sj-lapids"><input class="modern-input" data-lby list="sj-names" placeholder="Nama" value="${esc(x.by)}"><input class="modern-input" data-lkat list="sj-kats" placeholder="Kategori (mis. menjawab soal)" value="${esc(x.kat)}"></div>
+    <textarea class="modern-input" data-la placeholder="Jawaban / informasi yang didapat">${esc(x.a)}</textarea>
+    <textarea class="modern-input" data-lsrc placeholder="Sumber (judul | link)">${esc(x.src)}</textarea>
+    <div class="sj-limgs">${(x.gambar || []).map((g, gi) => `<div class="sj-limg" data-url="${esc(g.url)}" data-id="${esc(g.id || '')}"><img src="${esc(imgSrc(g))}" alt="Gambar laporan ${li + 1}.${gi + 1}" loading="lazy" referrerpolicy="no-referrer"><input class="modern-input" data-lcap placeholder="Keterangan gambar" value="${esc(g.cap || '')}"><button type="button" class="btn btn-outline btn-sm" data-dellimg="${li}-${gi}">Hapus gambar</button></div>`).join('')}</div>
+    <div class="sj-acts"><button type="button" class="btn btn-outline btn-sm" data-addlimg="${li}">\ud83d\uddbc\ufe0f + Gambar untuk laporan ini</button></div></div>`).join('')}</div>
+  <div class="sj-acts"><button type="button" class="btn btn-outline btn-sm" data-addlap>+ Tambah laporan</button></div>
+  <input type="file" id="sj-lfile" accept="image/*" multiple hidden>
   ${v.belajar ? `<p class="sj-sub" style="margin-top:12px;">Catatan lama (teks bebas dari versi sebelumnya, tetap tersimpan):</p><textarea class="modern-input" data-f="belajar">${esc(v.belajar)}</textarea>` : ''}
   ${v.sumber ? `<p class="sj-sub" style="margin-top:12px;">Daftar sumber lama (kolom sumber terpisah sudah dihapus; isi ini tetap tersimpan dan ikut ke dokumen):</p><textarea class="modern-input" data-f="sumber">${esc(v.sumber)}</textarea>` : ''}</div>
 <div class="sj-card"><h4>\ud83d\uddbc\ufe0f Gambar pendukung</h4><p class="sj-sub">Tambahkan gambar (skema, foto, tabel) untuk memperkuat alasan. Tulis keterangan di bawah tiap gambar. Foto otomatis diperkecil sebelum diunggah.${trial ? ' (Dimatikan di Mode Coba.)' : ''}</p>
@@ -5126,7 +5144,7 @@ ${trial ? '' : docsPanel()}`;
         r.querySelectorAll('.sj-row').forEach(row => d.istilah.push({ t: row.querySelector('[data-t]').value, d: row.querySelector('[data-d]').value }));
         r.querySelectorAll('[data-f]').forEach(el => { d[el.dataset.f] = el.value; });
         r.querySelectorAll('.sj-q').forEach(q => d.soal.push({ q: q.querySelector('[data-q]').value, by: q.querySelector('[data-qby]').value, a: Array.from(q.querySelectorAll('.sj-a')).map(a => ({ t: a.querySelector('[data-at]').value, by: a.querySelector('[data-aby]').value })) }));
-        r.querySelectorAll('.sj-lapr').forEach(row => d.laporan.push({ by: row.querySelector('[data-lby]').value, kat: row.querySelector('[data-lkat]').value, a: row.querySelector('[data-la]').value, src: row.querySelector('[data-lsrc]').value }));
+        r.querySelectorAll('.sj-lapr').forEach(row => d.laporan.push({ by: row.querySelector('[data-lby]').value, kat: row.querySelector('[data-lkat]').value, a: row.querySelector('[data-la]').value, src: row.querySelector('[data-lsrc]').value, gambar: Array.from(row.querySelectorAll('.sj-limg')).map(el => ({ url: el.dataset.url, id: el.dataset.id || '', cap: (el.querySelector('[data-lcap]') || {}).value || '' })) }));
         r.querySelectorAll('.sj-img').forEach(el => d.gambar.push({ url: el.dataset.url, id: el.dataset.id || '', cap: el.querySelector('[data-cap]').value }));
         if (same(d, srv[k])) { if (draft[k]) dropDraft(k); }
         else setDraft(k, d);
@@ -5151,6 +5169,26 @@ ${trial ? '' : docsPanel()}`;
             img.onerror = () => { URL.revokeObjectURL(u); res(file); };
             img.src = u;
         });
+    }
+
+    // gambar milik satu laporan (Langkah 7): disimpan di dalam laporan itu sendiri
+    async function addLapImages(files, li) {
+        if (trial) { toast('Unggah gambar dimatikan di Mode Coba.'); return; }
+        collect();
+        const b = BLOK[curB], n = cur, k = skey(b, n), added = [];
+        for (const f of files) {
+            if (!/^image\//.test(f.type)) { toast(f.name + ' bukan gambar, dilewati.'); continue; }
+            const small = await shrink(f);
+            const url = await uploadFileObj(small, b.folder + '/Skenario ' + n);
+            if (url) added.push({ url, id: driveIdOf(url) || '', cap: '' });
+        }
+        if (!added.length) return;
+        const d = clone(view(k));
+        if (!Array.isArray(d.laporan)) d.laporan = [];
+        while (d.laporan.length <= li) d.laporan.push(blankLap());
+        d.laporan[li].gambar = (d.laporan[li].gambar || []).concat(added);
+        setDraft(k, d);
+        if (curKey() === k) render();
     }
 
     async function addImages(files) {
@@ -5180,6 +5218,7 @@ ${trial ? '' : docsPanel()}`;
     function wire(r) {
         r.addEventListener('input', () => collect());
         r.addEventListener('change', e => {
+            if (e.target.id === 'sj-lfile') { const fs = Array.from(e.target.files || []); e.target.value = ''; if (fs.length) addLapImages(fs, lapTarget); return; }
             if (e.target.id === 'sj-file') { const fs = Array.from(e.target.files || []); e.target.value = ''; if (fs.length) addImages(fs); }
         });
         r.addEventListener('click', e => {
@@ -5203,6 +5242,8 @@ ${trial ? '' : docsPanel()}`;
             if (t.dataset.dellap != null) { mutate(d => { d.laporan.splice(+t.dataset.dellap, 1); }); return; }
             if (t.dataset.adda != null) { const qi = +t.dataset.adda; mutate(d => { if (d.soal[qi]) { if (!d.soal[qi].a.length) d.soal[qi].a.push({ t: '', by: '' }); d.soal[qi].a.push({ t: '', by: '' }); } }); const q = r.querySelectorAll('.sj-q')[qi]; if (q) { const as = q.querySelectorAll('[data-at]'); if (as.length) as[as.length - 1].focus(); } return; }
             if (t.dataset.dela != null) { const p = t.dataset.dela.split('-').map(Number); mutate(d => { if (d.soal[p[0]]) d.soal[p[0]].a.splice(p[1], 1); }); return; }
+            if (t.dataset.addlimg != null) { if (trial) { toast('Unggah gambar dimatikan di Mode Coba.'); return; } lapTarget = +t.dataset.addlimg; const f = $('sj-lfile'); if (f) f.click(); return; }
+            if (t.dataset.dellimg != null) { const p = t.dataset.dellimg.split('-').map(Number); mutate(d => { if (d.laporan[p[0]] && d.laporan[p[0]].gambar) d.laporan[p[0]].gambar.splice(p[1], 1); }); return; }
             if (t.hasAttribute('data-addimg')) { if (trial) { toast('Unggah gambar dimatikan di Mode Coba.'); return; } const f = $('sj-file'); if (f) f.click(); return; }
             if (t.dataset.delimg != null) { mutate(d => { d.gambar.splice(+t.dataset.delimg, 1); }); return; }
             if (t.hasAttribute('data-save')) { save(); return; }
@@ -5398,6 +5439,8 @@ ${trial ? '' : docsPanel()}`;
             const gam = v.gambar.map((g, i) => (tokens && g.id ? `<p>[[IMG:${g.id}]]</p>` : `<p><img src="${esc(imgSrc(g))}" width="440"></p>`) +
                 `<p style="font-size:9pt;color:#555"><em>Gambar ${i + 1}${g.cap ? '. ' + esc(g.cap) : ''}</em></p>`).join('');
             const lapRows = v.laporan || [];
+            const lapImg = lapRows.map((x, li) => (x.gambar || []).map(g => (tokens && g.id ? `<p>[[IMG:${g.id}]]</p>` : `<p><img src="${esc(imgSrc(g))}" width="440"></p>`) +
+                `<p style="font-size:9pt;color:#555"><em>Gambar laporan ${li + 1}${x.by ? ' (' + esc(x.by) + ')' : ''}${g.cap ? '. ' + esc(g.cap) : ''}</em></p>`).join('')).join('');
             const sl = lines(v.sumber).concat([].concat.apply([], lapRows.map(x => lines(x.src))));
             sl.forEach(x => { const kk = x.toLowerCase(); if (!seen.has(kk)) { seen.add(kk); allSrc.push(x); } });
             return ctr('SKENARIO ' + s.n) + ctr(U(s.topik)) + sp + ctr(U(s.judul)) + sp +
@@ -5407,7 +5450,7 @@ ${trial ? '' : docsPanel()}`;
                 hd('Learning Objectives (LO)') + ol(lines(v.lo).map(x => `<li>${esc(x)}</li>`)) +
                 ((v.belajar || lapRows.length) ? hd('Laporan hasil belajar mandiri (pertemuan 2)') + (v.belajar ? ol(lines(v.belajar).map(x => `<li>${esc(x)}</li>`)) : '') +
                     (lapRows.length ? '<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%;font-size:10pt"><tr><th>Nama</th><th>Kategori</th><th>Jawaban</th><th>Sumber</th></tr>' +
-                        lapRows.map(x => `<tr><td>${esc(x.by)}</td><td>${esc(x.kat)}</td><td>${esc(x.a).replace(/\n/g, '<br>')}</td><td>${lines(x.src).map(u => srcLi(u)).join('<br>')}</td></tr>`).join('') + '</table>' : '') : '') +
+                        lapRows.map(x => `<tr><td>${esc(x.by)}</td><td>${esc(x.kat)}</td><td>${esc(x.a).replace(/\n/g, '<br>')}</td><td>${lines(x.src).map(u => srcLi(u)).join('<br>')}</td></tr>`).join('') + '</table>' + lapImg : '') : '') +
                 (window.__sjxDoc ? window.__sjxDoc(b, n, L) : '') +
                 (gam ? hd('Gambar pendukung') + gam : '') +
                 (sl.length ? hd('Sumber / referensi') + `<ol style="margin-top:0">${sl.map(x => `<li>${srcLi(x)}</li>`).join('')}</ol>` : '') +
@@ -11109,4 +11152,111 @@ body.cbt-locked #a9-install, body.cbt-locked #a9-dl { display: none !important; 
 }
 `;
     document.head.appendChild(st);
+})();
+
+// ==========================================================================
+// BAGIAN 25 - TUTORIAL: KOTAK TULISAN MELEBAR OTOMATIS, SPLIT SCREEN, GAMBAR BISA DIPERBESAR
+//   1) Semua kotak tulisan (textarea) di Seven Jump, Pertanyaan belum terjawab, dan Notulen melebar
+//      ke bawah mengikuti isinya, jadi seluruh tulisan terlihat tanpa menggulir di dalam kotak.
+//      Baris Rangkuman pertanyaan juga tidak dipotong lagi (teks panjang turun ke baris berikutnya).
+//   2) Tombol "Split screen" di bilah atas menu Tutorial (layar lebar): teks skenario tetap terlihat
+//      di kiri, isian di kanan. Pilihan diingat di perangkat ini. Bisa dipakai bersama Layar penuh.
+//   3) Gambar di Seven Jump (termasuk gambar tiap laporan Langkah 7) bisa diketuk untuk diperbesar.
+//   Hanya menambah tampilan, tidak menyentuh data.
+// ==========================================================================
+(function () {
+    'use strict';
+    const SEL = '#sj-root textarea, #sjx-box textarea';
+    const SPLIT_KEY = 'a9_tut_split';
+    let split = false; try { split = localStorage.getItem(SPLIT_KEY) === '1'; } catch (e) { }
+    const host = () => { const l = document.getElementById('tutorial-list'); return l ? l.closest('.tab-content') : null; };
+
+    if (!document.getElementById('tut-grow-css')) {
+        const st = document.createElement('style'); st.id = 'tut-grow-css';
+        st.textContent = `
+#sj-root textarea, #sjx-box textarea { overflow-y:hidden !important; resize:none !important; max-height:none !important; }
+html body .sj-sumq { white-space:normal !important; overflow:visible !important; text-overflow:clip !important; overflow-wrap:anywhere; line-height:1.4; }
+.sj-img img { height:auto !important; max-height:320px; object-fit:contain !important; cursor:zoom-in; }
+#tut-bar .tb-split.on { box-shadow:0 0 0 2px var(--primary, #2563eb); }
+@media (max-width:899px) { #tut-bar .tb-split { display:none; } }
+@media (min-width:900px) {
+.tab-content.tut-split #sj-root { display:grid; grid-template-columns:minmax(300px, 40%) minmax(0, 1fr); column-gap:18px; row-gap:0; align-items:start; }
+.tab-content.tut-split #sj-root > * { grid-column:2; min-width:0; }
+.tab-content.tut-split #sj-root > :nth-child(-n+5) { grid-column:1 / -1; }
+.tab-content.tut-split #sj-root > .sj-case { grid-column:1; grid-row:6 / span 120; align-self:start; position:sticky; top:12px; max-height:calc(100vh - 24px); overflow-y:auto; margin-bottom:12px; }
+.tab-content.tut-full.tut-split #sj-root > .sj-case { top:62px; max-height:calc(100vh - 76px); }
+}`;
+        document.head.appendChild(st);
+    }
+
+    // ---------- kotak tulisan melebar ----------
+    function fit(t, force) {
+        if (!t || !t.isConnected || t.offsetParent === null) return;
+        if (!force && t.scrollHeight <= t.clientHeight + 1) return;
+        const extra = t.offsetHeight - t.clientHeight;
+        t.style.height = 'auto';
+        t.style.height = (t.scrollHeight + extra + 1) + 'px';
+    }
+    const sweep = force => document.querySelectorAll(SEL).forEach(t => fit(t, force));
+    let raf = 0;
+    const later = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; sweep(true); }); };
+
+    document.addEventListener('input', e => {
+        const t = e.target;
+        if (t && t.tagName === 'TEXTAREA' && t.closest && t.closest('#sj-root, #sjx-box')) fit(t, true);
+    }, true);
+    document.addEventListener('toggle', later, true);
+    window.addEventListener('resize', later);
+    try {
+        new MutationObserver(ms => {
+            for (const m of ms) {
+                const tg = m.target;
+                if (tg && tg.closest && tg.closest('#sj-root, #sjx-box')) { later(); return; }
+                for (const n of m.addedNodes) {
+                    if (n.nodeType === 1 && (n.id === 'sj-root' || n.id === 'sjx-box' || (n.querySelector && n.querySelector('#sj-root, #sjx-box')))) { later(); return; }
+                }
+            }
+        }).observe(document.body, { childList: true, subtree: true });
+    } catch (e) { }
+
+    // ---------- split screen ----------
+    function applySplit() {
+        const h = host(); if (h) h.classList.toggle('tut-split', split);
+        const b = document.getElementById('tut-split-btn');
+        if (b) { b.textContent = split ? '\u25e7 Tutup split' : '\u25e7 Split screen'; b.classList.toggle('on', split); }
+    }
+    function ensureBtn() {
+        const bar = document.getElementById('tut-bar'); if (!bar) return;
+        let b = document.getElementById('tut-split-btn');
+        if (!b) {
+            b = document.createElement('button'); b.type = 'button'; b.id = 'tut-split-btn'; b.className = 'btn btn-outline btn-sm tb-split';
+            b.title = 'Skenario di kiri, isian di kanan (layar lebar)';
+            b.addEventListener('click', () => { split = !split; try { localStorage.setItem(SPLIT_KEY, split ? '1' : '0'); } catch (e) { } applySplit(); later(); });
+            const f = document.getElementById('tut-full-btn');
+            if (f) f.insertAdjacentElement('afterend', b); else bar.insertBefore(b, bar.firstChild);
+        }
+        applySplit();
+    }
+    setInterval(() => { try { document.querySelectorAll(SEL).forEach(t => fit(t, false)); ensureBtn(); } catch (e) { } }, 1000);
+
+    // ---------- gambar diperbesar ----------
+    document.addEventListener('click', e => {
+        const img = e.target && e.target.closest ? e.target.closest('#sj-root .sj-img img, #sj-root .sj-limg img') : null;
+        if (!img) return;
+        e.preventDefault();
+        const ov = document.createElement('div');
+        ov.id = 'tut-lb'; ov.style.cssText = 'position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:16px;cursor:zoom-out;';
+        const im = document.createElement('img');
+        const big = String(img.currentSrc || img.src).replace(/sz=w\d+/, 'sz=w1600');
+        let tried = false;
+        im.referrerPolicy = 'no-referrer'; im.alt = img.alt || '';
+        im.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;background:#fff;';
+        im.onerror = () => { if (!tried) { tried = true; im.src = img.src; } };
+        im.src = big;
+        const close = () => { ov.remove(); window.removeEventListener('keydown', onKey, true); };
+        const onKey = ev => { if (ev.key === 'Escape') { ev.stopPropagation(); close(); } };
+        ov.addEventListener('click', close);
+        window.addEventListener('keydown', onKey, true);
+        ov.appendChild(im); document.body.appendChild(ov);
+    });
 })();
