@@ -11200,6 +11200,7 @@ html body .sj-sumq { white-space:normal !important; overflow:visible !important;
     const sweep = force => document.querySelectorAll(SEL).forEach(t => fit(t, force));
     let raf = 0;
     const later = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; sweep(true); }); };
+    window.__tutRefit = later;
 
     document.addEventListener('input', e => {
         const t = e.target;
@@ -11259,4 +11260,101 @@ html body .sj-sumq { white-space:normal !important; overflow:visible !important;
         window.addEventListener('keydown', onKey, true);
         ov.appendChild(im); document.body.appendChild(ov);
     });
+})();
+
+// ==========================================================================
+// BAGIAN 26 - TUTORIAL: BAGIAN BISA DITUTUP / DIBUKA (SUPAYA LAYAR TIDAK PENUH)
+//   Klik judul tiap bagian (Langkah 1, Rangkuman, Langkah 2-3, LO, Langkah 7, Gambar pendukung,
+//   dan kotak Pertanyaan & Notulen) untuk menutup atau membuka. Tombol "Lipat semua" dan "Buka semua"
+//   ada di bilah atas menu Tutorial. Pilihan diingat di perangkat ini. Isian yang tertutup tidak hilang
+//   dan tetap ikut tersimpan. Hanya menambah tampilan, tidak menyentuh data.
+// ==========================================================================
+(function () {
+    'use strict';
+    const KEY = 'a9_tut_fold', SJX = '__sjx';
+    let fold = new Set(); try { fold = new Set(JSON.parse(localStorage.getItem(KEY) || '[]')); } catch (e) { }
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(Array.from(fold))); } catch (e) { } };
+    const refit = () => { try { if (window.__tutRefit) window.__tutRefit(); } catch (e) { } };
+
+    if (!document.getElementById('tut-fold-css')) {
+        const st = document.createElement('style'); st.id = 'tut-fold-css';
+        st.textContent = `
+#sj-root .sj-card.sj-foldable > h4 { cursor:pointer; user-select:none; -webkit-user-select:none; display:flex; align-items:center; gap:8px; }
+#sj-root .sj-card.sj-foldable > h4::after { content:'\u25be'; margin-left:auto; flex:none; opacity:.65; font-size:15px; }
+#sj-root .sj-card.sj-fold > h4::after { content:'\u25b8'; }
+#sj-root .sj-card.sj-fold > :not(h4) { display:none !important; }
+#sj-root .sj-card.sj-fold > h4 { margin-bottom:0; }
+#sjx-box.sj-foldable > .sjx-head { cursor:pointer; user-select:none; -webkit-user-select:none; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+#sjx-box.sj-foldable > .sjx-head::after { content:'\u25be'; margin-left:auto; opacity:.65; font-size:15px; }
+#sjx-box.sj-fold > .sjx-head::after { content:'\u25b8'; }
+#sjx-box.sj-fold > :not(.sjx-head) { display:none !important; }`;
+        document.head.appendChild(st);
+    }
+
+    const cards = () => Array.from(document.querySelectorAll('#sj-root .sj-card:not(.sj-case)')).filter(c => c.querySelector(':scope > h4'));
+    const titleOf = c => (c.querySelector(':scope > h4').textContent || '').trim();
+
+    function apply() {
+        cards().forEach(c => {
+            const h = c.querySelector(':scope > h4'), t = titleOf(c);
+            if (!c.classList.contains('sj-foldable')) {
+                c.classList.add('sj-foldable');
+                h.title = 'Klik untuk menutup / membuka bagian ini'; h.setAttribute('role', 'button'); h.tabIndex = 0;
+            }
+            const on = fold.has(t);
+            c.classList.toggle('sj-fold', on); h.setAttribute('aria-expanded', on ? 'false' : 'true');
+        });
+        const bx = document.getElementById('sjx-box');
+        if (bx) {
+            const h = bx.querySelector(':scope > .sjx-head');
+            if (h) {
+                if (!bx.classList.contains('sj-foldable')) { bx.classList.add('sj-foldable'); h.title = 'Klik untuk menutup / membuka bagian ini'; }
+                bx.classList.toggle('sj-fold', fold.has(SJX));
+            }
+        }
+    }
+    function toggle(key) { if (fold.has(key)) fold.delete(key); else fold.add(key); save(); apply(); refit(); }
+
+    document.addEventListener('click', e => {
+        const t = e.target; if (!t || !t.closest) return;
+        const sr = t.closest('#sj-root .sj-sumrow');
+        if (sr) {            // lompat ke masalah: buka dulu bagian Langkah 2-3 bila sedang tertutup
+            if (t.closest('.a9-grip')) return;
+            const q = document.querySelector('#sj-root #sj-soal'), c = q && q.closest('.sj-card');
+            if (c && c.classList.contains('sj-fold')) { fold.delete(titleOf(c)); save(); apply(); refit(); }
+            return;
+        }
+        const h = t.closest('#sj-root .sj-card.sj-foldable > h4');
+        if (h) { toggle(titleOf(h.parentElement)); return; }
+        if (t.closest('#sjx-box.sj-foldable > .sjx-head')) toggle(SJX);
+    }, true);
+    document.addEventListener('keydown', e => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const h = e.target && e.target.closest ? e.target.closest('#sj-root .sj-card.sj-foldable > h4') : null;
+        if (h) { e.preventDefault(); toggle(titleOf(h.parentElement)); }
+    });
+
+    function ensureBtns() {
+        const bar = document.getElementById('tut-bar'); if (!bar || document.getElementById('tut-fold-btn')) return;
+        const mk = (id, txt, title, fn) => { const b = document.createElement('button'); b.type = 'button'; b.id = id; b.className = 'btn btn-outline btn-sm'; b.textContent = txt; b.title = title; b.addEventListener('click', fn); return b; };
+        const a = mk('tut-fold-btn', '\u25b4 Lipat semua', 'Tutup semua bagian isian (judulnya tetap terlihat)', () => { cards().forEach(c => fold.add(titleOf(c))); fold.add(SJX); save(); apply(); refit(); });
+        const b = mk('tut-unfold-btn', '\u25be Buka semua', 'Buka semua bagian', () => { fold.clear(); save(); apply(); refit(); });
+        const ref = document.getElementById('tut-split-btn') || document.getElementById('tut-full-btn');
+        if (ref) { ref.insertAdjacentElement('afterend', b); ref.insertAdjacentElement('afterend', a); }
+        else { bar.insertBefore(b, bar.firstChild); bar.insertBefore(a, bar.firstChild); }
+    }
+
+    // render ulang Seven Jump membuat kartu baru: terapkan lipatan sebelum layar sempat digambar
+    try {
+        new MutationObserver(ms => {
+            for (const m of ms) {
+                const tg = m.target;
+                if (tg && tg.closest && tg.closest('#sj-root, #sjx-box')) { apply(); return; }
+                for (const n of m.addedNodes) {
+                    if (n.nodeType === 1 && (n.id === 'sj-root' || n.id === 'sjx-box' || (n.querySelector && n.querySelector('#sj-root, #sjx-box')))) { apply(); return; }
+                }
+            }
+        }).observe(document.body, { childList: true, subtree: true });
+    } catch (e) { }
+    setInterval(() => { try { ensureBtns(); apply(); } catch (e) { } }, 1000);
 })();
