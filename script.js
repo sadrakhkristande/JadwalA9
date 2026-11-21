@@ -1099,7 +1099,7 @@ body { font-size: 16px; }
         <details><summary>4. Lab, Skills Lab, dan Tutorial (menu Praktikum)</summary>
           <p>Pilih halamannya, lalu klik <strong>Buka Berkas</strong> untuk melihat modul.</p></details>
         <details><summary>5. Soal Latihan</summary>
-          <ol><li>Buka <strong>Latihan, Soal Latihan</strong>. Bank berisi 200 soal Fisiologi Blok 1.3 Termoregulasi (Pretest 2023 dan materi PPT).</li><li>Pilih jumlah soal <strong>10, 20, atau 30</strong>. Kalau mau, pilih juga topik atau sumber tertentu, misalnya Demam atau Pretest 2023.</li><li>Klik <strong>Mulai Latihan</strong>. Soal diacak dan diutamakan yang belum pernah kamu kerjakan. Pilih jawaban, lalu klik <strong>Periksa jawaban</strong> untuk melihat benar atau salah beserta pembahasan.</li><li>Klik <strong>Selesai Latihan</strong> untuk melihat nilai, rekomendasi topik yang perlu diperkuat, dan review semua pembahasan. Tombol A-E atau 1-5 memilih jawaban, panah kiri/kanan pindah soal.</li></ol></details>
+          <ol><li>Buka <strong>Latihan, Soal Latihan</strong>. Bank berisi 200 soal Fisiologi Blok 1.3 Termoregulasi (Pretest 2023 dan materi PPT).</li><li>Pilih jumlah soal <strong>10, 20, atau 30</strong>. Kalau mau, pilih juga topik atau sumber tertentu, misalnya Demam atau Pretest 2023.</li><li>Klik <strong>Mulai Latihan</strong>. Soal diacak dan diutamakan yang belum pernah kamu kerjakan. Pilih jawaban, lalu klik <strong>Periksa jawaban</strong> untuk melihat benar atau salah beserta pembahasan. Kalau paketnya bertipe isian, ketik jawabanmu di kotak yang tersedia (huruf besar/kecil tidak berpengaruh) lalu tekan Enter atau Periksa jawaban.</li><li>Klik <strong>Selesai Latihan</strong> untuk melihat nilai, rekomendasi topik yang perlu diperkuat, dan review semua pembahasan. Tombol A-E atau 1-5 memilih jawaban, panah kiri/kanan pindah soal.</li></ol></details>
         <details><summary>6. Simulasi CBT</summary>
           <ul><li><strong>Atur soal:</strong> sebelum mulai, pilih <strong>kategori</strong> (boleh lebih dari satu) dan <strong>jumlah soal</strong> sesuai keinginanmu: 10, 20, 30, 50, 100, semua, atau ketik angka sendiri. Soal diambil acak dari kategori yang dipilih.</li><li><strong>Tampilan:</strong> satu soal per halaman. Pakai tombol Sebelumnya/Berikutnya, atau klik nomor di <strong>Daftar Soal</strong> untuk memilih soal mana yang mau dikerjakan.</li><li><strong>Warna nomor:</strong> abu-abu = belum dikerjakan, hijau = sudah dijawab, titik oranye = ditandai ragu-ragu.</li><li><strong>Mode Latihan:</strong> tanpa waktu. Jawaban yang kamu pilih disimpan dulu dan bisa diganti. Tekan <em>Periksa jawaban</em> untuk melihat benar/salah dan pembahasan soal itu. Menu lain tetap bisa dibuka.</li><li><strong>Mode CBT:</strong> waktu menyesuaikan jumlah soal, yaitu 1 menit per soal (100 soal = 100 menit; timer merah di 10 menit terakhir). Jawaban boleh diubah sebelum dikumpulkan, dan <strong>menu lain terkunci</strong> sampai jawaban dikumpulkan. Pembahasan bisa dilihat setelah dikumpulkan lewat tombol <em>Review &amp; Pembahasan</em>.</li><li><strong>Ganti mode:</strong> tombol <em>Beranda CBT</em> membawamu kembali ke pilihan mode (latihan atau ujian yang sedang jalan dibatalkan).</li><li><strong>Tombol cepat:</strong> A-E atau 1-5 untuk memilih jawaban, panah kiri/kanan untuk pindah soal, F untuk tandai ragu.</li><li>Di akhir sesi kamu mendapat apresiasi, laporan nilai, dan rekomendasi topik belajar. Hasilnya otomatis tersimpan.</li></ul></details>
         <details class="guest-guide"><summary>\ud83d\udcc8 Progres dan hasil belajar</summary>
@@ -5912,7 +5912,7 @@ html body.a9soft #login-page h1::after, html body.a9soft #login-page h2::after, 
     function openPicker(btn) {
         if (panel) { closePicker(); return; }
         const cur = stored();
-        const row = (id, nama, ket, sw) => `<button type="button" data-th="${id}" class="${cur === id ? 'on' : ''}"><span class="sw" style="background:${sw[0]}"><i style="background:${sw[1]}"></i></span><span><b>${nama}</b><small>${ket}</small></span>${cur === id ? '<span class="ck">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬ ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ</span>' : ''}</button>`;
+        const row = (id, nama, ket, sw) => `<button type="button" data-th="${id}" class="${cur === id ? 'on' : ''}"><span class="sw" style="background:${sw[0]}"><i style="background:${sw[1]}"></i></span><span><b>${nama}</b><small>${ket}</small></span>${cur === id ? '<span class="ck">ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬ ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬ ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬ ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“</span>' : ''}</button>`;
         panel = document.createElement('div'); panel.className = 'a9-thm'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Pilih tema');
         panel.innerHTML = '<h4>Pilih tema tampilan</h4>' + THEMES.map(t => row(t.id, t.nama, t.ket, t.sw)).join('') +
             row('auto', 'Otomatis', 'Ikut mode terang / gelap perangkat', ['#f4f6f4', '#2f3a40']);
@@ -7931,6 +7931,21 @@ let LATIHAN_BANK = [];
     const fmtDur = s => { s = Math.max(0, Math.round(s)); const m = Math.floor(s / 60); return m + ' menit ' + String(s % 60).padStart(2, '0') + ' detik'; };
     const qHtml = t => esc(t).replace(/\n/g, '<br>');
 
+    // ---------- tipe soal isian ----------
+    const isIs = q => q.type === 'isian';
+    const normI = t => normAns(String(t == null ? '' : t).normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+    // benar kalau semua kata kunci (salah satu jawaban yang diterima) muncul utuh di jawaban mahasiswa
+    const gradeIs = (q, a) => {
+        const u = normI(a); if (!u) return false;
+        return (q.k || []).some(k => { const n = normI(k); return n !== '' && (u === n || (' ' + u + ' ').indexOf(' ' + n + ' ') >= 0); });
+    };
+    const isOk = (q, a) => a !== undefined && (isIs(q) ? gradeIs(q, a) : !!(q.opts[a] && q.opts[a].ok));
+    function isianHtml(q, ans, reveal) {
+        const img = q.img ? `<div class="lat-img"><a href="${esc(q.img)}" target="_blank" rel="noopener"><img src="${esc(q.img)}" alt="Gambar soal" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'"></a></div>` : '';
+        const cls = reveal ? (isOk(q, ans) ? ' ok' : ' bad') : '';
+        return img + `<input type="text" class="modern-input lat-isian${cls}" data-isian="1" value="${esc(ans === undefined ? '' : ans)}" placeholder="Ketik jawabanmu..." autocomplete="off" autocapitalize="off" spellcheck="false"${reveal ? ' disabled' : ''}>`;
+    }
+
     const st = document.createElement('style');
     st.textContent = `
     .lat-pills { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -7968,6 +7983,7 @@ let LATIHAN_BANK = [];
 
     function buildSession(n, f) {
         const qs = draw(n, f).map(q => {
+            if (q.type === 'isian') return { id: q.id, t: q.t, s: q.s, q: q.q, e: q.e, img: q.img, type: 'isian', k: q.k, opts: [] };
             const idx = q.o.map((_, i) => i);
             const order = q.f ? idx : shuffle(idx);
             return { id: q.id, t: q.t, s: q.s, q: q.q, e: q.e, img: q.img, opts: order.map(i => ({ t: q.o[i], ok: i === q.a })) };
@@ -8012,9 +8028,19 @@ let LATIHAN_BANK = [];
 
     // ---------------- layar soal ----------------
     function paintQ() {
+        paintQ0();
+        try {   // soal isian: kursor langsung ke kotak jawaban (di laptop saja, supaya keyboard HP tidak muncul sendiri)
+            const c = L, q = c && c.qs[c.idx];
+            if (q && isIs(q) && !c.review && !c.chk[c.idx] && window.innerWidth > 900) {
+                const inp = host.querySelector('[data-isian]');
+                if (inp) { inp.focus(); const n = inp.value.length; try { inp.setSelectionRange(n, n); } catch (e) { } }
+            }
+        } catch (e) { }
+    }
+    function paintQ0() {
         const c = L, q = c.qs[c.idx], n = c.qs.length, ans = c.ans[c.idx], rv = c.review;
         const reveal = rv || !!c.chk[c.idx];
-        const opts = q.opts.map((o, i) => {
+        const opts = isIs(q) ? '' : q.opts.map((o, i) => {
             let cls = 'option-label';
             if (reveal) { if (o.ok) cls += ' correct-answer'; else if (i === ans) cls += ' wrong-answer'; }
             else if (ans === i) cls += ' picked';
@@ -8022,14 +8048,14 @@ let LATIHAN_BANK = [];
         }).join('');
         let fb = '';
         if (reveal) {
-            const right = q.opts.findIndex(o => o.ok), ok = ans === right;
+            const right = isIs(q) ? -1 : q.opts.findIndex(o => o.ok), ok = isOk(q, ans);
             const head = ans === undefined ? '\u26aa <strong>Tidak dijawab.</strong>' : ok ? '\u2705 <strong>Benar!</strong>' : '\u274c <strong>Salah.</strong>';
-            fb = `<div class="cbt-feedback ${ok ? 'feedback-success' : 'feedback-danger'}" style="display:block;">${head}${ok ? '' : ` Jawaban benar: <strong>${LET[right]}. ${esc(q.opts[right].t)}</strong>`}<br><small>Topik: ${esc(q.t)}</small><br><br><em>Pembahasan:</em> ${esc(q.e || 'Belum ada pembahasan untuk soal ini.')}${q.img ? `<div class="lat-img"><em>\ud83d\uddbc\ufe0f Slide materi:</em><a href="${esc(q.img)}" target="_blank" rel="noopener"><img src="${esc(q.img)}" alt="Slide materi" loading="lazy"></a></div>` : ''}<span class="lat-src">Sumber: ${esc(SRC[q.s] || q.s)}</span></div>`;
+            fb = `<div class="cbt-feedback ${ok ? 'feedback-success' : 'feedback-danger'}" style="display:block;">${head}${ok ? '' : (isIs(q) ? ' Jawaban benar: <strong>' + esc(q.k.join(' / ')) + '</strong>' : ` Jawaban benar: <strong>${LET[right]}. ${esc(q.opts[right].t)}</strong>`)}<br><small>Topik: ${esc(q.t)}</small><br><br><em>Pembahasan:</em> ${esc(q.e || 'Belum ada pembahasan untuk soal ini.')}${q.img && !isIs(q) ? `<div class="lat-img"><em>\ud83d\uddbc\ufe0f Slide materi:</em><a href="${esc(q.img)}" target="_blank" rel="noopener"><img src="${esc(q.img)}" alt="Slide materi" loading="lazy"></a></div>` : ''}<span class="lat-src">Sumber: ${esc(SRC[q.s] || q.s)}</span></div>`;
         }
         const state = i => {
-            const a = c.ans[i], right = c.qs[i].opts.findIndex(o => o.ok);
-            if (rv) return a === undefined ? 'blank' : a === right ? 'ok' : 'bad';
-            if (c.chk[i]) return a === right ? 'ok' : 'bad';
+            const a = c.ans[i], qi = c.qs[i];
+            if (rv) return a === undefined ? 'blank' : isOk(qi, a) ? 'ok' : 'bad';
+            if (c.chk[i]) return isOk(qi, a) ? 'ok' : 'bad';
             return a !== undefined ? 'done' : '';
         };
         const grid = c.qs.map((x, i) => `<button type="button" class="cx-btn ${state(i)}${c.flag[i] ? ' flag' : ''}${i === c.idx ? ' cur' : ''}" data-go="${i}" aria-label="Soal ${i + 1}">${i + 1}</button>`).join('');
@@ -8037,7 +8063,7 @@ let LATIHAN_BANK = [];
         const legend = rv ? sw('#10b981', 'Benar') + sw('#ef4444', 'Salah') + sw('var(--border-color)', 'Kosong')
             : sw('var(--bg-card)', 'Belum') + sw('var(--primary)', 'Terjawab (belum diperiksa)') + sw('#10b981', 'Benar') + sw('#ef4444', 'Salah') + sw('var(--warning)', 'Ragu');
         const answered = Object.keys(c.ans).length, flagged = Object.keys(c.flag).length;
-        const stats = rv ? `Review: ${c.qs.filter((x, i) => c.ans[i] !== undefined && x.opts[c.ans[i]].ok).length} benar dari ${n} soal`
+        const stats = rv ? `Review: ${c.qs.filter((x, i) => isOk(x, c.ans[i])).length} benar dari ${n} soal`
             : `Terjawab <strong>${answered}</strong> \u00b7 Ragu <strong>${flagged}</strong> \u00b7 Belum <strong>${n - answered}</strong>`;
         const acts = rv ? '<button class="btn btn-primary" data-act="back">\u2190 Kembali ke laporan</button>'
             : '<button class="btn btn-outline" data-act="blank">\u23ed Ke soal belum dijawab</button><button class="btn btn-primary" data-act="submit">\u2705 Selesai Latihan</button>';
@@ -8054,7 +8080,7 @@ let LATIHAN_BANK = [];
               </span>
             </div>
             <div class="q-text">${qHtml(q.q)}</div>
-            <ul class="options">${opts}</ul>
+            ${isIs(q) ? isianHtml(q, ans, reveal) : ''}<ul class="options">${opts}</ul>
             ${fb}
             <div class="cbtx-nav">
               <button class="btn btn-outline" data-act="prev"${c.idx === 0 ? ' disabled' : ''}>\u25c0 Sebelumnya</button>
@@ -8126,8 +8152,8 @@ let LATIHAN_BANK = [];
         let benar = 0, salah = 0, kosong = 0; const wrong = {};
         c.qs.forEach((q, i) => {
             const a = c.ans[i];
-            if (a === undefined) kosong++; else if (q.opts[a].ok) benar++; else salah++;
-            if (a === undefined || !q.opts[a].ok) wrong[q.t] = (wrong[q.t] || 0) + 1;
+            if (a === undefined) kosong++; else if (isOk(q, a)) benar++; else salah++;
+            if (!isOk(q, a)) wrong[q.t] = (wrong[q.t] || 0) + 1;
         });
         const skor = n ? Math.round(benar / n * 100) : 0;
         const durasi = Math.round((Date.now() - c.start) / 1000);
@@ -8214,6 +8240,23 @@ let LATIHAN_BANK = [];
             else if (act === 'again') { L = buildSession(cfg.n, cfg.f); paintQ(); window.scrollTo({ top: 0 }); }
             else if (act === 'progres') window.switchTab('progres', null);
         });
+        // soal isian: simpan ketikan tanpa menggambar ulang layar (supaya kursor tidak lepas)
+        host.addEventListener('input', e => {
+            const t = e.target;
+            if (!L || !t || !t.matches || !t.matches('[data-isian]') || L.review || L.chk[L.idx]) return;
+            const v = t.value;
+            if (v.trim()) L.ans[L.idx] = v; else delete L.ans[L.idx];
+            const gb = host.querySelector('.cx-btn[data-go="' + L.idx + '"]'); if (gb) gb.classList.toggle('done', v.trim() !== '');
+            const ck = host.querySelector('[data-act="check"]'); if (ck) ck.disabled = !v.trim();
+            const stt = host.querySelector('.cx-stats');
+            if (stt) { const a = Object.keys(L.ans).length, f = Object.keys(L.flag).length; stt.innerHTML = `Terjawab <strong>${a}</strong> \u00b7 Ragu <strong>${f}</strong> \u00b7 Belum <strong>${L.qs.length - a}</strong>`; }
+        });
+        host.addEventListener('keydown', e => {   // Enter di kotak isian = Periksa jawaban
+            const t = e.target;
+            if (e.key !== 'Enter' || !L || !t || !t.matches || !t.matches('[data-isian]') || L.review || L.chk[L.idx]) return;
+            e.preventDefault();
+            if (L.ans[L.idx] !== undefined) { L.chk[L.idx] = true; paintQ(); }
+        });
         host.addEventListener('change', e => {
             if (e.target.id === 'lat-filter' && !L) { cfg.f = e.target.value; ls.set('a9_lat_cfg_v1', cfg); paintSetup(); }
         });
@@ -8252,9 +8295,22 @@ let LATIHAN_BANK = [];
     .lat-img em { display: block; font-size: 12px; margin-bottom: 6px; opacity: .8; }
     .lat-img img { display: block; max-width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--border-color); background: #fff; }`;
     document.head.appendChild(st2);
+    const st3 = document.createElement('style');
+    st3.textContent = `
+    .lat-isian { width: 100%; box-sizing: border-box; margin: 14px 0 6px; font-size: 16px; }
+    .lat-isian.ok { border-color: #10b981; background: #ecfdf5; color: #065f46; }
+    .lat-isian.bad { border-color: #ef4444; background: #fef2f2; color: #991b1b; }
+    .lat-img { margin: 12px 0 4px; }`;
+    document.head.appendChild(st3);
 
     function parseVal(v) { if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { return null; } } return v; }
     function toQ(x, pk, i) {
+        if (pk.tipe === 'isian') {   // paket isian: cukup pertanyaan + jawaban (boleh beberapa jawaban yang diterima)
+            const ans = String(x && x.answer != null ? x.answer : '').trim();
+            if (!x || !x.question || !ans) return null;
+            const alt = (Array.isArray(x.alt) ? x.alt : []).map(v => String(v).trim()).filter(Boolean);
+            return { id: pk.key + '#' + (x.id != null ? x.id : i), t: x.topic || x.category || 'Umum', s: pk.key, q: String(x.question), type: 'isian', k: [ans].concat(alt), e: String(x.explanation || ''), img: String(x.image || x.image_path || '').trim() };
+        }
         if (!x || !Array.isArray(x.options) || x.options.length < 2 || !x.question) return null;   // lewati data yang tidak lengkap
         const o = x.options.map(v => String(v));
         let a = -1;
@@ -8266,8 +8322,8 @@ let LATIHAN_BANK = [];
         if (a < 0 || a >= o.length) return null;
         return { id: pk.key + '#' + (x.id != null ? x.id : i), t: x.topic || x.category || 'Umum', s: pk.key, q: String(x.question), o: o, a: a, e: String(x.explanation || ''), f: x.fixed_order ? 1 : 0, img: String(x.image || x.image_path || '').trim() };
     }
-    function makePaket(key, nama, desk, urut, list, mk) {
-        const pk = { key: key, nama: nama, desk: desk, urut: urut, mk: String(mk || '').trim() || 'Umum', soal: [] };
+    function makePaket(key, nama, desk, urut, list, mk, tipe) {
+        const pk = { key: key, nama: nama, desk: desk, urut: urut, mk: String(mk || '').trim() || 'Umum', tipe: tipe === 'isian' ? 'isian' : 'pilihan', soal: [] };
         SRC[key] = nama;   // supaya nama paket muncul di filter "Berdasarkan sumber" saat memilih Campuran
         pk.soal = (list || []).map((x, i) => toQ(x, pk, i)).filter(Boolean);
         return pk;
@@ -8280,13 +8336,13 @@ let LATIHAN_BANK = [];
             if (/^cbt~/.test(key) || (v && !Array.isArray(v) && v.jenis === 'cbt')) return;   // kategori CBT dikelola di Bagian 20B
             const isArr = Array.isArray(v);
             if (!isArr && v.aktif === false) return;   // aktif:false = disembunyikan dari mahasiswa
-            const pk = makePaket(key, (!isArr && v.nama) || key, (!isArr && v.deskripsi) || '', (!isArr && +v.urutan) || 999, isArr ? v : v.soal, !isArr && (v.mk || v.mata_kuliah));
+            const pk = makePaket(key, (!isArr && v.nama) || key, (!isArr && v.deskripsi) || '', (!isArr && +v.urutan) || 999, isArr ? v : v.soal, !isArr && (v.mk || v.mata_kuliah), !isArr && v.tipe);
             if (pk.soal.length) out.push(pk);
         });
         if (!out.length && Array.isArray(dbData.soal)) {   // cadangan: data "soal" lama dikelompokkan per sumber / paket
             const g = {};
             dbData.soal.forEach(x => { const n = String((x && (x.source || x.paket)) || 'Umum'); (g[n] = g[n] || []).push(x); });
-            Object.keys(g).forEach((n, i) => { const pk = makePaket('lama-' + i, n, '', 900 + i, g[n], 'Umum'); if (pk.soal.length) out.push(pk); });
+            Object.keys(g).forEach((n, i) => { const pk = makePaket('lama-' + i, n, '', 900 + i, g[n], 'Umum', g[n].every(x => !Array.isArray(x && x.options)) ? 'isian' : 'pilihan'); if (pk.soal.length) out.push(pk); });
         }
         out.sort((a, b) => a.urut - b.urut || a.nama.localeCompare(b.nama, 'id'));
         PAKET = out;
@@ -8352,7 +8408,7 @@ let LATIHAN_BANK = [];
         host.innerHTML = '<div class="card"><div class="card-header"><h3 class="card-title">\u270d\ufe0f ' + esc(curMK) + '</h3></div>'
             + (mkNames().length > 1 ? '<div class="lat-nav">' + navBtn('mk', 'Ganti mata kuliah') + '</div>' : '')
             + '<p style="color:var(--text-muted);margin-bottom:4px;">Pilih paket soal yang mau kamu kerjakan. Setelah itu kamu bisa mengatur jumlah soal dan topiknya.</p>'
-            + '<div class="lat-pkgrid">' + list.map(p => pkCard('data-pk', p.key, p.nama, p.desk, meta(p.soal))).join('')
+            + '<div class="lat-pkgrid">' + list.map(p => pkCard('data-pk', p.key, p.nama, p.desk, meta(p.soal) + ' \u00b7 ' + (p.tipe === 'isian' ? 'Isian' : 'Pilihan ganda'))).join('')
             + (list.length > 1 ? pkCard('data-pk', ALLP, 'Campuran semua paket', 'Soal diacak dari seluruh paket ' + curMK + '.', meta(all)) : '') + '</div></div>';
     }
 
@@ -10285,6 +10341,7 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
     const keyFor = nama => U().pre + nama;
     const normQ = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
     const topicOf = x => String((x && (x.topic || x.category)) || 'Umum');
+    const splitAns = s => (Array.isArray(s) ? s : String(s == null ? '' : s).split('|')).map(t => String(t == null ? '' : t).trim()).filter(Boolean);
     const ansIdx = x => { const o = (x && x.options) || []; return typeof x.answer === 'number' ? x.answer : o.indexOf(x.answer); };
 
     // ---------- data ----------
@@ -10295,6 +10352,7 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
         const k = String(key || '');
         return {
             jenis: (o.jenis === 'cbt' || /^cbt~/.test(k)) ? 'cbt' : 'latihan',
+            tipe: (o.tipe === 'isian' && o.jenis !== 'cbt' && !/^cbt~/.test(k)) ? 'isian' : 'pilihan',
             nama: String(o.nama || k.replace(/^cbt~/, '')), deskripsi: String(o.deskripsi || ''), mk: String(o.mk || o.mata_kuliah || 'Umum') || 'Umum',
             urutan: Number.isFinite(+o.urutan) && o.urutan !== '' && o.urutan != null ? +o.urutan : 999, aktif: o.aktif !== false, nid: +o.nid || 0,
             soal: Array.isArray(o.soal) ? o.soal : (arr ? v : [])
@@ -10340,12 +10398,15 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
   <div class="ks-cats" id="ks-cats"></div>
   <div id="ks-infobox" class="ks-panel" hidden></div>
   <details id="ks-imp" class="ks-panel ks-imp"><summary>\uD83D\uDCC2 Impor &amp; ekspor file</summary>
-    <p class="ks-hint">Punya soal buatan AI atau dari Excel? Pilih file <b>.json</b>, <b>.csv</b>, atau <b>.txt</b> (boleh juga seret filenya ke kotak ini). Kalau di dalam file ada <code>nama</code>, soal masuk ke paket/kategori dengan nama itu (dibuat baru kalau belum ada). Kalau tidak ada, soal masuk ke yang sedang dipilih.</p>
+    <p class="ks-hint">Punya soal buatan AI atau dari Excel? Pilih file <b>.json</b>, <b>.csv</b>, atau <b>.txt</b> (boleh juga seret filenya ke kotak ini). Kalau di dalam file ada <code>nama</code>, soal masuk ke paket/kategori dengan nama itu (dibuat baru kalau belum ada). Kalau tidak ada, soal masuk ke yang sedang dipilih. <b>Soal isian:</b> tulis <code>"tipe": "isian"</code> di JSON dan isi <code>jawaban</code> (beberapa jawaban diterima dipisah <code>|</code>), tanpa pilihan A-E. Tipe paket yang sudah ada tidak berubah: file yang tipenya beda dilewati.</p>
     <div class="ks-btns">
       <label class="btn btn-primary btn-sm ks-filebtn">Pilih file\u2026<input type="file" id="ks-file" accept=".json,.csv,.tsv,.txt,.md,application/json,text/csv,text/plain" hidden></label>
       <button type="button" class="btn btn-outline btn-sm" id="ks-copy-ai">Salin perintah untuk AI</button>
       <button type="button" class="btn btn-outline btn-sm" id="ks-dl-json">Contoh JSON</button>
       <button type="button" class="btn btn-outline btn-sm" id="ks-dl-csv">Contoh CSV</button>
+      <button type="button" class="btn btn-outline btn-sm" id="ks-copy-ai-is">Perintah AI (isian)</button>
+      <button type="button" class="btn btn-outline btn-sm" id="ks-dl-json-is">Contoh JSON isian</button>
+      <button type="button" class="btn btn-outline btn-sm" id="ks-dl-csv-is">Contoh CSV isian</button>
     </div>
     <label class="ks-chk"><input type="checkbox" id="ks-upd" checked> Perbarui soal yang sudah ada (dicocokkan lewat kolom <code>id</code> atau teks pertanyaan)</label>
     <h4 style="margin-top:14px;">Ekspor untuk diedit</h4>
@@ -10368,7 +10429,7 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
         }).join('');
         const h = $('ks-modehint'); if (h) h.innerHTML = mode === 'cbt'
             ? 'Soal CBT dikelompokkan per <b>kategori</b>. Di <b>Latihan, Simulasi CBT</b>, mahasiswa memilih kategori dan jumlah soal sendiri. Bank CBT lama tetap dipakai dan digabung otomatis.'
-            : 'Soal latihan dikelompokkan per <b>paket</b> dalam mata kuliah. Soal langsung tersimpan dan muncul di <b>Latihan, Soal Latihan</b> setelah mahasiswa memuat ulang halaman.';
+            : 'Soal latihan dikelompokkan per <b>paket</b> dalam mata kuliah. Soal langsung tersimpan dan muncul di <b>Latihan, Soal Latihan</b> setelah mahasiswa memuat ulang halaman. Tiap paket bisa bertipe <b>pilihan ganda</b> atau <b>isian</b> (diatur saat membuat paket, lewat Info paket).';
     }
     function paintCats() {
         const el = $('ks-cats'); if (!el) return;
@@ -10378,7 +10439,7 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
         curBy[mode] = cur;
         el.innerHTML = ks.map(k => {
             const v = rows[k];
-            return `<button type="button" class="ks-cat${k === cur ? ' on' : ''}" data-cat="${esc(k)}"><b>${esc(v.nama)}</b><span>${esc(v.mk)} \u00b7 ${v.soal.length} soal</span>${v.aktif ? '' : '<em>Disembunyikan</em>'}</button>`;
+            return `<button type="button" class="ks-cat${k === cur ? ' on' : ''}" data-cat="${esc(k)}"><b>${esc(v.nama)}</b><span>${esc(v.mk)} \u00b7 ${v.soal.length} soal${v.tipe === 'isian' ? ' \u00b7 Isian' : ''}</span>${v.aktif ? '' : '<em>Disembunyikan</em>'}</button>`;
         }).join('') + `<button type="button" class="ks-cat ks-cat-new" data-new="1"><b>\uFF0B ${U().Unit} baru</b><span>${esc(U().eg)}</span></button>`;
     }
     function resetView() { editing = null; filter = ''; fTopic = ''; fNoExp = false; picked.clear(); opened.clear(); const b = $('ks-infobox'); if (b) b.hidden = true; }
@@ -10396,7 +10457,7 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
         const b = $('ks-infobox'); if (!b) return;
         if (!b.hidden && b.dataset.mode === (isNew ? 'new' : 'edit')) { b.hidden = true; return; }
         if (!isNew && (!cur || !rows[cur])) { say('Pilih ' + U().unit + ' dulu, atau buat yang baru.'); return; }
-        const v = isNew ? { nama: '', mk: 'Umum', deskripsi: '', urutan: keysOf(mode).length + 1, aktif: true } : rows[cur];
+        const v = isNew ? { nama: '', mk: 'Umum', deskripsi: '', urutan: keysOf(mode).length + 1, aktif: true, tipe: 'pilihan', soal: [] } : rows[cur];
         const mks = Array.from(new Set(Object.keys(rows).map(k => rows[k].mk)));
         b.dataset.mode = isNew ? 'new' : 'edit'; b.hidden = false;
         b.innerHTML = `<h4>${isNew ? U().Unit + ' baru' : 'Info ' + U().unit}</h4>
@@ -10405,6 +10466,7 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
   <label>Mata kuliah<input id="ks-in-mk" class="modern-input" list="ks-mks" value="${esc(v.mk)}" placeholder="mis. Fisiologi"><datalist id="ks-mks">${mks.map(m => `<option value="${esc(m)}">`).join('')}</datalist></label>
   <label>Urutan tampil<input id="ks-in-urut" type="number" class="modern-input" value="${esc(v.urutan)}"></label>
 </div>
+${mode === 'latihan' ? `<label>Tipe soal<select id="ks-in-tipe" class="modern-input"${(!isNew && v.soal.length) ? ' disabled' : ''}><option value="pilihan"${v.tipe !== 'isian' ? ' selected' : ''}>Pilihan ganda (A-E)</option><option value="isian"${v.tipe === 'isian' ? ' selected' : ''}>Isian (mahasiswa mengetik jawaban)</option></select>${(!isNew && v.soal.length) ? '<small>Tipe tidak bisa diubah setelah paket berisi soal. Buat paket baru untuk tipe lain.</small>' : ''}</label>` : ''}
 <label>Deskripsi (opsional)<input id="ks-in-desk" class="modern-input" value="${esc(v.deskripsi)}"></label>
 <label class="ks-chk"><input type="checkbox" id="ks-in-aktif"${v.aktif ? ' checked' : ''}> Tampilkan ke mahasiswa</label>
 <div class="ks-btns"><button type="button" class="btn btn-primary btn-sm" id="ks-in-save">Simpan</button><button type="button" class="btn btn-outline btn-sm" id="ks-in-cancel">Tutup</button>${isNew ? '' : '<button type="button" class="btn btn-outline btn-sm ks-danger" id="ks-in-del">Hapus ' + U().unit + '</button>'}</div>`;
@@ -10416,7 +10478,7 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
             if (isNew && rows[key]) { say('Nama itu sudah dipakai.'); return; }
             try {
                 const old = isNew ? norm(null, key) : ((await getRow(key)) || rows[key]);
-                const nv = Object.assign({}, old, { jenis: mode, nama, mk: $('ks-in-mk').value.trim() || 'Umum', deskripsi: $('ks-in-desk').value.trim(), urutan: +$('ks-in-urut').value || 1, aktif: $('ks-in-aktif').checked });
+                const nv = Object.assign({}, old, { jenis: mode, nama, mk: $('ks-in-mk').value.trim() || 'Umum', deskripsi: $('ks-in-desk').value.trim(), urutan: +$('ks-in-urut').value || 1, aktif: $('ks-in-aktif').checked, tipe: (mode === 'latihan' && $('ks-in-tipe') && !$('ks-in-tipe').disabled) ? $('ks-in-tipe').value : (old.tipe || 'pilihan') });
                 await putRow(key, nv); rows[key] = nv; cur = key; curBy[mode] = key; b.hidden = true; resetView();
                 paintMode(); paintCats(); paintWork();
                 say(isNew ? U().Unit + ' dibuat. Sekarang tambahkan soalnya di bawah.' : 'Info ' + U().unit + ' disimpan.', true);
@@ -10440,22 +10502,25 @@ html body.a9soft.a9aura.a9shape #login-page .modern-input, html body.a9soft.a9au
         if (!cur || !rows[cur]) { w.innerHTML = `<div class="ks-empty"><div>\uD83D\uDDC2\uFE0F</div><p>Belum ada ${U().unit}. Klik <b>\uFF0B ${U().Unit} baru</b> untuk mulai.</p></div>`; return; }
         const v = rows[cur];
         const topics = Array.from(new Set(v.soal.map(x => x.topic || x.category).filter(Boolean)));
+        const IS = v.tipe === 'isian';
+        const ISF = '<label>Jawaban benar<input id="ks-ans-text" class="modern-input" placeholder="mis. Clavicula"></label><label>Jawaban lain yang juga diterima <small>(opsional, pisahkan dengan tanda |)</small><input id="ks-ans-alt" class="modern-input" placeholder="mis. Os clavicula | Tulang selangka"></label><p class="ks-hint">Mahasiswa mengetik jawabannya. Huruf besar/kecil dan tanda baca tidak berpengaruh, awalan Os / M. / N. diabaikan, dan jawaban dianggap benar kalau kata kuncinya ada.</p>';
+        const ISBULK = '<p class="ks-hint"><b>Paket isian:</b> tulis soal, lalu satu baris <code>Jawaban: ...</code> (beberapa jawaban yang diterima dipisah tanda |). Tidak perlu pilihan A-E. Pisahkan tiap soal dengan satu baris kosong. Contoh:</p><pre class="ks-pre">Topik: Anatomi\nSebutkan tulang selangka!\nJawaban: Clavicula | Os clavicula\nPembahasan: Tulang penghubung sternum dan scapula.</pre>';
         w.innerHTML = `<div class="ks-wh"><div class="ks-wh-t"><h4>${esc(v.nama)}</h4><div class="ks-stats" id="ks-stats"></div></div><button type="button" class="btn btn-outline btn-sm" id="ks-info">\u2699\uFE0F Info ${U().unit}</button></div>
 <div class="ks-seg" role="tablist"><button type="button" data-pane="list" class="on">Daftar soal</button><button type="button" data-pane="form">\uFF0B Tambah / ubah</button><button type="button" data-pane="bulk">Tempel banyak</button></div>
 <div class="ks-pane" data-p="form"><div class="ks-form ks-panel" id="ks-form">
   <h4 id="ks-ftitle">Tambah soal</h4>
   <label>Topik<input id="ks-topic" class="modern-input" list="ks-topics" placeholder="mis. Termoregulasi"><datalist id="ks-topics">${topics.map(t => `<option value="${esc(t)}">`).join('')}</datalist></label>
   <label>Pertanyaan<textarea id="ks-q" class="modern-input" rows="3" placeholder="Tulis soalnya di sini"></textarea></label>
-  <div class="ks-optlabel">Pilihan jawaban <small>(kosongkan yang tidak dipakai, minimal 2. Bulatan = jawaban benar)</small></div>
-  <div id="ks-opts">${L5.map((l, i) => `<div class="ks-opt"><label class="ks-ans" title="Jawaban benar: ${l}"><input type="radio" name="ks-a" value="${i}"><span>${l}</span></label><input class="modern-input" data-o="${i}" placeholder="Pilihan ${l}"></div>`).join('')}</div>
+  ${IS ? ISF : ''}<div class="ks-optlabel"${IS ? ' style="display:none"' : ''}>Pilihan jawaban <small>(kosongkan yang tidak dipakai, minimal 2. Bulatan = jawaban benar)</small></div>
+  <div id="ks-opts"${IS ? ' style="display:none"' : ''}>${L5.map((l, i) => `<div class="ks-opt"><label class="ks-ans" title="Jawaban benar: ${l}"><input type="radio" name="ks-a" value="${i}"><span>${l}</span></label><input class="modern-input" data-o="${i}" placeholder="Pilihan ${l}"></div>`).join('')}</div>
   <label>Pembahasan <small>(opsional, tampil setelah jawaban diperiksa)</small><textarea id="ks-e" class="modern-input" rows="2"></textarea></label>
   <label>Link gambar <small>(opsional)</small><input id="ks-img" class="modern-input" placeholder="https://..."></label>
-  <label class="ks-chk"><input type="checkbox" id="ks-fix"> Jangan acak urutan pilihan (untuk soal \u201csemua benar\u201d dsb.)</label>
+  <label class="ks-chk"${IS ? ' style="display:none"' : ''}><input type="checkbox" id="ks-fix"> Jangan acak urutan pilihan (untuk soal \u201csemua benar\u201d dsb.)</label>
   <div class="ks-btns"><button type="button" class="btn btn-primary" id="ks-save">Simpan soal</button><button type="button" class="btn btn-outline" id="ks-cancel" hidden>Batal ubah</button></div>
   <p class="ks-hint" style="margin:8px 0 0;">Tips: tekan <b>Ctrl + Enter</b> untuk menyimpan cepat. Topik terakhir tetap terisi supaya input soal berikutnya lebih cepat.</p>
 </div></div>
 <div class="ks-pane" data-p="bulk"><div class="ks-panel ks-bulk"><h4>Tempel banyak soal sekaligus</h4>
-  <p class="ks-hint">Pisahkan tiap soal dengan satu baris kosong. Soal yang pertanyaannya sudah ada otomatis dilewati. Contoh:</p>
+  ${IS ? ISBULK : ''}<div${IS ? ' style="display:none"' : ''}><p class="ks-hint">Pisahkan tiap soal dengan satu baris kosong. Soal yang pertanyaannya sudah ada otomatis dilewati. Contoh:</p>
   <pre class="ks-pre">Topik: Termoregulasi
 Pusat pengatur suhu tubuh terletak di ...
 A. Talamus
@@ -10464,7 +10529,7 @@ C. Serebelum
 D. Medula oblongata
 E. Korteks serebri
 Jawaban: B
-Pembahasan: Hipotalamus anterior dan posterior mengatur suhu tubuh.</pre>
+Pembahasan: Hipotalamus anterior dan posterior mengatur suhu tubuh.</pre></div>
   <textarea id="ks-bulk" class="modern-input" rows="8" placeholder="Tempel soal di sini"></textarea>
   <div class="ks-btns"><button type="button" class="btn btn-primary btn-sm" id="ks-bulk-go">Baca &amp; tambahkan</button></div>
 </div></div>
@@ -10509,7 +10574,7 @@ Pembahasan: Hipotalamus anterior dan posterior mengatur suhu tubuh.</pre>
         const tp = new Set(v.soal.map(topicOf)), noExp = v.soal.filter(x => !String(x.explanation || '').trim()).length;
         el.innerHTML = '<span><b>' + v.soal.length + '</b> soal</span><span><b>' + tp.size + '</b> topik</span>'
             + (noExp ? '<span class="warn"><b>' + noExp + '</b> tanpa pembahasan</span>' : '<span class="on">Semua ada pembahasan</span>')
-            + '<span>' + esc(v.mk) + '</span><span class="' + (v.aktif ? 'on' : 'off') + '">' + (v.aktif ? 'Tampil ke mahasiswa' : 'Disembunyikan') + '</span>';
+            + '<span>' + esc(v.mk) + '</span>' + (v.tipe === 'isian' ? '<span class="on">Tipe isian</span>' : '<span>Pilihan ganda</span>') + '<span class="' + (v.aktif ? 'on' : 'off') + '">' + (v.aktif ? 'Tampil ke mahasiswa' : 'Disembunyikan') + '</span>';
     }
     function setFormMode() {
         const t = $('ks-ftitle'), c = $('ks-cancel'), s = $('ks-save'); if (!t) return;
@@ -10520,10 +10585,17 @@ Pembahasan: Hipotalamus anterior dan posterior mengatur suhu tubuh.</pre>
         $('ks-q').value = ''; $('ks-e').value = ''; $('ks-img').value = ''; $('ks-fix').checked = false;
         document.querySelectorAll('#ks-opts [data-o]').forEach(i => { i.value = ''; });
         document.querySelectorAll('#ks-opts input[type=radio]').forEach(r => { r.checked = false; });
+        if ($('ks-ans-text')) { $('ks-ans-text').value = ''; $('ks-ans-alt').value = ''; }
         $('ks-topic').value = keepTopic ? topic : '';
     }
     function readForm() {
         const q = $('ks-q').value.trim(), topic = $('ks-topic').value.trim() || 'Umum';
+        if (rows[cur] && rows[cur].tipe === 'isian') {
+            if (!q) return { err: 'Pertanyaan belum diisi.' };
+            const all = splitAns($('ks-ans-text') ? $('ks-ans-text').value : '').concat(splitAns($('ks-ans-alt') ? $('ks-ans-alt').value : '')).filter((s, i, a) => a.indexOf(s) === i);
+            if (!all.length) return { err: 'Jawaban benar belum diisi.' };
+            return { ok: { topic, question: q, answer: all[0], alt: all.slice(1), explanation: $('ks-e').value.trim(), image: $('ks-img').value.trim() } };
+        }
         const sel = document.querySelector('#ks-opts input[type=radio]:checked');
         const opts = []; let ans = -1;
         document.querySelectorAll('#ks-opts [data-o]').forEach(inp => {
@@ -10591,9 +10663,9 @@ Pembahasan: Hipotalamus anterior dan posterior mengatur suhu tubuh.</pre>
             const x = o.x, opts = x.options || [], a = ansIdx(x), id = String(x.id), isOpen = opened.has(id), isPick = picked.has(id);
             const noExp = !String(x.explanation || '').trim();
             return `<div class="ks-item${isPick ? ' picked' : ''}${isOpen ? ' open' : ''}" data-id="${esc(id)}">${canSort ? '<span class="a9-grip" role="button" aria-label="Seret untuk mengubah urutan" title="Seret untuk mengubah urutan">\u283f</span>' : ''}<label class="ks-pick" title="Pilih soal ini"><input type="checkbox" data-pick="1"${isPick ? ' checked' : ''}></label><span class="ks-n">${o.i + 1}</span>
-<div class="ks-body" data-ks="toggle" role="button" tabindex="0" title="Klik untuk melihat pilihan dan pembahasan"><div class="ks-q">${esc(x.question)}</div><div class="ks-meta"><span class="ks-tag">${esc(topicOf(x))}</span><span class="ks-ok">Jawaban: ${a >= 0 ? L5[a] || (a + 1) : '?'}${a >= 0 && opts[a] ? ' - ' + esc(String(opts[a]).slice(0, 40)) : ''}</span><span>${opts.length} pilihan</span>${x.image ? '<span>\uD83D\uDDBC Gambar</span>' : ''}${noExp ? '<span class="ks-warn">tanpa pembahasan</span>' : ''}</div></div>
+<div class="ks-body" data-ks="toggle" role="button" tabindex="0" title="Klik untuk melihat pilihan dan pembahasan"><div class="ks-q">${esc(x.question)}</div><div class="ks-meta"><span class="ks-tag">${esc(topicOf(x))}</span>${v.tipe === 'isian' ? `<span class="ks-ok">Jawaban: ${esc(String(x.answer == null ? '' : x.answer).slice(0, 60))}</span><span>Isian</span>` : `<span class="ks-ok">Jawaban: ${a >= 0 ? L5[a] || (a + 1) : '?'}${a >= 0 && opts[a] ? ' - ' + esc(String(opts[a]).slice(0, 40)) : ''}</span><span>${opts.length} pilihan</span>`}${x.image ? '<span>\uD83D\uDDBC Gambar</span>' : ''}${noExp ? '<span class="ks-warn">tanpa pembahasan</span>' : ''}</div></div>
 <div class="ks-acts">${canSort ? '<button type="button" class="btn btn-outline btn-sm" data-ks="up" title="Naikkan">\u25B2</button><button type="button" class="btn btn-outline btn-sm" data-ks="down" title="Turunkan">\u25BC</button>' : ''}<button type="button" class="btn btn-outline btn-sm" data-ks="edit">Ubah</button><button type="button" class="btn btn-outline btn-sm" data-ks="dup" title="Gandakan soal ini">Salin</button><button type="button" class="btn btn-outline btn-sm ks-danger" data-ks="del">Hapus</button></div>
-<div class="ks-detail"${isOpen ? '' : ' hidden'}><ol class="ks-opts">${opts.map((t, i) => `<li class="${i === a ? 'ok' : ''}"><b>${L5[i]}.</b> ${esc(t)}${i === a ? ' <em>\u2713 benar</em>' : ''}</li>`).join('')}</ol>${noExp ? '<div class="ks-exp none">Belum ada pembahasan.</div>' : '<div class="ks-exp"><b>Pembahasan:</b> ' + esc(x.explanation) + '</div>'}${x.fixed_order ? '<div class="ks-exp none">Urutan pilihan tidak diacak.</div>' : ''}${x.image ? '<div class="ks-img"><img src="' + esc(x.image) + '" alt="Gambar soal" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'"></div>' : ''}</div></div>`;
+<div class="ks-detail"${isOpen ? '' : ' hidden'}>${v.tipe === 'isian' ? '<div class="ks-exp"><b>Jawaban diterima:</b> ' + esc([x.answer].concat(x.alt || []).join(' | ')) + '</div>' : ''}<ol class="ks-opts">${opts.map((t, i) => `<li class="${i === a ? 'ok' : ''}"><b>${L5[i]}.</b> ${esc(t)}${i === a ? ' <em>\u2713 benar</em>' : ''}</li>`).join('')}</ol>${noExp ? '<div class="ks-exp none">Belum ada pembahasan.</div>' : '<div class="ks-exp"><b>Pembahasan:</b> ' + esc(x.explanation) + '</div>'}${x.fixed_order ? '<div class="ks-exp none">Urutan pilihan tidak diacak.</div>' : ''}${x.image ? '<div class="ks-img"><img src="' + esc(x.image) + '" alt="Gambar soal" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'"></div>' : ''}</div></div>`;
         }).join('') + (w.show.length > cut.length ? '<p class="ks-hint">Menampilkan 300 pertama. Gunakan pencarian atau filter untuk yang lain.</p>' : '');
         paintSelbar();
         if (canSort && window.__a9Sortable) { box._ksdrop = dropOrder; window.__a9Sortable(box, '.ks-item', () => box._ksdrop && box._ksdrop()); }
@@ -10602,7 +10674,7 @@ Pembahasan: Hipotalamus anterior dan posterior mengatur suhu tubuh.</pre>
         const bar = $('ks-selbar'); if (!bar) return;
         const n = picked.size; bar.hidden = n === 0; if (!n) return;
         $('ks-selcount').textContent = n + ' soal dipilih';
-        const targets = keysOf(mode).filter(k => k !== cur), sig = targets.join('|');
+        const targets = keysOf(mode).filter(k => k !== cur && rows[cur] && rows[k].tipe === rows[cur].tipe), sig = targets.join('|') + '|' + (rows[cur] && rows[cur].tipe);
         if (bar.dataset.sig !== sig) {
             bar.dataset.sig = sig;
             $('ks-target').innerHTML = targets.length ? targets.map(k => `<option value="${esc(k)}">${esc(rows[k].nama)} (${rows[k].soal.length})</option>`).join('') : '<option value="">(belum ada ' + U().unit + ' lain)</option>';
@@ -10631,6 +10703,7 @@ Pembahasan: Hipotalamus anterior dan posterior mengatur suhu tubuh.</pre>
                 busy = true; await change(p => { p.soal.forEach(s => { if (has(s)) s.topic = nt; }); }); msg = 'Topik ' + n + ' soal diganti menjadi "' + nt + '".';
             } else if (act === 'move' || act === 'copy') {
                 const tk = $('ks-target').value; if (!tk || !rows[tk]) { say('Pilih ' + U().unit + ' tujuan dulu.'); return; }
+                if (rows[tk].tipe !== rows[cur].tipe) { say('Tipe soal paket tujuan berbeda (pilihan ganda dan isian tidak bisa dicampur).'); return; }
                 if (!confirm((act === 'move' ? 'Pindahkan ' : 'Salin ') + n + ' soal ke "' + rows[tk].nama + '"?')) return;
                 busy = true;
                 const src = (await getRow(cur)) || rows[cur], dst = (await getRow(tk)) || rows[tk];
@@ -10663,6 +10736,7 @@ Pembahasan: Hipotalamus anterior dan posterior mengatur suhu tubuh.</pre>
             const x = v.soal.find(s => String(s.id) === id); if (!x) return;
             editing = x.id; setFormMode(); pane('form');
             $('ks-topic').value = x.topic || x.category || ''; $('ks-q').value = x.question || ''; $('ks-e').value = x.explanation || ''; $('ks-img').value = x.image || x.image_path || ''; $('ks-fix').checked = !!x.fixed_order;
+            if ($('ks-ans-text')) { $('ks-ans-text').value = x.answer == null ? '' : String(x.answer); $('ks-ans-alt').value = (x.alt || []).join(' | '); }
             const opts = x.options || [], a = ansIdx(x);
             document.querySelectorAll('#ks-opts [data-o]').forEach(inp => { inp.value = opts[+inp.dataset.o] || ''; });
             document.querySelectorAll('#ks-opts input[type=radio]').forEach(r => { r.checked = (+r.value === a); });
@@ -10691,7 +10765,7 @@ Pembahasan: Hipotalamus anterior dan posterior mengatur suhu tubuh.</pre>
     });
 
     // ---------- tempel banyak soal ----------
-    function parseBulk(text, defTopic) {
+    function parseBulk(text, defTopic, isian) {
         const blocks = String(text).replace(/\r/g, '').split(/\n\s*\n+/).map(b => b.trim()).filter(Boolean), ok = [], bad = [];
         blocks.forEach((b, bi) => {
             let topic = defTopic, q = [], opts = [], ans = '', exp = '', img = '', mode = 'q', m;
@@ -10700,11 +10774,17 @@ Pembahasan: Hipotalamus anterior dan posterior mengatur suhu tubuh.</pre>
                 if ((m = l.match(/^(?:jawaban|kunci|answer)\s*[:=]\s*(.+)$/i))) { ans = m[1].trim(); mode = 'x'; return; }
                 if ((m = l.match(/^(?:pembahasan|penjelasan|explanation)\s*[:=]\s*(.*)$/i))) { exp = m[1].trim(); mode = 'e'; return; }
                 if ((m = l.match(/^(?:gambar|image)\s*[:=]\s*(.+)$/i))) { img = m[1].trim(); return; }
-                if ((m = l.match(/^\(?([A-Ea-e])[\.\)]\s+(.+)$/)) && (q.length || mode === 'q')) { opts.push({ k: m[1].toUpperCase(), t: m[2].trim() }); mode = 'o'; return; }
+                if ((m = l.match(/^\(?([A-Ea-e])[\.\)]\s+(.+)$/)) && !isian && (q.length || mode === 'q')) { opts.push({ k: m[1].toUpperCase(), t: m[2].trim() }); mode = 'o'; return; }
                 if (mode === 'o' && opts.length) opts[opts.length - 1].t += ' ' + l; else if (mode === 'e') exp += ' ' + l; else if (mode === 'q') q.push(l);
             });
             const qt = q.join(' ').replace(/^\s*(?:soal\s*)?\d+\s*[\.\):]\s*/i, '').trim(), no = 'Soal ke-' + (bi + 1);
             if (!qt) { bad.push(no + ': pertanyaan tidak terbaca'); return; }
+            if (isian) {
+                const all = splitAns(ans);
+                if (!all.length) { bad.push(no + ': baris "Jawaban:" belum ada'); return; }
+                ok.push({ topic: topic || 'Umum', question: qt, answer: all[0], alt: all.slice(1), explanation: exp.trim(), image: img });
+                return;
+            }
             if (opts.length < 2) { bad.push(no + ': pilihan jawaban kurang dari 2'); return; }
             let ai = -1; const letter = ans.replace(/[\.\)\s]/g, '').toUpperCase();
             if (/^[A-E]$/.test(letter)) ai = opts.findIndex(o => o.k === letter);
@@ -10716,7 +10796,7 @@ Pembahasan: Hipotalamus anterior dan posterior mengatur suhu tubuh.</pre>
     }
     async function bulkAdd() {
         if (busy) return; const txt = $('ks-bulk').value; if (!txt.trim()) { say('Tempel soalnya dulu.'); return; }
-        const r = parseBulk(txt, ($('ks-topic') && $('ks-topic').value.trim()) || 'Umum');
+        const r = parseBulk(txt, ($('ks-topic') && $('ks-topic').value.trim()) || 'Umum', rows[cur].tipe === 'isian');
         if (!r.ok.length) { say(r.bad.length ? r.bad.slice(0, 4).join('; ') : 'Tidak ada soal yang terbaca.'); return; }
         const have = new Set(rows[cur].soal.map(x => normQ(x.question)));
         const fresh = r.ok.filter(s => { const k = normQ(s.question); if (have.has(k)) return false; have.add(k); return true; });
@@ -10734,7 +10814,7 @@ Pembahasan: Hipotalamus anterior dan posterior mengatur suhu tubuh.</pre>
     // ---------- impor dari file (JSON / CSV / TXT) ----------
     const KEYS = {
         q: ['question', 'pertanyaan', 'soal', 'q'], opts: ['options', 'opsi', 'pilihan', 'choices'], ans: ['answer', 'jawaban', 'kunci', 'jawaban_benar', 'correct', 'kunci_jawaban'],
-        topic: ['topic', 'topik', 'kategori', 'category'], exp: ['explanation', 'pembahasan', 'penjelasan'], img: ['image', 'gambar', 'image_path', 'link_gambar'], fix: ['fixed_order', 'urutan_tetap', 'tetap']
+        topic: ['topic', 'topik', 'kategori', 'category'], exp: ['explanation', 'pembahasan', 'penjelasan'], img: ['image', 'gambar', 'image_path', 'link_gambar'], fix: ['fixed_order', 'urutan_tetap', 'tetap'], alt: ['alt', 'jawaban_lain', 'jawaban_alternatif', 'alternatif', 'sinonim']
     };
     function gk(x, list) { const lk = {}; Object.keys(x).forEach(k => { lk[String(k).trim().toLowerCase().replace(/\s+/g, '_')] = x[k]; }); for (const k of list) { const v = lk[k]; if (v != null && String(v).trim() !== '') return v; } return ''; }
     function normItem(x, no, zeroBased) {
@@ -10745,6 +10825,11 @@ Pembahasan: Hipotalamus anterior dan posterior mengatur suhu tubuh.</pre>
         if (Array.isArray(raw)) raw.forEach((t, i) => { const s = String(t == null ? '' : t).replace(/^\s*\(?[A-Ea-e][\.\)]\s+/, '').trim(); if (s) { texts.push(s); letters.push(L5[i]); } });
         else if (raw && typeof raw === 'object') L5.forEach(l => { const s = String(raw[l] != null ? raw[l] : (raw[l.toLowerCase()] != null ? raw[l.toLowerCase()] : '')).trim(); if (s) { texts.push(s); letters.push(l); } });
         else L5.forEach(l => { const s = String(gk(x, [l.toLowerCase(), 'opsi_' + l.toLowerCase(), 'pilihan_' + l.toLowerCase(), 'option_' + l.toLowerCase()])).trim(); if (s) { texts.push(s); letters.push(l); } });
+        if (texts.length === 0) {   // tanpa pilihan A-E = soal isian: kolom "jawaban" boleh berisi beberapa jawaban dipisah |
+            const all = splitAns(gk(x, KEYS.ans)).concat(splitAns(gk(x, KEYS.alt))).filter((s, i, a) => a.indexOf(s) === i);
+            if (!all.length) return bad('pilihan jawaban kurang dari 2 (untuk soal isian, isi kolom "jawaban")');
+            return { ok: { id: String(gk(x, ['id', 'kode'])).trim(), topic: String(gk(x, KEYS.topic)).trim() || 'Umum', question: q, answer: all[0], alt: all.slice(1), explanation: String(gk(x, KEYS.exp)).trim(), image: String(gk(x, KEYS.img)).trim() } };
+        }
         if (texts.length < 2) return bad('pilihan jawaban kurang dari 2');
         if (new Set(texts.map(t => t.toLowerCase())).size !== texts.length) return bad('ada dua pilihan yang sama');
         const a = gk(x, KEYS.ans); let ai = -1;
@@ -10784,14 +10869,14 @@ Pembahasan: Hipotalamus anterior dan posterior mengatur suhu tubuh.</pre>
             if (Array.isArray(j)) return fromList(j, {});
             const list = j.soal || j.questions || j.items || j.data;
             if (!Array.isArray(list)) throw new Error('Daftar soal tidak ditemukan. Di JSON harus ada bagian "soal": [ ... ].');
-            return fromList(list, { nama: j.nama || j.name || '', mk: j.mk || j.mata_kuliah || '', deskripsi: j.deskripsi || '', urutan: j.urutan });
+            return fromList(list, { nama: j.nama || j.name || '', mk: j.mk || j.mata_kuliah || '', deskripsi: j.deskripsi || '', urutan: j.urutan, tipe: j.tipe || '' });
         }
         if (ext === 'csv' || ext === 'tsv') {
             const rows2 = parseCSV(text); if (rows2.length < 2) throw new Error('CSV kosong atau tidak ada baris soal.');
             const head = rows2[0].map(h => String(h).trim());
             return fromList(rows2.slice(1).map(r => { const o = {}; head.forEach((h, i) => { o[h] = r[i]; }); return o; }), {});
         }
-        const r = parseBulk(text, 'Umum');
+        const r = parseBulk(text, 'Umum', !!(mode === 'latihan' && cur && rows[cur] && rows[cur].tipe === 'isian'));
         return { ok: r.ok, bad: r.bad, meta: {} };
     }
     async function importFile(file) {
@@ -10806,23 +10891,31 @@ Pembahasan: Hipotalamus anterior dan posterior mengatur suhu tubuh.</pre>
         busy = true;
         try {
             const exist = await getRow(key), isNew = !exist, v = exist || norm(null, key);
+            // tipe paket: paket yang sudah ada tetap; paket baru ikut tulisan "tipe" di file, kalau tidak ada ikut isi file
+            let tipe = 'pilihan';
+            if (mode === 'latihan') {
+                if (exist) tipe = exist.tipe;
+                else { const mt = String(r.meta.tipe || '').toLowerCase(); tipe = mt === 'isian' ? 'isian' : mt === 'pilihan' ? 'pilihan' : (r.ok.filter(s => !Array.isArray(s.options)).length > r.ok.length / 2 ? 'isian' : 'pilihan'); }
+            }
+            const okAll = r.ok.filter(s => (Array.isArray(s.options) ? 'pilihan' : 'isian') === tipe), skipKind = r.ok.length - okAll.length;
+            if (!okAll.length) { say('Paket "' + v.nama + '" bertipe ' + (tipe === 'isian' ? 'isian' : 'pilihan ganda') + ', tapi isi file ini bertipe ' + (tipe === 'isian' ? 'pilihan ganda' : 'isian') + '. Pilih paket lain atau buat paket baru dengan tipe yang sesuai.'); return; }
             const upd = $('ks-upd') ? $('ks-upd').checked : true;
             const byId = {}, byQ = {}; v.soal.forEach(x => { byId[String(x.id)] = x; byQ[normQ(x.question)] = x; });
             const fresh = [], changed = []; let dup = 0;
-            r.ok.forEach(s => {
+            okAll.forEach(s => {
                 const hit = (s.id && byId[s.id]) || byQ[normQ(s.question)];
                 if (hit) { if (upd) changed.push([hit, s]); else dup++; }
                 else { const c = Object.assign({}, s); delete c.id; fresh.push(c); byQ[normQ(c.question)] = c; }
             });
             if (!fresh.length && !changed.length) { say('Semua soal di file ini sudah ada di ' + U().unit + ' "' + v.nama + '".'); return; }
-            const s0 = fresh[0] || changed[0][1], note = (dup ? '\nDilewati karena sudah ada: ' + dup : '') + (r.bad.length ? '\nBermasalah (dilewati): ' + r.bad.length + '\n- ' + r.bad.slice(0, 5).join('\n- ') : '');
+            const s0 = fresh[0] || changed[0][1], note = (skipKind ? '\nDilewati karena tipenya beda dengan paket (' + tipe + '): ' + skipKind : '') + (dup ? '\nDilewati karena sudah ada: ' + dup : '') + (r.bad.length ? '\nBermasalah (dilewati): ' + r.bad.length + '\n- ' + r.bad.slice(0, 5).join('\n- ') : '');
             if (!confirm(U().Unit + ': "' + v.nama + '" (' + (isNew ? 'baru' : 'sudah ada, berisi ' + v.soal.length + ' soal') + ')\nAkan ditambahkan: ' + fresh.length + ' soal' + (changed.length ? '\nAkan diperbarui: ' + changed.length + ' soal' : '') + note
-                + '\n\nPeriksa contoh:\n"' + s0.question.slice(0, 90) + '"\nJawaban benar: ' + s0.options[s0.answer] + '\n\nLanjutkan?')) return;
+                + '\n\nPeriksa contoh:\n"' + s0.question.slice(0, 90) + '"\nJawaban benar: ' + (Array.isArray(s0.options) ? s0.options[s0.answer] : s0.answer) + '\n\nLanjutkan?')) return;
             if (isNew) {
-                v.jenis = mode; v.nama = nama || String(key).replace(/^cbt~/, ''); v.mk = String(r.meta.mk || '').trim() || 'Umum'; v.deskripsi = String(r.meta.deskripsi || '').trim();
+                v.jenis = mode; v.tipe = tipe; v.nama = nama || String(key).replace(/^cbt~/, ''); v.mk = String(r.meta.mk || '').trim() || 'Umum'; v.deskripsi = String(r.meta.deskripsi || '').trim();
                 v.urutan = Number.isFinite(+r.meta.urutan) && r.meta.urutan !== '' && r.meta.urutan != null ? +r.meta.urutan : keysOf(mode).length + 1;
             }
-            changed.forEach(pr => { const h = pr[0], s2 = pr[1]; Object.assign(h, { topic: s2.topic, question: s2.question, options: s2.options, answer: s2.answer, explanation: s2.explanation, image: s2.image, fixed_order: s2.fixed_order }); });
+            changed.forEach(pr => { const h = pr[0], s2 = pr[1]; Object.assign(h, tipe === 'isian' ? { topic: s2.topic, question: s2.question, answer: s2.answer, alt: s2.alt || [], explanation: s2.explanation, image: s2.image } : { topic: s2.topic, question: s2.question, options: s2.options, answer: s2.answer, explanation: s2.explanation, image: s2.image, fixed_order: s2.fixed_order }); });
             fresh.forEach(s => v.soal.push(Object.assign({}, s, { id: nextId(v) })));
             await putRow(key, v); rows[key] = v; cur = key; curBy[mode] = key; resetView();
             paintAll(); say(fresh.length + ' soal ditambah, ' + changed.length + ' diperbarui di "' + v.nama + '".', true);
@@ -10833,6 +10926,15 @@ Pembahasan: Hipotalamus anterior dan posterior mengatur suhu tubuh.</pre>
         { topik: 'Termoregulasi', pertanyaan: 'Pusat pengatur suhu tubuh terletak di ...', opsi: ['Talamus', 'Hipotalamus', 'Serebelum', 'Medula oblongata', 'Korteks serebri'], jawaban: 'B', pembahasan: 'Hipotalamus anterior dan posterior mengatur suhu tubuh.', gambar: '' },
         { topik: 'Termoregulasi', pertanyaan: 'Mekanisme kehilangan panas tubuh melalui kontak langsung dengan benda dingin disebut ...', opsi: ['Konduksi', 'Konveksi', 'Radiasi', 'Evaporasi', 'Metabolisme'], jawaban: 'A', pembahasan: 'Konduksi adalah perpindahan panas melalui kontak langsung.', gambar: '' } ] };
     const SAMPLE_CSV = '\uFEFFtopik,pertanyaan,A,B,C,D,E,jawaban,pembahasan,gambar\r\nTermoregulasi,Pusat pengatur suhu tubuh terletak di ...,Talamus,Hipotalamus,Serebelum,Medula oblongata,Korteks serebri,B,Hipotalamus mengatur suhu tubuh.,\r\nTermoregulasi,"Konduksi adalah perpindahan panas melalui ...",Kontak langsung,Aliran udara,Gelombang elektromagnetik,Penguapan,Metabolisme,A,,\r\n';
+    const SAMPLE_ISIAN = { nama: 'Contoh Paket Isian Anatomi', mk: 'Anatomi', tipe: 'isian', deskripsi: 'Soal isian lab anatomi', soal: [
+        { topik: 'Osteologi', pertanyaan: 'Sebutkan nama tulang selangka!', jawaban: 'Clavicula', jawaban_lain: 'Os clavicula | Tulang selangka', pembahasan: 'Tulang penghubung sternum dan scapula.', gambar: '' },
+        { topik: 'Osteologi', pertanyaan: 'Tulang terpanjang dan terkuat pada tubuh disebut ...', jawaban: 'Femur', jawaban_lain: 'Os femur | Tulang paha', pembahasan: 'Femur menopang berat badan saat berdiri dan berjalan.', gambar: '' } ] };
+    const SAMPLE_ISIAN_CSV = '\uFEFFtopik,pertanyaan,jawaban,jawaban_lain,pembahasan,gambar\r\nOsteologi,Sebutkan nama tulang selangka!,Clavicula,Os clavicula | Tulang selangka,Tulang penghubung sternum dan scapula.,\r\nOsteologi,Tulang terpanjang dan terkuat pada tubuh disebut ...,Femur,Os femur | Tulang paha,,\r\n';
+    const AI_PROMPT_ISIAN = [
+        'Buatkan soal isian singkat dari materi yang saya lampirkan di bawah. Keluarkan HANYA JSON yang valid (tanpa kalimat pembuka, tanpa penjelasan, tanpa tanda ```), persis dengan bentuk ini:',
+        '', '{', '  "nama": "NAMA PAKET",', '  "mk": "MATA KULIAH",', '  "tipe": "isian",', '  "deskripsi": "satu kalimat singkat",', '  "soal": [', '    {', '      "topik": "nama topik singkat",', '      "pertanyaan": "teks soal",', '      "jawaban": "jawaban benar yang singkat",', '      "jawaban_lain": "penulisan lain yang juga benar, pisahkan dengan |",', '      "pembahasan": "alasan jawaban benar, 1-3 kalimat"', '    }', '  ]', '}', '',
+        'Aturan:', '- Jumlah soal: GANTI_JUMLAH.', '- Jawaban harus pendek (satu istilah atau frasa singkat) supaya mudah diketik dan dicocokkan.', '- Isi "jawaban_lain" dengan istilah Latin atau Indonesia lain yang sah.', '- Tiap soal wajib punya "topik" dan "pembahasan".', '- Jangan ada soal kembar.', '- Gunakan Bahasa Indonesia, gaya soal ujian kedokteran.', '', 'MATERI:', '(tempel materi di sini)'
+    ].join('\n');
     const AI_PROMPT = [
         'Buatkan soal pilihan ganda dari materi yang saya lampirkan di bawah. Keluarkan HANYA JSON yang valid (tanpa kalimat pembuka, tanpa penjelasan, tanpa tanda ```), persis dengan bentuk ini:',
         '', '{', '  "nama": "NAMA PAKET",', '  "mk": "MATA KULIAH",', '  "deskripsi": "satu kalimat singkat",', '  "soal": [', '    {', '      "topik": "nama topik singkat",', '      "pertanyaan": "teks soal",', '      "opsi": ["pilihan A", "pilihan B", "pilihan C", "pilihan D", "pilihan E"],', '      "jawaban": "B",', '      "pembahasan": "alasan jawaban benar, 1-3 kalimat"', '    }', '  ]', '}', '',
@@ -10841,11 +10943,13 @@ Pembahasan: Hipotalamus anterior dan posterior mengatur suhu tubuh.</pre>
     function download(name, text, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: type })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
     async function copyText(t) { try { await navigator.clipboard.writeText(t); return true; } catch (e) { try { const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (x) { return false; } } }
     function exportRows(v) {
+        if (v.tipe === 'isian') return v.soal.map(x => ({ id: x.id, topik: x.topic || x.category || 'Umum', pertanyaan: x.question || '', jawaban: x.answer == null ? '' : x.answer, jawaban_lain: (x.alt || []).join(' | '), pembahasan: x.explanation || '', gambar: x.image || x.image_path || '' }));
         return v.soal.map(x => { const o = x.options || [], a = typeof x.answer === 'number' ? x.answer : o.indexOf(x.answer);
             return { id: x.id, topik: x.topic || x.category || 'Umum', pertanyaan: x.question || '', opsi: o, jawaban: a >= 0 ? L5[a] || '' : '', pembahasan: x.explanation || '', gambar: x.image || x.image_path || '', urutan_tetap: x.fixed_order ? 'ya' : '' }; });
     }
     const csvCell = t => '"' + String(t == null ? '' : t).replace(/"/g, '""') + '"';
     function csvOf(v) {
+        if (v.tipe === 'isian') { const L2 = ['id,topik,pertanyaan,jawaban,jawaban_lain,pembahasan,gambar']; exportRows(v).forEach(r => L2.push([r.id, r.topik, r.pertanyaan, r.jawaban, r.jawaban_lain, r.pembahasan, r.gambar].map(csvCell).join(','))); return '\uFEFF' + L2.join('\r\n'); }
         const lines = ['id,topik,pertanyaan,A,B,C,D,E,jawaban,pembahasan,gambar,urutan_tetap'];
         exportRows(v).forEach(r => lines.push([r.id, r.topik, r.pertanyaan, r.opsi[0], r.opsi[1], r.opsi[2], r.opsi[3], r.opsi[4], r.jawaban, r.pembahasan, r.gambar, r.urutan_tetap].map(csvCell).join(',')));
         return '\uFEFF' + lines.join('\r\n');
@@ -10856,8 +10960,11 @@ Pembahasan: Hipotalamus anterior dan posterior mengatur suhu tubuh.</pre>
         inp.onchange = () => { const f = inp.files && inp.files[0]; inp.value = ''; if (f) importFile(f); };
         $('ks-dl-json').onclick = () => download('contoh-soal.json', JSON.stringify(SAMPLE, null, 2), 'application/json');
         $('ks-dl-csv').onclick = () => download('contoh-soal.csv', SAMPLE_CSV, 'text/csv');
-        $('ks-ex-json').onclick = () => { const v = cur && rows[cur]; if (!v) { say('Pilih ' + U().unit + ' dulu.'); return; } download(fname(v) + '.json', JSON.stringify({ nama: v.nama, mk: v.mk, deskripsi: v.deskripsi, urutan: v.urutan, soal: exportRows(v) }, null, 2), 'application/json'); };
+        $('ks-ex-json').onclick = () => { const v = cur && rows[cur]; if (!v) { say('Pilih ' + U().unit + ' dulu.'); return; } download(fname(v) + '.json', JSON.stringify({ nama: v.nama, mk: v.mk, deskripsi: v.deskripsi, urutan: v.urutan, tipe: v.tipe, soal: exportRows(v) }, null, 2), 'application/json'); };
         $('ks-ex-csv').onclick = () => { const v = cur && rows[cur]; if (!v) { say('Pilih ' + U().unit + ' dulu.'); return; } download(fname(v) + '.csv', csvOf(v), 'text/csv'); };
+        $('ks-dl-json-is').onclick = () => download('contoh-soal-isian.json', JSON.stringify(SAMPLE_ISIAN, null, 2), 'application/json');
+        $('ks-dl-csv-is').onclick = () => download('contoh-soal-isian.csv', SAMPLE_ISIAN_CSV, 'text/csv');
+        $('ks-copy-ai-is').onclick = async () => { say((await copyText(AI_PROMPT_ISIAN)) ? 'Perintah AI untuk soal isian sudah disalin. Tempel ke ChatGPT / Claude / Gemini bersama materimu.' : 'Tidak bisa menyalin otomatis. Coba lagi lewat tombol Contoh JSON isian.', true); };
         $('ks-copy-ai').onclick = async () => { say((await copyText(AI_PROMPT.replace('NAMA PAKET', mode === 'cbt' ? 'NAMA KATEGORI' : 'NAMA PAKET'))) ? 'Perintah untuk AI sudah disalin. Tempel ke ChatGPT / Claude / Gemini bersama materimu.' : 'Tidak bisa menyalin otomatis. Coba lagi lewat tombol Contoh JSON.', true); };
         ['dragenter', 'dragover'].forEach(ev => box.addEventListener(ev, e => { e.preventDefault(); box.classList.add('drag'); }));
         ['dragleave', 'drop'].forEach(ev => box.addEventListener(ev, e => { e.preventDefault(); box.classList.remove('drag'); }));
