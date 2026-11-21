@@ -21,6 +21,7 @@
 
     // ---------- DAFTAR VERSI: terbaru di paling atas ----------
     var VERSI = [
+        { v: '2.4.0', tgl: '2026-11-21', file: 'versi/script-2.4.0.js', catatan: 'Jawaban isian yang mirip (salah ketik sedikit) dibenarkan dengan peringatan.' },
         { v: '2.3.0', tgl: '2026-11-21', file: 'versi/script-2.3.0.js', catatan: 'Kategori hanya menyebut paket soal, pengumuman paket soal baru, pilihan versi.' },
         { v: '2.2.0', tgl: '2026-11-05', file: 'versi/script-2.2.0.js', catatan: 'Versi sebelum pengatur versi.' }
     ];
