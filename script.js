@@ -23,6 +23,7 @@
 
     // ---------- DAFTAR VERSI: terbaru di paling atas ----------
     var SEMUA = [
+        { v: '2.7.1', tgl: '2026-11-23', file: 'versi/script-2.7.1.js', catatan: 'Versi Penyempurnaan.' },
         { v: '2.7.0', tgl: '2026-11-23', file: 'versi/script-2.7.0.js', catatan: 'Urutan lebih mulus, split Tutorial tidak berkedip, pengumuman menuju bagiannya dan hilang otomatis kalau tujuannya sudah tidak ada.' },
         { v: '2.6.0', tgl: '2026-11-22', file: 'versi/script-2.6.0.js', catatan: 'Soal isian berupa daftar ikut diimpor; semua istilah di daftar jadi kunci jawaban.' },
         { v: '2.5.0', tgl: '2026-11-22', file: 'versi/script-2.5.0.js', catatan: 'Impor soal dari file JSON bank soal (opsi berbentuk label/teks, file campuran jadi dua paket).' },
