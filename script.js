@@ -6,7 +6,9 @@
 // CARA RILIS VERSI BARU
 //   1) Simpan script baru sebagai versi/script-X.Y.Z.js (jangan menimpa file versi lama).
 //   2) Di dalam script baru itu, ubah APP_VERSION dan APP_BUILD supaya sama dengan baris di bawah.
-//   3) Tambahkan SATU baris baru di PALING ATAS daftar VERSI di bawah ini. Selesai.
+//   3) Tambahkan SATU baris baru di PALING ATAS daftar SEMUA di bawah ini. Selesai.
+//   4) Kalau versinya sudah lebih dari MAKS_VERSI, yang paling bawah otomatis keluar dari daftar pilihan.
+//      Hapus file-nya dari folder versi/ (daftar file yang boleh dihapus ada di Setelan > Tentang web, khusus admin).
 //
 // CARA KERJA UNTUK PENGGUNA
 //   - Otomatis: pengguna menjalankan versi paling atas (terbaru).
@@ -20,13 +22,19 @@
     'use strict';
 
     // ---------- DAFTAR VERSI: terbaru di paling atas ----------
-    var VERSI = [
+    var SEMUA = [
+        { v: '2.7.0', tgl: '2026-11-23', file: 'versi/script-2.7.0.js', catatan: 'Urutan lebih mulus, split Tutorial tidak berkedip, pengumuman menuju bagiannya dan hilang otomatis kalau tujuannya sudah tidak ada.' },
         { v: '2.6.0', tgl: '2026-11-22', file: 'versi/script-2.6.0.js', catatan: 'Soal isian berupa daftar ikut diimpor; semua istilah di daftar jadi kunci jawaban.' },
         { v: '2.5.0', tgl: '2026-11-22', file: 'versi/script-2.5.0.js', catatan: 'Impor soal dari file JSON bank soal (opsi berbentuk label/teks, file campuran jadi dua paket).' },
         { v: '2.4.0', tgl: '2026-11-21', file: 'versi/script-2.4.0.js', catatan: 'Jawaban isian yang mirip (salah ketik sedikit) dibenarkan dengan peringatan.' },
         { v: '2.3.0', tgl: '2026-11-21', file: 'versi/script-2.3.0.js', catatan: 'Kategori hanya menyebut paket soal, pengumuman paket soal baru, pilihan versi.' },
         { v: '2.2.0', tgl: '2026-11-05', file: 'versi/script-2.2.0.js', catatan: 'Versi sebelum pengatur versi.' }
     ];
+    // Batas jumlah versi: yang paling bawah otomatis keluar dari daftar (tidak bisa dipilih lagi).
+    // File-nya di folder versi/ tidak terhapus sendiri (hosting statis); lihat A9Versi.bisaDihapus lalu hapus manual.
+    var MAKS_VERSI = 5;
+    var VERSI = SEMUA.slice(0, MAKS_VERSI);
+    var BISA_DIHAPUS = SEMUA.slice(MAKS_VERSI).map(function (x) { return x.file; });
 
     var K_PIL = 'a9_versi_pilihan', K_GAGAL = 'a9_versi_gagal', K_RL = 'a9_versi_reload';
     var GAGAL_MS = 6 * 60 * 60 * 1000;
@@ -53,7 +61,7 @@
 
     // ---------- yang dipakai bagian Setelan ----------
     window.A9Versi = {
-        daftar: VERSI, aktif: jalan.v, terbaru: terbaru.v, pilihan: pin ? pin.v : 'otomatis',
+        daftar: VERSI, bisaDihapus: BISA_DIHAPUS, aktif: jalan.v, terbaru: terbaru.v, pilihan: pin ? pin.v : 'otomatis',
         opsiHtml: function () {
             var h = '<option value="otomatis"' + (pin ? '' : ' selected') + '>Otomatis (terbaru; pindah ke versi lama kalau error)</option>';
             for (var i = 0; i < VERSI.length; i++) {
