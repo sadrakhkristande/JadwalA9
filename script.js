@@ -23,7 +23,7 @@
 
     // ---------- DAFTAR VERSI: terbaru di paling atas ----------
     var SEMUA = [
-        { v: '2.7.3', tgl: '2026-11-24', file: 'versi/script-2.9.0.js', catatan: 'Versi Penyempurnaan.' },
+        { v: '2.9.0', tgl: '2026-11-25', file: 'versi/script-2.9.0.js', catatan: 'Versi Penyempurnaan.' },
         { v: '2.7.3', tgl: '2026-11-24', file: 'versi/script-2_7_3.js', catatan: 'Versi Penyempurnaan.' },
         { v: '2.7.1', tgl: '2026-11-23', file: 'versi/script-2_7_1.js', catatan: 'Versi Penyempurnaan.' },
         { v: '2.7.0', tgl: '2026-11-23', file: 'versi/script-2.7.0.js', catatan: 'Urutan lebih mulus, split Tutorial tidak berkedip, pengumuman menuju bagiannya dan hilang otomatis kalau tujuannya sudah tidak ada.' },
