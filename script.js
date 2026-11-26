@@ -23,15 +23,11 @@
 
     // ---------- DAFTAR VERSI: terbaru di paling atas ----------
     var SEMUA = [
+        { v: '3.0.0', tgl: '2026-11-25', file: 'versi/script-3.0.0.js', catatan: 'Versi Penyempurnaan.' },
         { v: '2.9.0', tgl: '2026-11-25', file: 'versi/script-2.9.0.js', catatan: 'Versi Penyempurnaan.' },
         { v: '2.7.3', tgl: '2026-11-24', file: 'versi/script-2_7_3.js', catatan: 'Versi Penyempurnaan.' },
-        { v: '2.7.1', tgl: '2026-11-23', file: 'versi/script-2_7_1.js', catatan: 'Versi Penyempurnaan.' },
-        { v: '2.7.0', tgl: '2026-11-23', file: 'versi/script-2.7.0.js', catatan: 'Urutan lebih mulus, split Tutorial tidak berkedip, pengumuman menuju bagiannya dan hilang otomatis kalau tujuannya sudah tidak ada.' },
-        { v: '2.6.0', tgl: '2026-11-22', file: 'versi/script-2.6.0.js', catatan: 'Soal isian berupa daftar ikut diimpor; semua istilah di daftar jadi kunci jawaban.' },
-        { v: '2.5.0', tgl: '2026-11-22', file: 'versi/script-2.5.0.js', catatan: 'Impor soal dari file JSON bank soal (opsi berbentuk label/teks, file campuran jadi dua paket).' },
-        { v: '2.4.0', tgl: '2026-11-21', file: 'versi/script-2.4.0.js', catatan: 'Jawaban isian yang mirip (salah ketik sedikit) dibenarkan dengan peringatan.' },
-        { v: '2.3.0', tgl: '2026-11-21', file: 'versi/script-2.3.0.js', catatan: 'Kategori hanya menyebut paket soal, pengumuman paket soal baru, pilihan versi.' },
-        { v: '2.2.0', tgl: '2026-11-05', file: 'versi/script-2.2.0.js', catatan: 'Versi sebelum pengatur versi.' }
+        { v: '2.7.1', tgl: '2026-11-23', file: 'versi/script-2_7_1.js', catatan: 'Versi Penyempurnaan.' }
+        
     ];
     // Batas jumlah versi: yang paling bawah otomatis keluar dari daftar (tidak bisa dipilih lagi).
     // File-nya di folder versi/ tidak terhapus sendiri (hosting statis); lihat A9Versi.bisaDihapus lalu hapus manual.
